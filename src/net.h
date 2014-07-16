@@ -624,6 +624,7 @@ public:
     std::vector<CInv> vInventoryTierTwoToSend;
     RecursiveMutex cs_inventory;
     std::multimap<int64_t, CInv> mapAskFor;
+    std::set<uint256> setAskFor;
     std::vector<uint256> vBlockRequested;
     int64_t nNextInvSend;
     // Used for BIP35 mempool sending, also protected by cs_inventory
