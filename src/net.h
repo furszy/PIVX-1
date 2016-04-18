@@ -199,6 +199,9 @@ private:
     bool IsWhitelistedRange(const CNetAddr &addr);
 
     void DeleteNode(CNode* pnode);
+
+    NodeId GetNewNodeId();
+
     //!check is the banlist has unwritten changes
     bool BannedSetIsDirty();
     //!set the "dirty" flag for the banlist
@@ -226,6 +229,7 @@ private:
     RecursiveMutex cs_vAddedNodes;
     std::vector<CNode*> vNodes;
     mutable RecursiveMutex cs_vNodes;
+    std::atomic<NodeId> nLastNodeId;
 };
 extern std::unique_ptr<CConnman> g_connman;
 void MapPort(bool fUseUPnP);
@@ -303,9 +307,6 @@ extern std::map<CInv, CDataStream> mapRelay;
 extern std::deque<std::pair<int64_t, CInv> > vRelayExpiration;
 extern RecursiveMutex cs_mapRelay;
 extern limitedmap<CInv, int64_t> mapAlreadyAskedFor;
-
-extern NodeId nLastNodeId;
-extern RecursiveMutex cs_nLastNodeId;
 
 /** Subversion as sent to the P2P network in `version` messages */
 extern std::string strSubVersion;
@@ -476,7 +477,7 @@ public:
     // Whether a ping is requested.
     bool fPingQueued;
 
-    CNode(SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = "", bool fInboundIn = false);
+    CNode(NodeId id, SOCKET hSocketIn, const CAddress& addrIn, const std::string& addrNameIn = "", bool fInboundIn = false);
     ~CNode();
 
 private:
