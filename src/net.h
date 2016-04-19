@@ -75,10 +75,10 @@ static const unsigned int DEFAULT_MAX_PEER_CONNECTIONS = 125;
 /** Maximum number of peers added to setOffsetDisconnectedPeers before triggering a warning */
 #define MAX_TIMEOFFSET_DISCONNECTIONS 16
 
-static const ServiceFlags REQUIRED_SERVICES = NODE_NETWORK;
+static const size_t DEFAULT_MAXRECEIVEBUFFER = 5 * 1000;
+static const size_t DEFAULT_MAXSENDBUFFER    = 1 * 1000;
 
-unsigned int ReceiveFloodSize();
-unsigned int SendBufferSize();
+static const ServiceFlags REQUIRED_SERVICES = NODE_NETWORK;
 
 bool RecvLine(SOCKET hSocket, std::string& strLine);
 
@@ -173,6 +173,8 @@ public:
     bool DisconnectNode(NodeId id);
     bool DisconnectSubnet(const CSubNet& subnet);
 
+    unsigned int GetSendBufferSize() const;
+
     void AddWhitelistedRange(const CSubNet& subnet);
 
     uint64_t GetTotalBytesRecv();
@@ -217,6 +219,8 @@ private:
     void DumpData();
     void DumpBanlist();
 
+    unsigned int GetReceiveFloodSize() const;
+
     // Network stats
     void RecordBytesRecv(uint64_t bytes);
     void RecordBytesSent(uint64_t bytes);
@@ -231,6 +235,9 @@ private:
     // whitelisted (as well as those connecting to whitelisted binds).
     std::vector<CSubNet> vWhitelistedRange;
     RecursiveMutex cs_vWhitelistedRange;
+
+    unsigned int nSendBufferMaxSize;
+    unsigned int nReceiveFloodSize;
 
     std::vector<ListenSocket> vhListenSocket;
     banmap_t setBanned;
