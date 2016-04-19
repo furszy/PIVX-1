@@ -231,6 +231,7 @@ private:
     std::vector<CNode*> vNodes;
     mutable RecursiveMutex cs_vNodes;
     std::atomic<NodeId> nLastNodeId;
+    boost::condition_variable messageHandlerCondition;
 };
 extern std::unique_ptr<CConnman> g_connman;
 void MapPort(bool fUseUPnP);
@@ -519,7 +520,7 @@ public:
     }
 
     // requires LOCK(cs_vRecvMsg)
-    bool ReceiveMsgBytes(const char* pch, unsigned int nBytes);
+    bool ReceiveMsgBytes(const char* pch, unsigned int nBytes, bool& complete);
 
     // requires LOCK(cs_vRecvMsg)
     void SetRecvVersion(int nVersionIn)
