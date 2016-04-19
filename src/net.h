@@ -107,7 +107,7 @@ public:
 
     CConnman();
     ~CConnman();
-    bool Start(boost::thread_group& threadGroup, CScheduler& scheduler, std::string& strNodeError);
+    bool Start(boost::thread_group& threadGroup, CScheduler& scheduler, ServiceFlags nLocalServicesIn, ServiceFlags nRelevantServicesIn, std::string& strNodeError);
     void Stop();
     bool BindListenPort(const CService &bindAddr, std::string& strError, bool fWhitelisted = false);
     bool OpenNetworkConnection(const CAddress& addrConnect, bool fCountFailure, CSemaphoreGrant* grantOutbound = NULL, const char* strDest = NULL, bool fOneShot = false, bool fFeeler = false);
@@ -176,6 +176,8 @@ public:
     unsigned int GetSendBufferSize() const;
 
     void AddWhitelistedRange(const CSubNet& subnet);
+
+    ServiceFlags GetLocalServices() const;
 
     uint64_t GetTotalBytesRecv();
     uint64_t GetTotalBytesSent();
@@ -253,12 +255,18 @@ private:
     mutable RecursiveMutex cs_vNodes;
     std::atomic<NodeId> nLastNodeId;
     boost::condition_variable messageHandlerCondition;
+
+    /** Services this instance offers */
+    ServiceFlags nLocalServices;
+
+    /** Services this instance cares about */
+    ServiceFlags nRelevantServices;
 };
 extern std::unique_ptr<CConnman> g_connman;
 void MapPort(bool fUseUPnP);
 unsigned short GetListenPort();
 bool BindListenPort(const CService& bindAddr, std::string& strError, bool fWhitelisted = false);
-bool StartNode(CConnman& connman, boost::thread_group& threadGroup, CScheduler& scheduler, std::string& strNodeError);
+bool StartNode(CConnman& connman, boost::thread_group& threadGroup, CScheduler& scheduler, ServiceFlags nLocalServices, ServiceFlags nRelevantServices, std::string& strNodeError);
 bool StopNode(CConnman& connman);
 size_t SocketSendData(CNode* pnode);
 void CheckOffsetDisconnectedPeers(const CNetAddr& ip);
@@ -314,13 +322,13 @@ bool IsLocal(const CService& addr);
 bool GetLocal(CService& addr, const CNetAddr* paddrPeer = NULL);
 bool IsReachable(enum Network net);
 bool IsReachable(const CNetAddr& addr);
-CAddress GetLocalAddress(const CNetAddr* paddrPeer = NULL);
+CAddress GetLocalAddress(const CNetAddr* paddrPeer, ServiceFlags nLocalServices);
+
 bool validateMasternodeIP(const std::string& addrStr);          // valid, reachable and routable address
 
 
 extern bool fDiscover;
 extern bool fListen;
-extern ServiceFlags nLocalServices;
 
 /** Maximum number of connections to simultaneously allow (aka connection slots) */
 extern int nMaxConnections;
@@ -500,7 +508,7 @@ public:
     // Whether a ping is requested.
     bool fPingQueued;
 
-    CNode(NodeId id, SOCKET hSocketIn, const CAddress& addrIn, const std::string& addrNameIn = "", bool fInboundIn = false);
+    CNode(NodeId id, ServiceFlags nLocalServicesIn, SOCKET hSocketIn, const CAddress& addrIn, const std::string& addrNameIn = "", bool fInboundIn = false);
     ~CNode();
 
 private:
@@ -510,6 +518,7 @@ private:
     static uint64_t CalculateKeyedNetGroup(const CAddress& ad);
 
     uint64_t nLocalHostNonce;
+    ServiceFlags nLocalServices;
 public:
     NodeId GetId() const
     {
@@ -810,6 +819,11 @@ public:
     bool DisconnectOldProtocol(int nVersionRequired, std::string strLastCommand = "");
 
     void copyStats(CNodeStats& stats);
+
+    ServiceFlags GetLocalServices() const
+    {
+        return nLocalServices;
+    }
 };
 
 class CExplicitNetCleanup
