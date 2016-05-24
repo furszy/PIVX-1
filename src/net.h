@@ -114,6 +114,7 @@ private:
     void ThreadDNSAddressSeed();
 
     CNode* ConnectNode(CAddress addrConnect, const char* pszDest, bool fCountFailure);
+    void DeleteNode(CNode* pnode);
 
     std::vector<ListenSocket> vhListenSocket;
 };
@@ -149,7 +150,7 @@ struct CNodeSignals
     boost::signals2::signal<bool (CNode*, CConnman&), CombinerAll> ProcessMessages;
     boost::signals2::signal<bool (CNode*, CConnman&), CombinerAll> SendMessages;
     boost::signals2::signal<void (NodeId, const CNode*)> InitializeNode;
-    boost::signals2::signal<void (NodeId)> FinalizeNode;
+    boost::signals2::signal<void (NodeId, bool&)> FinalizeNode;
 };
 
 
