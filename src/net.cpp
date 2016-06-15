@@ -851,8 +851,7 @@ void CheckOffsetDisconnectedPeers(const CNetAddr& ip)
             if (pnode->fSuccessfullyConnected)
                 nConnections++;
             if (nConnections == ENOUGH_CONNECTIONS)
-                return true;
-            return true;
+                return;
         });
     }
 
@@ -2563,7 +2562,7 @@ bool CConnman::ForNode(NodeId id, std::function<bool(CNode* pnode)> func)
     return found != nullptr && func(found);
 }
 
-bool CConnman::ForEachNode(std::function<bool(CNode* pnode)> func)
+bool CConnman::ForEachNodeContinueIf(std::function<bool(CNode* pnode)> func)
 {
     LOCK(cs_vNodes);
     for (auto&& node : vNodes)
@@ -2572,7 +2571,7 @@ bool CConnman::ForEachNode(std::function<bool(CNode* pnode)> func)
     return true;
 }
 
-bool CConnman::ForEachNode(std::function<bool(const CNode* pnode)> func) const
+bool CConnman::ForEachNodeContinueIf(std::function<bool(const CNode* pnode)> func) const
 {
     LOCK(cs_vNodes);
     for (const auto& node : vNodes)
@@ -2581,7 +2580,7 @@ bool CConnman::ForEachNode(std::function<bool(const CNode* pnode)> func) const
     return true;
 }
 
-bool CConnman::ForEachNodeThen(std::function<bool(CNode* pnode)> pre, std::function<void()> post)
+bool CConnman::ForEachNodeContinueIfThen(std::function<bool(CNode* pnode)> pre, std::function<void()> post)
 {
     bool ret = true;
     LOCK(cs_vNodes);
@@ -2594,7 +2593,7 @@ bool CConnman::ForEachNodeThen(std::function<bool(CNode* pnode)> pre, std::funct
     return ret;
 }
 
-bool CConnman::ForEachNodeThen(std::function<bool(const CNode* pnode)> pre, std::function<void()> post) const
+bool CConnman::ForEachNodeContinueIfThen(std::function<bool(const CNode* pnode)> pre, std::function<void()> post) const
 {
     bool ret = true;
     LOCK(cs_vNodes);
@@ -2605,6 +2604,36 @@ bool CConnman::ForEachNodeThen(std::function<bool(const CNode* pnode)> pre, std:
         }
     post();
     return ret;
+}
+
+void CConnman::ForEachNode(std::function<void(CNode* pnode)> func)
+{
+    LOCK(cs_vNodes);
+    for (auto&& node : vNodes)
+        func(node);
+}
+
+void CConnman::ForEachNode(std::function<void(const CNode* pnode)> func) const
+{
+    LOCK(cs_vNodes);
+    for (const auto& node : vNodes)
+        func(node);
+}
+
+void CConnman::ForEachNodeThen(std::function<void(CNode* pnode)> pre, std::function<void()> post)
+{
+    LOCK(cs_vNodes);
+    for (auto&& node : vNodes)
+		pre(node);
+    post();
+}
+
+void CConnman::ForEachNodeThen(std::function<void(const CNode* pnode)> pre, std::function<void()> post) const
+{
+    LOCK(cs_vNodes);
+    for (const auto& node : vNodes)
+		pre(node);
+    post();
 }
 
 // valid, reachable and routable address (except for RegTest)

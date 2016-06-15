@@ -540,7 +540,6 @@ bool ProcessBlockFound(CBlock* pblock, CWallet& wallet, Optional<CReserveKey>& r
     g_connman->ForEachNode([&pblock](CNode* node)
     {
         node->PushInventory(CInv(MSG_BLOCK, pblock->GetHash()));
-        return true;
     });
 
     return true;
