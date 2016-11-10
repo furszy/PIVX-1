@@ -240,6 +240,7 @@ public:
 
     /** Convert a CMutableTransaction into a CTransaction. */
     CTransaction(const CMutableTransaction &tx);
+    CTransaction(CMutableTransaction &&tx);
 
     CTransaction& operator=(const CTransaction& tx);
 
@@ -254,6 +255,9 @@ public:
         if (ser_action.ForRead())
             UpdateHash();
     }
+
+    template <typename Stream>
+    CTransaction(deserialize_type, Stream& s) : CTransaction(CMutableTransaction(deserialize, s)) {}
 
     bool IsNull() const {
         return vin.empty() && vout.empty();
@@ -336,6 +340,11 @@ struct CMutableTransaction
         READWRITE(vin);
         READWRITE(vout);
         READWRITE(nLockTime);
+    }
+
+    template <typename Stream>
+    CMutableTransaction(deserialize_type, Stream& s) {
+        Unserialize(s);
     }
 
     /** Compute the hash of this CMutableTransaction. This is computed on the
