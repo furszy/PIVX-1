@@ -241,6 +241,7 @@ BITCOIN_CORE_H = \
   support/cleanse.h \
   sync.h \
   threadsafety.h \
+  threadinterrupt.h \
   timedata.h \
   tinyformat.h \
   torcontrol.h \
@@ -512,6 +513,7 @@ libbitcoin_util_a_SOURCES = \
   sync.cpp \
   uint256.cpp \
   blob_uint256.cpp \
+  threadinterrupt.cpp \
   util.cpp \
   utilmoneystr.cpp \
   util/threadnames.cpp \
