@@ -1842,9 +1842,8 @@ void ThreadMessageHandler()
 
             // Send messages
             {
-                TRY_LOCK(pnode->cs_sendProcessing, lockSend);
-                if (lockSend)
-                    GetNodeSignals().SendMessages(pnode);
+                LOCK(pnode->cs_sendProcessing);
+                GetNodeSignals().SendMessages(pnode);
             }
             boost::this_thread::interruption_point();
         }
