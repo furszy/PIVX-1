@@ -59,8 +59,6 @@ private:
     friend void ::UnregisterAllValidationInterfaces();
 
 public:
-    CMainSignals();
-
     /** A posInBlock value for SyncTransaction which indicates the transaction was conflicted, disconnected, or not in a block */
     static const int SYNC_TRANSACTION_NOT_IN_BLOCK = -1;
 
