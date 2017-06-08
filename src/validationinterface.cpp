@@ -126,6 +126,10 @@ void UnregisterValidationInterface(CValidationInterface* pwalletIn)
     }
 }
 
+void CallFunctionInValidationInterfaceQueue(std::function<void ()> func) {
+    g_signals.m_internals->m_schedulerClient.AddToProcessQueue(std::move(func));
+}
+
 void UnregisterAllValidationInterfaces()
 {
     if (!g_signals.m_internals) {
