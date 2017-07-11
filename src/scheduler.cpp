@@ -121,6 +121,10 @@ size_t CScheduler::getQueueInfo(boost::chrono::system_clock::time_point &first,
     return result;
 }
 
+bool CScheduler::AreThreadsServicingQueue() const {
+    return nThreadsServicingQueue;
+}
+
 void SingleThreadedSchedulerClient::MaybeScheduleProcessQueue() {
     {
         LOCK(m_cs_callbacks_pending);
@@ -173,6 +177,7 @@ void SingleThreadedSchedulerClient::AddToProcessQueue(std::function<void (void)>
 }
 
 void SingleThreadedSchedulerClient::EmptyQueue() {
+    assert(!m_pscheduler->AreThreadsServicingQueue());
     bool should_continue = true;
     while (should_continue) {
         ProcessQueue();
