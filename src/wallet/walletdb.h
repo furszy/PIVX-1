@@ -141,6 +141,8 @@ public:
         m_dbw(dbw)
     {
     }
+    CWalletDB(const CWalletDB&) = delete;
+    CWalletDB& operator=(const CWalletDB&) = delete;
 
     bool WriteName(const std::string& strAddress, const std::string& strName);
     bool EraseName(const std::string& strAddress);
@@ -232,9 +234,6 @@ public:
 private:
     CDB batch;
     CWalletDBWrapper& m_dbw;
-
-    CWalletDB(const CWalletDB&);
-    void operator=(const CWalletDB&);
 };
 
 void NotifyBacked(const CWallet& wallet, bool fSuccess, std::string strMessage);
