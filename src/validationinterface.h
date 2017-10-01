@@ -48,7 +48,11 @@ class CValidationInterface {
 public:
     virtual ~CValidationInterface() = default;
 protected:
-    /** Notifies listeners of updated block chain tip */
+    /**
+     * Notifies listeners of updated block chain tip
+     *
+     * Called on a background thread.
+     */
     virtual void UpdatedBlockTip(const CBlockIndex *pindexNew, const CBlockIndex *pindexFork, bool fInitialDownload) {}
     /**
      * Notifies listeners of a transaction having been added to mempool.
