@@ -72,6 +72,11 @@ void CMainSignals::FlushBackgroundCallbacks() {
     }
 }
 
+size_t CMainSignals::CallbacksPending() {
+    if (!m_internals) return 0;
+    return m_internals->m_schedulerClient.CallbacksPending();
+}
+
 void CMainSignals::RegisterWithMempoolSignals(CTxMemPool& pool) {
     pool.NotifyEntryRemoved.connect(std::bind(&CMainSignals::MempoolEntryRemoved, this, std::placeholders::_1, std::placeholders::_2));
 }
