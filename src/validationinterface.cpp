@@ -103,6 +103,11 @@ void CMainSignals::FlushBackgroundCallbacks() {
     }
 }
 
+size_t CMainSignals::CallbacksPending() {
+    if (!m_internals) return 0;
+    return m_internals->m_schedulerClient.CallbacksPending();
+}
+
 CMainSignals& GetMainSignals()
 {
     return g_signals;

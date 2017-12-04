@@ -77,6 +77,8 @@ public:
     /** Call any remaining callbacks on the calling thread */
     void FlushBackgroundCallbacks();
 
+    size_t CallbacksPending();
+
     void UpdatedBlockTip(const CBlockIndex *, const CBlockIndex *, bool fInitialDownload);
     void SyncTransaction(const CTransaction &, const CBlockIndex *pindex, int posInBlock);
     void NotifyTransactionLock(const CTransaction&);
