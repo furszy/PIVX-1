@@ -3670,3 +3670,27 @@ UniValue createautomintaddress(const UniValue& params, bool fHelp)
     CBitcoinAddress address = pwalletMain->GenerateNewAutoMintKey();
     return address.ToString();
 }
+UniValue clearspendcache(const UniValue& params, bool fHelp)
+{
+    if(fHelp || params.size() != 0)
+        throw runtime_error(
+            "clearspendcache\n"
+            "\nClear the pre-computed zPIV spend cache.\n" +
+            HelpRequiringPassphrase() + "\n"
+
+            "\nExamples\n" +
+            HelpExampleCli("clearspendcache", "") + HelpExampleRpc("clearspendcache", ""));
+
+    EnsureWalletIsUnlocked();
+
+    CzPIVTracker* zpivTracker = pwalletMain->zpivTracker.get();
+
+    {
+        TRY_LOCK(zpivTracker->cs_spendcache, fLocked);
+        if (fLocked) {
+            if (zpivTracker->ClearSpendCache())
+                return NullUniValue;
+        }
+    }
+    throw JSONRPCError(RPC_WALLET_ERROR, "Error: Spend cache not cleared!");
+}
