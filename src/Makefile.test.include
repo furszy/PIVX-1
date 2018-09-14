@@ -26,7 +26,7 @@ BITCOIN_TEST_SUITE = \
   test/test_pivx.cpp
 # test_pivx binary #
 BITCOIN_TESTS =\
-  #test/zerocoin_zkp_tests.cpp \
+  test/zerocoin_zkp_tests.cpp \
   test/zerocoin_implementation_tests.cpp\
   test/zerocoin_denomination_tests.cpp\
   test/zerocoin_transactions_tests.cpp \
@@ -93,7 +93,6 @@ test_test_pivx_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) -stat
 if ENABLE_ZMQ
 test_test_pivx_LDADD += $(ZMQ_LIBS)
 endif
-#
 
 nodist_test_test_pivx_SOURCES = $(GENERATED_TEST_FILES)
 
