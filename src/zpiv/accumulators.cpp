@@ -657,6 +657,65 @@ bool calculateAccumulatedBlocksFor(
     return true;
 }
 
+bool calculateAccumulatedBlocksFor(
+        int startHeight,
+        int nHeightStop,
+        int nHeightMintAdded,
+        CBlockIndex *pindex,
+        int &nCheckpointsAdded,
+        CBigNum &bnAccValue,
+        libzerocoin::Accumulator &accumulator,
+        libzerocoin::Accumulator &witnessAccumulator,
+        libzerocoin::PublicCoin coin,
+        string& strError
+){
+
+    int amountOfScannedBlocks = 0;
+    bool fDoubleCounted = false;
+    int nMintsAdded = 0;
+    while (pindex) {
+
+        if (pindex->nHeight >= nHeightStop) {
+            //If this height is within the invalid range (when fraudulent coins were being minted), then continue past this range
+            if(InvalidCheckpointRange(pindex->nHeight))
+                continue;
+
+            bnAccValue = 0;
+            uint256 nCheckpointSpend = chainActive[pindex->nHeight + 10]->nAccumulatorCheckpoint;
+            if (!GetAccumulatorValueFromDB(nCheckpointSpend, coin.getDenomination(), bnAccValue) || bnAccValue == 0) {
+                throw new ChecksumInDbNotFoundException(
+                        "calculateAccumulatedBlocksFor : failed to find checksum in database for accumulator");
+            }
+            accumulator.setValue(bnAccValue);
+            break;
+        }
+
+        // Add it
+        nMintsAdded += AddBlockMintsToAccumulator(coin, nHeightMintAdded, pindex, &witnessAccumulator, true);
+
+        // 10 blocks were accumulated twice when zPIV v2 was activated
+        if (pindex->nHeight == 1050010 && !fDoubleCounted) {
+            pindex = chainActive[1050000];
+            fDoubleCounted = true;
+            continue;
+        }
+
+        amountOfScannedBlocks++;
+        pindex = chainActive.Next(pindex);
+    }
+
+    // A certain amount of accumulated coins are required
+    if (nMintsAdded < Params().Zerocoin_RequiredAccumulation()) {
+        strError = _(strprintf("Less than %d mints added, unable to create spend",
+                               Params().Zerocoin_RequiredAccumulation()).c_str());
+        throw NotEnoughMintsException(strError);
+    }
+
+    LogPrintf("calculateAccumulatedBlocksFor() : nMintsAdded %d",nMintsAdded);
+
+    return true;
+}
+
 
 bool CalculateAccumulatorWitnessFor(
         const ZerocoinParams* params,
@@ -755,8 +814,67 @@ bool GenerateAccumulatorWitness(
         LogPrint("zero", "%s: after lock\n", __func__);
 
         int nHeightMintAdded = SearchMintHeightOf(coin.getValue());
+        //get the checkpoint added at the next multiple of 10
+        int nHeightCheckpoint = nHeightMintAdded + (10 - (nHeightMintAdded % 10));
+        //the height to start accumulating coins to add to witness
+        int nAccStartHeight = nHeightMintAdded - (nHeightMintAdded % 10);
 
-        // TODO: Complete me..
+        //Get the accumulator that is right before the cluster of blocks containing our mint was added to the accumulator
+        CBigNum bnAccValue = 0;
+        if (GetAccumulatorValue(nHeightCheckpoint, coin.getDenomination(), bnAccValue)) {
+            if(!bnAccValue && Params().NetworkID() == CBaseChainParams::REGTEST){
+                accumulator.setInitialValue();
+                witness.resetValue(accumulator, coin);
+            }else {
+                accumulator.setValue(bnAccValue);
+                witness.resetValue(accumulator, coin);
+            }
+        }
+
+        //add the pubcoins from the blockchain up to the next checksum starting from the block
+        CBlockIndex *pindex = chainActive[nHeightCheckpoint - 10];
+        int nChainHeight = chainActive.Height();
+        int nHeightStop = nChainHeight % 10;
+        nHeightStop = nChainHeight - nHeightStop - 20; // at least two checkpoints deep
+
+        //If looking for a specific checkpoint
+        if (pindexCheckpoint)
+            nHeightStop = pindexCheckpoint->nHeight - 10;
+
+        //Iterate through the chain and calculate the witness
+        int nCheckpointsAdded = 0;
+        nMintsAdded = 0;
+        libzerocoin::Accumulator witnessAccumulator = accumulator;
+
+        if(!calculateAccumulatedBlocksFor(
+                nAccStartHeight,
+                nHeightStop,
+                nHeightMintAdded,
+                pindex,
+                nCheckpointsAdded,
+                bnAccValue,
+                accumulator,
+                witnessAccumulator,
+                coin,
+                strError
+        )){
+            return error("GenerateAccumulatorWitness(): Calculate accumulated coins failed");
+        }
+
+        witness.resetValue(witnessAccumulator, coin);
+        if (!witness.VerifyWitness(accumulator, coin))
+            return error("%s: failed to verify witness", __func__);
+
+        // A certain amount of accumulated coins are required
+        if (nMintsAdded < Params().Zerocoin_RequiredAccumulation()) {
+            strError = _(strprintf("Less than %d mints added, unable to create spend",
+                                   Params().Zerocoin_RequiredAccumulation()).c_str());
+            return error("%s : %s", __func__, strError);
+        }
+
+        // calculate how many mints of this denomination existed in the accumulator we initialized
+        nMintsAdded += ComputeAccumulatedCoins(nAccStartHeight, coin.getDenomination());
+        LogPrint("zero", "%s : %d mints added to witness\n", __func__, nMintsAdded);
 
         return true;
 

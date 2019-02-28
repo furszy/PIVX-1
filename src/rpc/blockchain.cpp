@@ -1301,12 +1301,19 @@ UniValue getaccumulatorwitness(const UniValue& params, bool fHelp)
     string strFailReason = "";
     int nMintsAdded = 0;
     CZerocoinSpendReceipt receipt;
+
     if (!GenerateAccumulatorWitness(pubCoin, accumulator, witness, nMintsAdded, strFailReason)) {
         receipt.SetStatus(_(strFailReason.c_str()), ZPIV_FAILED_ACCUMULATOR_INITIALIZATION);
         throw JSONRPCError(RPC_DATABASE_ERROR, receipt.GetStatusMessage());
     }
 
-    return UniValue(UniValue::VOBJ);
+    UniValue obj(UniValue::VOBJ);
+    obj.push_back(Pair("Accumulator Value", accumulator.getValue().GetHex()));
+    obj.push_back(Pair("Denomination", accumulator.getDenomination()));
+    obj.push_back(Pair("Mints added",nMintsAdded));
+    obj.push_back(Pair("Witness Value", witness.getValue().GetHex()));
+
+    return obj;
 }
 
 UniValue getmintsinblocks(const UniValue& params, bool fHelp) {
