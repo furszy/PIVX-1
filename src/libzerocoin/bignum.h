@@ -838,19 +838,19 @@ public:
     uint256 getuint256() const
     {
         size_t size = (mpz_sizeinbase (bn, 2) + CHAR_BIT-1) / CHAR_BIT;
+        uint256 n = uint256();
         // This is just a fall back for invalid numbers, it will only take the last 256 bits as openssl implementation does.
-        if(size > 32){
+        if(size > 32)
+        {
             std::vector<unsigned char> vch(size);
             mpz_export(&vch[0], NULL, -1, 1, 0, 0, bn);
-            uint256 n = 0;
             for (unsigned int i = 0, j = 0; i < sizeof(n); i++, j++)
                 ((unsigned char*)&n)[i] = vch[j];
-            return n;
-        }else{
-            uint256 n = 0;
+        } else
+        {
             mpz_export((unsigned char*)&n, NULL, -1, 1, 0, 0, bn);
-            return n;
         }
+        return n;
     }
 
     void setvch(const std::vector<unsigned char>& vch)
