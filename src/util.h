@@ -232,4 +232,10 @@ void TraceThread(const char* name, Callable func)
     }
 }
 
+/**
+ * Sporks utils..
+ */
+
+bool isZerocoinSporkEnabled();
+
 #endif // BITCOIN_UTIL_H

@@ -15,8 +15,10 @@
 #include "chainparamsbase.h"
 #include "random.h"
 #include "sync.h"
+#include "spork.h"
 #include "utilstrencodings.h"
 #include "utiltime.h"
+#include "timedata.h"
 
 #include <stdarg.h>
 
@@ -830,4 +832,13 @@ void SetThreadPriority(int nPriority)
     setpriority(PRIO_PROCESS, 0, nPriority);
 #endif // PRIO_THREAD
 #endif // WIN32
+}
+
+
+/**
+ * Sporks
+ */
+
+bool isZerocoinSporkEnabled(){
+    return GetAdjustedTime() > GetSporkValue(SPORK_16_ZEROCOIN_MAINTENANCE_MODE);
 }
