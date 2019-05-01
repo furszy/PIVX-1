@@ -1345,7 +1345,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState& state, const CTransa
         CCoinsViewCache view(&dummy);
 
         CAmount nValueIn = 0;
-        if(tx.IsZerocoinSpend()){
+        if(tx.IsZerocoinSpend() || tx.IsZerocoinPublicSpend()){
             nValueIn = tx.GetZerocoinSpent();
 
             //Check that txid is not already in the chain
@@ -1356,9 +1356,14 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState& state, const CTransa
 
             //Check for double spending of serial #'s
             for (const CTxIn& txIn : tx.vin) {
-                if (!txIn.scriptSig.IsZerocoinSpend())
-                    continue;
-                CoinSpend spend = TxInToZerocoinSpend(txIn);
+                // Only allow for zc spends inputs
+                bool isPublicSpend = txIn.scriptSig.IsZerocoinPublicSpend();
+                if (!txIn.scriptSig.IsZerocoinSpend() && !isPublicSpend) {
+                    return state.Invalid(error("%s: ContextualCheckZerocoinSpend failed for tx %s, every input must be a zcspend or zcpublicspend", __func__,
+                                        tx.GetHash().GetHex()), REJECT_INVALID, "bad-txns-invalid-zpiv");
+                }
+
+                CoinSpend spend = (isPublicSpend) ? pwalletMain->zpivModule.parseCoinSpend(txIn, tx) : TxInToZerocoinSpend(txIn);
                 if (!ContextualCheckZerocoinSpend(tx, spend, chainActive.Tip(), 0))
                     return state.Invalid(error("%s: ContextualCheckZerocoinSpend failed for tx %s", __func__,
                                                tx.GetHash().GetHex()), REJECT_INVALID, "bad-txns-invalid-zpiv");
@@ -1407,7 +1412,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState& state, const CTransa
             // are the actual inputs available?
             if (!view.HaveInputs(tx))
                 return state.Invalid(error("AcceptToMemoryPool : inputs already spent"),
-                    REJECT_DUPLICATE, "bad-txns-inputs-spent");
+                                     REJECT_DUPLICATE, "bad-txns-inputs-spent");
 
             // Bring the best block into scope
             view.GetBestBlock();

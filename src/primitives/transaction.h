@@ -273,6 +273,16 @@ public:
         return false;
     }
 
+    bool IsZerocoinPublicSpend() const
+    {
+        // The wallet only allows publicSpend inputs in the same tx and not a combination between piv and zpiv
+        for(const CTxIn& txin : vin) {
+            if (txin.scriptSig.IsZerocoinPublicSpend())
+                return true;
+        }
+        return false;
+    }
+
     bool ContainsZerocoins() const
     {
         return IsZerocoinSpend() || IsZerocoinMint();
