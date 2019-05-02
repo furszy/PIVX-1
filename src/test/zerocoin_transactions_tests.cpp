@@ -22,38 +22,38 @@ BOOST_AUTO_TEST_SUITE(zerocoin_transactions_tests)
 
 static CWallet cWallet("unlocked.dat");
 
-//BOOST_AUTO_TEST_CASE(zerocoin_spend_test)
-//{
-//    SelectParams(CBaseChainParams::MAIN);
-//    ZerocoinParams *ZCParams = Params().Zerocoin_Params(false);
-//    (void)ZCParams;
-//
-//    bool fFirstRun;
-//    cWallet.LoadWallet(fFirstRun);
-//    cWallet.zpivTracker = unique_ptr<CzPIVTracker>(new CzPIVTracker(cWallet.strWalletFile));
-//    CMutableTransaction tx;
-//    CWalletTx* wtx = new CWalletTx(&cWallet, tx);
-//    bool fMintChange=true;
-//    bool fMinimizeChange=true;
-//    std::vector<CZerocoinSpend> vSpends;
-//    std::vector<CZerocoinMint> vMints;
-//    CAmount nAmount = COIN;
-//
-//    CZerocoinSpendReceipt receipt;
-//    cWallet.SpendZerocoin(nAmount, *wtx, receipt, vMints, fMintChange, fMinimizeChange);
-//
-//    BOOST_CHECK_MESSAGE(receipt.GetStatus() == ZPIV_TRX_FUNDS_PROBLEMS, "Failed Invalid Amount Check");
-//
-//    nAmount = 1;
-//    CZerocoinSpendReceipt receipt2;
-//    cWallet.SpendZerocoin(nAmount, *wtx, receipt2, vMints, fMintChange, fMinimizeChange);
-//
-//    // if using "wallet.dat", instead of "unlocked.dat" need this
-//    /// BOOST_CHECK_MESSAGE(vString == "Error: Wallet locked, unable to create transaction!"," Locked Wallet Check Failed");
-//
-//    BOOST_CHECK_MESSAGE(receipt2.GetStatus() == ZPIV_TRX_FUNDS_PROBLEMS, "Failed Invalid Amount Check");
-//
-//}
+BOOST_AUTO_TEST_CASE(zerocoin_spend_test)
+{
+    SelectParams(CBaseChainParams::MAIN);
+    ZerocoinParams *ZCParams = Params().Zerocoin_Params(false);
+    (void)ZCParams;
+
+    bool fFirstRun;
+    cWallet.LoadWallet(fFirstRun);
+    cWallet.zpivTracker = unique_ptr<CzPIVTracker>(new CzPIVTracker(cWallet.strWalletFile));
+    CMutableTransaction tx;
+    CWalletTx* wtx = new CWalletTx(&cWallet, tx);
+    bool fMintChange=true;
+    bool fMinimizeChange=true;
+    std::vector<CZerocoinSpend> vSpends;
+    std::vector<CZerocoinMint> vMints;
+    CAmount nAmount = COIN;
+
+    CZerocoinSpendReceipt receipt;
+    cWallet.SpendZerocoin(nAmount, *wtx, receipt, vMints, fMintChange, fMinimizeChange);
+
+    BOOST_CHECK_MESSAGE(receipt.GetStatus() == ZPIV_TRX_FUNDS_PROBLEMS, "Failed Invalid Amount Check");
+
+    nAmount = 1;
+    CZerocoinSpendReceipt receipt2;
+    cWallet.SpendZerocoin(nAmount, *wtx, receipt2, vMints, fMintChange, fMinimizeChange);
+
+    // if using "wallet.dat", instead of "unlocked.dat" need this
+    /// BOOST_CHECK_MESSAGE(vString == "Error: Wallet locked, unable to create transaction!"," Locked Wallet Check Failed");
+
+    BOOST_CHECK_MESSAGE(receipt2.GetStatus() == ZPIV_TRX_FUNDS_PROBLEMS, "Failed Invalid Amount Check");
+
+}
 
 BOOST_AUTO_TEST_CASE(zerocoin_public_spend_test)
 {
@@ -76,35 +76,40 @@ BOOST_AUTO_TEST_CASE(zerocoin_public_spend_test)
             nullptr);
     mint.SetPrivKey(privKey);
 
-    // Tx data.
+
+    // Mint tx
+    CTransaction prevTx;
+
+    CScript scriptSerializedCoin = CScript()
+    << OP_ZEROCOINMINT << privCoin.getPublicCoin().getValue().getvch().size() << privCoin.getPublicCoin().getValue().getvch();
+    CTxOut out = CTxOut(libzerocoin::ZerocoinDenominationToAmount(privCoin.getPublicCoin().getDenomination()), scriptSerializedCoin);
+    prevTx.vout.push_back(out);
+
     mint.SetOutputIndex(0);
+    mint.SetTxHash(prevTx.GetHash());
 
     // Spend tx
-    CTransaction tx;
+    CMutableTransaction tx;
     tx.vout.resize(1);
     tx.vout[0].nValue = 1*CENT;
-    tx.vout[0].scriptPubKey = GetScriptForDestination(CBitcoinAddress("D9Ti4LEhF1n6dR2hGd2SyNADD51AVgva6q").Get()); //GetScriptForDestination(key.GetPubKey().GetID());
-
+    tx.vout[0].scriptPubKey = GetScriptForDestination(CBitcoinAddress("D9Ti4LEhF1n6dR2hGd2SyNADD51AVgva6q").Get());
 
     CTxIn in;
     if (!zpivModule.createInput(in, mint, tx.GetHash())){
         BOOST_CHECK_MESSAGE(false, "Failed to create zc input");
     }
 
-    CScript scriptSerializedCoin = CScript()
-            << OP_ZEROCOINMINT << privCoin.getPublicCoin().getValue().getvch().size() << privCoin.getPublicCoin().getValue().getvch();
-    CTxOut out = CTxOut(libzerocoin::ZerocoinDenominationToAmount(privCoin.getPublicCoin().getDenomination()), scriptSerializedCoin);
-
-    PublicCoinSpend publicSpend;
+    PublicCoinSpend publicSpend(ZCParams);
     if (!zpivModule.validateInput(in, out, tx, publicSpend)){
         BOOST_CHECK_MESSAGE(false, "Failed to validate zc input");
     }
 
-    libzerocoin::CoinSpend spend = zpivModule.parseCoinSpend(in, tx);
-    PublicCoinSpend publicSpendTest = zpivModule.parseCoinSpend(in, tx);
+    PublicCoinSpend publicSpendTest(ZCParams);
+    BOOST_CHECK_MESSAGE(zpivModule.parseCoinSpend(in, tx, out, publicSpendTest), "Failed to parse public spend");
+    libzerocoin::CoinSpend *spend = &publicSpendTest;
 
     BOOST_CHECK_MESSAGE(publicSpendTest.HasValidSignature(), "Failed to validate public spend signature");
-    BOOST_CHECK_MESSAGE(spend.HasValidSignature(), "Failed to validate spend signature");
+    BOOST_CHECK_MESSAGE(spend->HasValidSignature(), "Failed to validate spend signature");
 
 }
 
