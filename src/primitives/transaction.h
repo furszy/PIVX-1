@@ -261,7 +261,12 @@ public:
 
     bool IsZerocoinSpend() const
     {
-        return (vin.size() > 0 && vin[0].prevout.hash == 0 && vin[0].scriptSig[0] == OP_ZEROCOINSPEND);
+        // The wallet only allows spend inputs in the same tx and not a combination between piv and zpiv
+        for(const CTxIn& txin : vin) {
+            if (txin.scriptSig.IsZerocoinSpend() || txin.scriptSig.IsZerocoinPublicSpend())
+                return true;
+        }
+        return false;
     }
 
     bool IsZerocoinMint() const
