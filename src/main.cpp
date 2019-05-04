@@ -4797,7 +4797,7 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex, 
                 if(coin && !coin->IsAvailable(in.prevout.n)){
                     // If this is not available get the height of the spent and validate it with the forked height
                     // Check if this occurred before the chain split
-                    if(!(isBlockFromFork && coin->nHeight > splitHeight)){
+                    if(!isBlockFromFork || (isBlockFromFork && coin->nHeight <= splitHeight) ){
                         // Coins not available
                         return error("%s: coin stake inputs already spent in main chain", __func__);
                     }
