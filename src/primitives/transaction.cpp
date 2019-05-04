@@ -209,12 +209,12 @@ std::list<COutPoint> CTransaction::GetOutPoints() const
 
 CAmount CTransaction::GetZerocoinSpent() const
 {
-    if(!IsZerocoinSpend())
+    if(!IsZerocoinSpend() && !IsZerocoinPublicSpend())
         return 0;
 
     CAmount nValueOut = 0;
     for (const CTxIn& txin : vin) {
-        if(!txin.scriptSig.IsZerocoinSpend())
+        if(!txin.scriptSig.IsZerocoinSpend() && !txin.scriptSig.IsZerocoinPublicSpend())
             continue;
 
         nValueOut += txin.nSequence * COIN;

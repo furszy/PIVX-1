@@ -7,6 +7,7 @@
 #include "libzerocoin/Commitment.h"
 #include "libzerocoin/Coin.h"
 #include "hash.h"
+#include "main.h"
 #include "iostream"
 
 bool PublicCoinSpend::HasValidSerial(libzerocoin::ZerocoinParams* params) const {

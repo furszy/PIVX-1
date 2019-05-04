@@ -21,6 +21,7 @@
 #include "primitives/block.h"
 #include "primitives/transaction.h"
 #include "zpiv/zerocoin.h"
+#include "zpiv/zpivmodule.h"
 #include "script/script.h"
 #include "script/sigcache.h"
 #include "script/standard.h"
@@ -372,6 +373,16 @@ bool ReindexAccumulators(list<uint256>& listMissingCheckpoints, string& strError
 
 // Fake Serial attack Range
 bool isBlockBetweenFakeSerialAttackRange(int nHeight);
+
+// Public zc spend parse
+/**
+ *
+ * @param in --> public zc spend input
+ * @param tx --> input parent
+ * @param publicCoinSpend ---> return the publicCoinSpend parsed
+ * @return true if everything went ok
+ */
+bool ParseZerocoinPublicSpend(const CTxIn &in, const CTransaction& tx, CValidationState& state, PublicCoinSpend& publicCoinSpend);
 
 
 /**

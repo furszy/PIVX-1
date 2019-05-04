@@ -12,7 +12,6 @@
 #include "libzerocoin/SpendType.h"
 #include "primitives/transaction.h"
 #include "script/script.h"
-#include "main.h"
 #include "serialize.h"
 #include "uint256.h"
 #include <streams.h>
