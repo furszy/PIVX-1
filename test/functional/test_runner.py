@@ -65,6 +65,7 @@ BASE_SCRIPTS= [
     'feature_block.py',
     'rpc_fundrawtransaction.py',
     # vv Tests less than 2m vv
+    'p2p_pos_doublestake-splitchain.py',
     'p2p_pos_doublespend.py',
     'wallet_basic.py',
     'wallet_accounts.py',
