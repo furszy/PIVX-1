@@ -122,9 +122,9 @@ public:
     static std::vector<unsigned char> ParseSerial(CDataStream& s);
 
     virtual const uint256 signatureHash() const;
-    bool Verify(const Accumulator& a, bool verifyParams = true) const;
-    virtual bool HasValidSerial(ZerocoinParams* params) const;
-    virtual bool HasValidSignature() const;
+    virtual bool Verify(const Accumulator& a, bool verifyParams = true) const;
+    bool HasValidSerial(ZerocoinParams* params) const;
+    bool HasValidSignature() const;
     void setTxOutHash(uint256 txOutHash) { this->ptxHash = txOutHash; };
     void setDenom(libzerocoin::CoinDenomination denom) { this->denomination = denom; }
 

@@ -1081,7 +1081,7 @@ bool CheckZerocoinSpend(const CTransaction& tx, bool fVerifySignature, CValidati
             }
             libzerocoin::ZerocoinParams* params = Params().Zerocoin_Params(false);
             PublicCoinSpend publicSpend(params);
-            if (!pwalletMain->zpivModule.parseCoinSpend(txin, tx, prevOut, publicSpend)){
+            if (!ZPIVModule::parseCoinSpend(txin, tx, prevOut, publicSpend)){
                 return state.DoS(100, error("CheckZerocoinSpend(): public zerocoin spend parse failed"));
             }
             newSpend = publicSpend;
@@ -1104,7 +1104,7 @@ bool CheckZerocoinSpend(const CTransaction& tx, bool fVerifySignature, CValidati
         if (isPublicSpend) {
             libzerocoin::ZerocoinParams* params = Params().Zerocoin_Params(false);
             PublicCoinSpend ret(params);
-            if (!pwalletMain->zpivModule.validateInput(txin, prevOut, tx, ret)){
+            if (!ZPIVModule::validateInput(txin, prevOut, tx, ret)){
                 return state.DoS(100, error("CheckZerocoinSpend(): public zerocoin spend did not verify"));
             }
         } else
@@ -1800,7 +1800,7 @@ bool ParseZerocoinPublicSpend(const CTxIn &txIn, const CTransaction& tx, CValida
         return state.DoS(100, error("%s: public zerocoin spend prev output not found, prevTx %s, index %d",
                                     __func__, txIn.prevout.hash.GetHex(), txIn.prevout.n));
     }
-    if (!pwalletMain->zpivModule.parseCoinSpend(txIn, tx, prevOut, publicSpend)) {
+    if (!ZPIVModule::parseCoinSpend(txIn, tx, prevOut, publicSpend)) {
         return state.Invalid(error("%s: invalid public coin spend parse %s", __func__,
                                    tx.GetHash().GetHex()), REJECT_INVALID, "bad-txns-invalid-zpiv");
     }

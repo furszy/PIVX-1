@@ -4874,12 +4874,12 @@ bool CWallet::MintsToInputVectorPublicSpend(std::map<CBigNum, CZerocoinMint>& ma
 
             mint.SetOutputIndex(outputIndex);
             CTxIn in;
-            if(!zpivModule.createInput(in, mint, hashTxOut)){
+            if(!ZPIVModule::createInput(in, mint, hashTxOut)){
                 receipt.SetStatus(_("Cannot create public spend input"), ZPIV_TXMINT_GENERAL);
                 return false;
             }
             vin.emplace_back(in);
-            receipt.AddSpend(CZerocoinSpend(mint.GetSerialNumber(), 0, mint.GetValue(), mint.GetDenomination(), 0, true));
+            receipt.AddSpend(CZerocoinSpend(mint.GetSerialNumber(), 0, mint.GetValue(), mint.GetDenomination(), 0));
         }
         break;
     }

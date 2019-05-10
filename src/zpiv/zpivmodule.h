@@ -41,11 +41,12 @@ public:
 
     uint8_t getVersion() const { return libzerocoin::PrivateCoin::PUBKEY_VERSION; }
 
-    virtual bool HasValidSerial(libzerocoin::ZerocoinParams* params) const override;
-    virtual bool HasValidSignature() const override ;
-    virtual const uint256 signatureHash() const override { return ptxHash; }
+    const uint256 signatureHash() const override { return ptxHash; }
     libzerocoin::SpendType getSpendType() const { return libzerocoin::SpendType::SPEND; }
+    bool Verify(const libzerocoin::Accumulator& a, bool verifyParams = true) const override;
+    bool validate() const;
 
+    // Members
     CBigNum randomness;
     // prev out values
     uint256 txHash = 0;
@@ -64,11 +65,7 @@ public:
 };
 
 
-class ZPIVModule {
-
-public:
-    ZPIVModule(){}
-
+namespace ZPIVModule {
     bool createInput(CTxIn &in, CZerocoinMint& mint, uint256 hashTxOut);
     bool parseCoinSpend(const CTxIn &in, const CTransaction& tx, const CTxOut &prevOut, PublicCoinSpend& publicCoinSpend);
     bool validateInput(const CTxIn &in, const CTxOut &prevOut, const CTransaction& tx, PublicCoinSpend& ret);

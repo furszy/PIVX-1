@@ -286,8 +286,6 @@ public:
     bool fCombineDust;
     CAmount nAutoCombineThreshold;
 
-    ZPIVModule zpivModule;
-
     CWallet()
     {
         SetNull();

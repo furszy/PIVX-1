@@ -207,16 +207,6 @@ public:
         this->nAccumulatorChecksum = nAccumulatorChecksum;
     }
 
-    CZerocoinSpend(CBigNum coinSerial, uint256 hashTx, CBigNum pubCoin, libzerocoin::CoinDenomination denomination, unsigned int nAccumulatorChecksum, bool isPublicSpend)
-    {
-        this->coinSerial = coinSerial;
-        this->hashTx = hashTx;
-        this->pubCoin = pubCoin;
-        this->denomination = denomination;
-        this->nAccumulatorChecksum = nAccumulatorChecksum;
-        this->publicSpend = isPublicSpend;
-    }
-
     void SetNull()
     {
         coinSerial = 0;
@@ -234,7 +224,6 @@ public:
     uint256 GetHash() const;
     void SetMintCount(int nMintsAdded) { this->nMintCount = nMintsAdded; }
     int GetMintCount() const { return nMintCount; }
-    bool IsPublicSpend() const { return publicSpend; }
  
     ADD_SERIALIZE_METHODS;
 
