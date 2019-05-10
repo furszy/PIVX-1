@@ -190,7 +190,6 @@ private:
     libzerocoin::CoinDenomination denomination;
     unsigned int nAccumulatorChecksum;
     int nMintCount; //memory only - the amount of mints that belong to the accumulator this is spent from
-    bool publicSpend = false;
 
 public:
     CZerocoinSpend()
