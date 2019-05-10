@@ -94,4 +94,18 @@ namespace ZPIVModule {
         // TODO: Validate that the prev out has the same spend denom?
         return publicSpend.validate();
     }
+
+    bool ParseZerocoinPublicSpend(const CTxIn &txIn, const CTransaction& tx, CValidationState& state, PublicCoinSpend& publicSpend)
+    {
+        CTxOut prevOut;
+        if(!GetOutput(txIn.prevout.hash, txIn.prevout.n ,state, prevOut)){
+            return state.DoS(100, error("%s: public zerocoin spend prev output not found, prevTx %s, index %d",
+                                        __func__, txIn.prevout.hash.GetHex(), txIn.prevout.n));
+        }
+        if (!ZPIVModule::parseCoinSpend(txIn, tx, prevOut, publicSpend)) {
+            return state.Invalid(error("%s: invalid public coin spend parse %s", __func__,
+                                       tx.GetHash().GetHex()), REJECT_INVALID, "bad-txns-invalid-zpiv");
+        }
+        return true;
+    }
 }

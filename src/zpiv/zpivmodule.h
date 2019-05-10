@@ -65,10 +65,22 @@ public:
 };
 
 
+class CValidationState;
+
 namespace ZPIVModule {
     bool createInput(CTxIn &in, CZerocoinMint& mint, uint256 hashTxOut);
     bool parseCoinSpend(const CTxIn &in, const CTransaction& tx, const CTxOut &prevOut, PublicCoinSpend& publicCoinSpend);
     bool validateInput(const CTxIn &in, const CTxOut &prevOut, const CTransaction& tx, PublicCoinSpend& ret);
+
+    // Public zc spend parse
+    /**
+     *
+     * @param in --> public zc spend input
+     * @param tx --> input parent
+     * @param publicCoinSpend ---> return the publicCoinSpend parsed
+     * @return true if everything went ok
+     */
+    bool ParseZerocoinPublicSpend(const CTxIn &in, const CTransaction& tx, CValidationState& state, PublicCoinSpend& publicCoinSpend);
 };
 
 

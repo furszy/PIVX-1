@@ -374,17 +374,6 @@ bool ReindexAccumulators(list<uint256>& listMissingCheckpoints, string& strError
 // Fake Serial attack Range
 bool isBlockBetweenFakeSerialAttackRange(int nHeight);
 
-// Public zc spend parse
-/**
- *
- * @param in --> public zc spend input
- * @param tx --> input parent
- * @param publicCoinSpend ---> return the publicCoinSpend parsed
- * @return true if everything went ok
- */
-bool ParseZerocoinPublicSpend(const CTxIn &in, const CTransaction& tx, CValidationState& state, PublicCoinSpend& publicCoinSpend);
-
-
 /**
  * Check if transaction will be final in the next block to be created.
  *

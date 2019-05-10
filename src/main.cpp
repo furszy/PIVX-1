@@ -1386,7 +1386,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState& state, const CTransa
                 if (isPublicSpend) {
                     libzerocoin::ZerocoinParams* params = Params().Zerocoin_Params(false);
                     PublicCoinSpend publicSpend(params);
-                    if (!ParseZerocoinPublicSpend(txIn, tx, state, publicSpend)){
+                    if (!ZPIVModule::ParseZerocoinPublicSpend(txIn, tx, state, publicSpend)){
                         return false;
                     }
                     if (!ContextualCheckZerocoinSpend(tx, &publicSpend, chainActive.Tip(), 0))
@@ -1790,20 +1790,6 @@ bool GetOutput(const uint256& hash, unsigned int index, CValidationState& state,
         return state.DoS(100, error("Output not found, invalid index %d", index));
     }
     out = txPrev.vout[index];
-    return true;
-}
-
-bool ParseZerocoinPublicSpend(const CTxIn &txIn, const CTransaction& tx, CValidationState& state, PublicCoinSpend& publicSpend)
-{
-    CTxOut prevOut;
-    if(!GetOutput(txIn.prevout.hash, txIn.prevout.n ,state, prevOut)){
-        return state.DoS(100, error("%s: public zerocoin spend prev output not found, prevTx %s, index %d",
-                                    __func__, txIn.prevout.hash.GetHex(), txIn.prevout.n));
-    }
-    if (!ZPIVModule::parseCoinSpend(txIn, tx, prevOut, publicSpend)) {
-        return state.Invalid(error("%s: invalid public coin spend parse %s", __func__,
-                                   tx.GetHash().GetHex()), REJECT_INVALID, "bad-txns-invalid-zpiv");
-    }
     return true;
 }
 
@@ -2455,7 +2441,7 @@ void AddInvalidSpendsToMap(const CBlock& block)
                     libzerocoin::ZerocoinParams* params = Params().Zerocoin_Params(false);
                     PublicCoinSpend publicSpend(params);
                     CValidationState state;
-                    if (!ParseZerocoinPublicSpend(in, tx, state, publicSpend)){
+                    if (!ZPIVModule::ParseZerocoinPublicSpend(in, tx, state, publicSpend)){
                         throw runtime_error("Failed to parse public spend");
                     }
                     spend = &publicSpend;
@@ -2661,7 +2647,7 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex
                             libzerocoin::ZerocoinParams* params = Params().Zerocoin_Params(false);
                             PublicCoinSpend publicSpend(params);
                             CValidationState state;
-                            if (!ParseZerocoinPublicSpend(txin, tx, state, publicSpend)){
+                            if (!ZPIVModule::ParseZerocoinPublicSpend(txin, tx, state, publicSpend)){
                                 return error("Failed to parse public spend");
                             }
                             serial = publicSpend.getCoinSerialNumber();
@@ -3231,7 +3217,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                 if (isPublicSpend) {
                     libzerocoin::ZerocoinParams* params = Params().Zerocoin_Params(false);
                     PublicCoinSpend publicSpend(params);
-                    if (!ParseZerocoinPublicSpend(txIn, tx, state, publicSpend)){
+                    if (!ZPIVModule::ParseZerocoinPublicSpend(txIn, tx, state, publicSpend)){
                         return false;
                     }
                     nValueIn += publicSpend.getDenomination() * COIN;
@@ -4432,7 +4418,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
                     if (isPublicSpend) {
                         libzerocoin::ZerocoinParams* params = Params().Zerocoin_Params(false);
                         PublicCoinSpend publicSpend(params);
-                        if (!ParseZerocoinPublicSpend(txIn, tx, state, publicSpend)){
+                        if (!ZPIVModule::ParseZerocoinPublicSpend(txIn, tx, state, publicSpend)){
                             return false;
                         }
                         spend = publicSpend;
@@ -4790,7 +4776,7 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex, 
                         if (isPublicSpend) {
                             libzerocoin::ZerocoinParams* params = Params().Zerocoin_Params(false);
                             PublicCoinSpend publicSpend(params);
-                            if (!ParseZerocoinPublicSpend(in, tx, state, publicSpend)){
+                            if (!ZPIVModule::ParseZerocoinPublicSpend(in, tx, state, publicSpend)){
                                 return false;
                             }
                             spend = publicSpend;
