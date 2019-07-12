@@ -180,6 +180,7 @@ public:
         nEnforceNewSporkKey = 1566860400; //!> Sporks signed after Monday, August 26, 2019 11:00:00 PM GMT must use the new spork key
         nRejectOldSporkKey = 1569538800; //!> Fully reject old spork key after Thursday, September 26, 2019 11:00:00 PM GMT
         nBlockStakeModifierlV2 = 1967000;
+
         // Public coin spend enforcement
         nPublicZCSpends = 1880000;
 
@@ -189,6 +190,9 @@ public:
         // Fake Serial Attack
         nFakeSerialBlockheightEnd = 1686229;
         nSupplyBeforeFakeSerial = 4131563 * COIN;   // zerocoin supply at block nFakeSerialBlockheightEnd
+
+        // Cold Staking enforcement
+        nColdStakingStart = 2880000;
 
         /**
          * Build the genesis block. Note that the output of the genesis coinbase cannot
@@ -319,6 +323,7 @@ public:
         nEnforceNewSporkKey = 1566860400; //!> Sporks signed after Monday, August 26, 2019 11:00:00 PM GMT must use the new spork key
         nRejectOldSporkKey = 1569538800; //!> Reject old spork key after Thursday, September 26, 2019 11:00:00 PM GMT
         nBlockStakeModifierlV2 = 1214000;
+
         // Public coin spend enforcement
         nPublicZCSpends = 1106100;
 
@@ -328,6 +333,9 @@ public:
         // Fake Serial Attack
         nFakeSerialBlockheightEnd = -1;
         nSupplyBeforeFakeSerial = 0;
+
+        // Cold Staking enforcement
+        nColdStakingStart = 2106100;
 
         //! Modify the testnet genesis block so the timestamp is valid for a later start.
         genesis.nTime = 1454124731;
@@ -416,6 +424,7 @@ public:
         nBlockFirstFraudulent = 999999999; //First block that bad serials emerged
         nBlockLastGoodCheckpoint = 999999999; //Last valid accumulator checkpoint
         nBlockStakeModifierlV2 = std::numeric_limits<int>::max(); // max integer value (never switch on regtest)
+
         // Public coin spend enforcement
         nPublicZCSpends = 350;
 
@@ -424,6 +433,9 @@ public:
 
         // Fake Serial Attack
         nFakeSerialBlockheightEnd = -1;
+
+        // Cold Staking enforcement
+        nColdStakingStart = 251;
 
         //! Modify the regtest genesis block so the timestamp is valid for a later start.
         genesis.nTime = 1454124731;
