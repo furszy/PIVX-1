@@ -169,7 +169,7 @@ public:
 class CWallet : public CCryptoKeyStore, public CValidationInterface
 {
 private:
-    bool SelectCoins(const CAmount& nTargetValue, std::set<std::pair<const CWalletTx*, unsigned int> >& setCoinsRet, CAmount& nValueRet, const CCoinControl* coinControl = NULL, AvailableCoinsType coin_type = ALL_COINS, bool useIX = true) const;
+    bool SelectCoins(const CAmount& nTargetValue, std::set<std::pair<const CWalletTx*, unsigned int> >& setCoinsRet, CAmount& nValueRet, const CCoinControl* coinControl = NULL, AvailableCoinsType coin_type = ALL_COINS, bool useIX = true, bool fIncludeColdStaking=false, bool fIncludeDelegated=true) const;
     //it was public bool SelectCoins(int64_t nTargetValue, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet, const CCoinControl *coinControl = NULL, AvailableCoinsType coin_type=ALL_COINS, bool useIX = true) const;
 
     CWalletDB* pwalletdbEncryption;
@@ -423,14 +423,14 @@ public:
         return nWalletMaxVersion >= wf;
     }
 
-    void AvailableCoins(std::vector<COutput>& vCoins, bool fOnlyConfirmed = true, const CCoinControl* coinControl = NULL, bool fIncludeZeroValue = false, AvailableCoinsType nCoinType = ALL_COINS, bool fUseIX = false, int nWatchonlyConfig = 1) const;
+    void AvailableCoins(std::vector<COutput>& vCoins, bool fOnlyConfirmed = true, const CCoinControl* coinControl = NULL, bool fIncludeZeroValue = false, AvailableCoinsType nCoinType = ALL_COINS, bool fUseIX = false, int nWatchonlyConfig = 1, bool fIncludeColdStaking=false, bool fIncludeDelegated=true) const;
     std::map<CBitcoinAddress, std::vector<COutput> > AvailableCoinsByAddress(bool fConfirmed = true, CAmount maxCoinValue = 0);
     bool SelectCoinsMinConf(const CAmount& nTargetValue, int nConfMine, int nConfTheirs, std::vector<COutput> vCoins, std::set<std::pair<const CWalletTx*, unsigned int> >& setCoinsRet, CAmount& nValueRet) const;
 
-    /// Get 1000DASH output and keys which can be used for the Masternode
+    /// Get 10000 PIV output and keys which can be used for the Masternode
     bool GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& keyRet, std::string strTxHash = "", std::string strOutputIndex = "");
     /// Extract txin information and keys from output
-    bool GetVinAndKeysFromOutput(COutput out, CTxIn& txinRet, CPubKey& pubKeyRet, CKey& keyRet);
+    bool GetVinAndKeysFromOutput(COutput out, CTxIn& txinRet, CPubKey& pubKeyRet, CKey& keyRet, bool fColdStake = false);
 
     bool IsSpent(const uint256& hash, unsigned int n) const;
 
@@ -510,6 +510,8 @@ public:
     void ReacceptWalletTransactions();
     void ResendWalletTransactions();
     CAmount GetBalance() const;
+    CAmount GetColdStakingBalance() const;  // delegated coins for which we have the staking key
+    CAmount GetDelegatedBalance() const;  // delegated coins for which we have the spending key
     CAmount GetZerocoinBalance(bool fMatureOnly) const;
     CAmount GetUnconfirmedZerocoinBalance() const;
     CAmount GetImmatureZerocoinBalance() const;
@@ -522,7 +524,6 @@ public:
     CAmount GetUnconfirmedWatchOnlyBalance() const;
     CAmount GetImmatureWatchOnlyBalance() const;
     CAmount GetLockedWatchOnlyBalance() const;
-    bool CreateTransaction(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, std::string& strFailReason, const CCoinControl* coinControl);
     bool CreateTransaction(const std::vector<std::pair<CScript, CAmount> >& vecSend,
         CWalletTx& wtxNew,
         CReserveKey& reservekey,
@@ -531,8 +532,9 @@ public:
         const CCoinControl* coinControl = NULL,
         AvailableCoinsType coin_type = ALL_COINS,
         bool useIX = false,
-        CAmount nFeePay = 0);
-    bool CreateTransaction(CScript scriptPubKey, const CAmount& nValue, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet, std::string& strFailReason, const CCoinControl* coinControl = NULL, AvailableCoinsType coin_type = ALL_COINS, bool useIX = false, CAmount nFeePay = 0);
+        CAmount nFeePay = 0,
+        bool fIncludeDelegated = false);
+    bool CreateTransaction(CScript scriptPubKey, const CAmount& nValue, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet, std::string& strFailReason, const CCoinControl* coinControl = NULL, AvailableCoinsType coin_type = ALL_COINS, bool useIX = false, CAmount nFeePay = 0, bool fIncludeDelegated = false);
     bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, std::string strCommand = "tx");
     bool AddAccountingEntry(const CAccountingEntry&, CWalletDB & pwalletdb);
     int GenerateObfuscationOutputs(int nTotalValue, std::vector<CTxOut>& vout);
@@ -638,8 +640,9 @@ public:
     DBErrors ZapWalletTx(std::vector<CWalletTx>& vWtx);
 
     bool SetAddressBook(const CTxDestination& address, const std::string& strName, const std::string& purpose);
-
     bool DelAddressBook(const CTxDestination& address);
+    bool HasAddressBook(const CTxDestination& address) const;
+    bool HasDelegator(const CTxOut& out) const;
 
     bool UpdatedTransaction(const uint256& hashTx);
 
@@ -861,6 +864,10 @@ public:
     mutable bool fImmatureWatchCreditCached;
     mutable bool fAvailableWatchCreditCached;
     mutable bool fChangeCached;
+    mutable bool fColdDebitCached;
+    mutable bool fColdCreditCached;
+    mutable bool fDelegatedDebitCached;
+    mutable bool fDelegatedCreditCached;
     mutable CAmount nDebitCached;
     mutable CAmount nCreditCached;
     mutable CAmount nImmatureCreditCached;
@@ -874,6 +881,10 @@ public:
     mutable CAmount nImmatureWatchCreditCached;
     mutable CAmount nAvailableWatchCreditCached;
     mutable CAmount nChangeCached;
+    mutable CAmount nColdDebitCached;
+    mutable CAmount nColdCreditCached;
+    mutable CAmount nDelegatedDebitCached;
+    mutable CAmount nDelegatedCreditCached;
 
     CWalletTx()
     {
@@ -918,6 +929,10 @@ public:
         fImmatureWatchCreditCached = false;
         fAvailableWatchCreditCached = false;
         fChangeCached = false;
+        fColdDebitCached = false;
+        fColdCreditCached = false;
+        fDelegatedDebitCached = false;
+        fDelegatedCreditCached = false;
         nDebitCached = 0;
         nCreditCached = 0;
         nImmatureCreditCached = 0;
@@ -930,6 +945,10 @@ public:
         nWatchCreditCached = 0;
         nAvailableWatchCreditCached = 0;
         nImmatureWatchCreditCached = 0;
+        nColdDebitCached = 0;
+        nColdCreditCached = 0;
+        nDelegatedDebitCached = 0;
+        nDelegatedCreditCached = 0;
         nChangeCached = 0;
         nOrderPos = -1;
     }
@@ -992,6 +1011,10 @@ public:
         fImmatureWatchCreditCached = false;
         fDebitCached = false;
         fChangeCached = false;
+        fColdDebitCached = false;
+        fColdCreditCached = false;
+        fDelegatedDebitCached = false;
+        fDelegatedCreditCached = false;
     }
 
     void BindWallet(CWallet* pwalletIn)
@@ -1012,6 +1035,9 @@ public:
     CAmount GetImmatureWatchOnlyCredit(const bool& fUseCache = true) const;
     CAmount GetAvailableWatchOnlyCredit(const bool& fUseCache = true) const;
     CAmount GetLockedWatchOnlyCredit() const;
+    // Cold staking contracts credit
+    CAmount GetColdStakingCredit(bool fUseCache = true) const;
+    CAmount GetStakeDelegationCredit(bool fUseCache = true) const;
 
     CAmount GetChange() const
     {
@@ -1069,8 +1095,10 @@ public:
     int64_t GetComputedTxTime() const;
     int GetRequestCount() const;
     void RelayWalletTransaction(std::string strCommand = "tx");
-
     std::set<uint256> GetConflicts() const;
+
+protected:
+    CAmount CreditFor(const isminetype& minetype) const;
 };
 
 
