@@ -469,6 +469,10 @@ void PIVXGUI::goToMasterNodes(){
     showTop(masterNodesWidget);
 }
 
+void PIVXGUI::goToColdStaking(){
+    showTop(coldStakingWidget);
+}
+
 void PIVXGUI::goToSettings(){
     showTop(settingsWidget);
 }
