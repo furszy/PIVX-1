@@ -149,6 +149,7 @@ public:
     int Block_Enforce_Invalid() const { return nBlockEnforceInvalidUTXO; }
     int Zerocoin_Block_V2_Start() const { return nBlockZerocoinV2; }
     bool IsStakeModifierV2(const int nHeight) const { return nHeight >= nBlockStakeModifierlV2; }
+    int NewSigsActive(const int nHeight) const { return nHeight >= nBlockEnforceNewMessageSignatures; }
 
     // fake serial attack
     int Zerocoin_Block_EndFakeSerial() const { return nFakeSerialBlockheightEnd; }
@@ -239,6 +240,7 @@ protected:
     int nPublicZCSpends;
     int nBlockStakeModifierlV2;
     int nBlockTimeProtocolV2;
+    int nBlockEnforceNewMessageSignatures;
 
     CAmount nMinColdStakingAmount;
 
