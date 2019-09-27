@@ -22,13 +22,16 @@ bool CMessageSigner::GetKeysFromSecret(const std::string& strSecret, CKey& keyRe
     return true;
 }
 
-bool CMessageSigner::SignMessage(const std::string& strMessage, std::vector<unsigned char>& vchSigRet, const CKey& key)
-{
+uint256 CMessageSigner::ProduceMessageHash(const std::string& strMessage) {
     CHashWriter ss(SER_GETHASH, 0);
     ss << strMessageMagic;
     ss << strMessage;
+    return ss.GetHash();
+}
 
-    return CHashSigner::SignHash(ss.GetHash(), key, vchSigRet);
+bool CMessageSigner::SignMessage(const std::string& strMessage, std::vector<unsigned char>& vchSigRet, const CKey& key)
+{
+    return CHashSigner::SignHash(ProduceMessageHash(strMessage), key, vchSigRet);
 }
 
 bool CMessageSigner::VerifyMessage(const CPubKey& pubkey, const std::vector<unsigned char>& vchSig, const std::string& strMessage, std::string& strErrorRet)
@@ -38,11 +41,7 @@ bool CMessageSigner::VerifyMessage(const CPubKey& pubkey, const std::vector<unsi
 
 bool CMessageSigner::VerifyMessage(const CKeyID& keyID, const std::vector<unsigned char>& vchSig, const std::string& strMessage, std::string& strErrorRet)
 {
-    CHashWriter ss(SER_GETHASH, 0);
-    ss << strMessageMagic;
-    ss << strMessage;
-
-    return CHashSigner::VerifyHash(ss.GetHash(), keyID, vchSig, strErrorRet);
+    return CHashSigner::VerifyHash(ProduceMessageHash(strMessage), keyID, vchSig, strErrorRet);
 }
 
 bool CHashSigner::SignHash(const uint256& hash, const CKey& key, std::vector<unsigned char>& vchSigRet)
