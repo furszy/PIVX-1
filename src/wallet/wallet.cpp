@@ -2194,7 +2194,7 @@ bool CWallet::SelectStakeCoins(std::list<std::unique_ptr<CStakeInput> >& listInp
 bool CWallet::MintableCoins()
 {
     LOCK(cs_main);
-    CAmount nBalance = GetBalance();
+    CAmount nBalance = GetBalance() + GetColdStakingBalance();
     CAmount nZpivBalance = GetZerocoinBalance(false);
 
     int chainHeight = chainActive.Height();
@@ -2207,7 +2207,8 @@ bool CWallet::MintableCoins()
             return false;
 
         std::vector<COutput> vCoins;
-        AvailableCoins(vCoins, true);
+        // include cold, exclude delegated
+        AvailableCoins(vCoins, true, NULL, false, STAKABLE_COINS, false, 1, GetBoolArg("-coldstaking", true), false);
 
         int64_t time = GetAdjustedTime();
         for (const COutput& out : vCoins) {
