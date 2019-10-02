@@ -672,6 +672,9 @@ void BitcoinMiner(CWallet* pwallet, bool fProofOfStake)
     CReserveKey reservekey(pwallet);
     unsigned int nExtraNonce = 0;
     bool fLastLoopOrphan = false;
+    bool fColdStake = GetBoolArg("-coldstaking", true);
+    CAmount stakingBalance = 0;
+
     while (fGenerateBitcoins || fProofOfStake) {
         if (fProofOfStake) {
             if (chainActive.Tip()->nHeight < Params().LAST_POW_BLOCK()) {
@@ -685,10 +688,11 @@ void BitcoinMiner(CWallet* pwallet, bool fProofOfStake)
             {
                 nMintableLastCheck = GetTime();
                 fMintableCoins = pwallet->MintableCoins();
+                stakingBalance = pwallet->GetStakingBalance(fColdStake);
             }
 
             while (vNodes.empty() || pwallet->IsLocked() || !fMintableCoins ||
-                   (pwallet->GetBalance() > 0 && nReserveBalance >= pwallet->GetBalance()) || !masternodeSync.IsSynced()) {
+                   (stakingBalance > 0 && nReserveBalance >= stakingBalance) || !masternodeSync.IsSynced()) {
                 nLastCoinStakeSearchInterval = 0;
                 MilliSleep(5000);
                 // Do a separate 1 minute check here to ensure fMintableCoins is updated
@@ -696,6 +700,7 @@ void BitcoinMiner(CWallet* pwallet, bool fProofOfStake)
                 {
                     nMintableLastCheck = GetTime();
                     fMintableCoins = pwallet->MintableCoins();
+                    stakingBalance = pwallet->GetStakingBalance(fColdStake);
                 }
             }
 
