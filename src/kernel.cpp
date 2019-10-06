@@ -380,7 +380,7 @@ bool StakeV1(const CBlockIndex* pindexPrev, CStakeInput* stakeInput, const uint3
     // iterate from maxTime down to pindexPrev->nTime (or min time due to maturity, 60 min after blockFrom)
     const unsigned int prevBlockTime = pindexPrev->nTime;
     const unsigned int maxTime = pindexPrev->MaxFutureBlockTime();
-    const unsigned int minTime = std::max(prevBlockTime, nTimeBlockFrom + 3600);
+    const unsigned int minTime = std::max(prevBlockTime, nTimeBlockFrom + Params().COINSTAKE_MIN_AGE());
     unsigned int nTryTime = maxTime;
 
     // check required maturity for stake
