@@ -510,14 +510,28 @@ bool WalletModel::isCoinStake(QString id){
     uint256 hashTx;
     hashTx.SetHex(id.toStdString());
     const CWalletTx* tx = getTx(hashTx);
-    return tx->IsCoinStake();
+    return tx && tx->IsCoinStake();
 }
 
 bool WalletModel::isCoinStakeMine(QString id){
     uint256 hashTx;
     hashTx.SetHex(id.toStdString());
     const CWalletTx* tx = getTx(hashTx);
-    return tx->IsCoinStake() && wallet->IsMine(tx->vin[0]);
+    return tx && tx->IsCoinStake() && wallet->IsMine(tx->vin[0]);
+}
+
+bool WalletModel::isDelegatedToMe(QString id) {
+    uint256 hashTx;
+    hashTx.SetHex(id.toStdString());
+    const CWalletTx* tx = getTx(hashTx);
+    if (tx && tx->HasP2CSOutputs()) {
+        for (auto out : tx->vout) {
+            if (wallet->IsMine(out) & ISMINE_COLD) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 bool WalletModel::mintCoins(CAmount value, CCoinControl* coinControl ,std::string &strError){
