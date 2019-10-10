@@ -469,7 +469,7 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
 
         // reject old signatures 6000 blocks after hard-fork
         if (winner.nMessVersion != MessageVersion::MESS_VER_HASH && Params().NewSigsActive(winner.nBlockHeight - 6000)) {
-            LogPrintf("%s : nMessVersion=%d not accepted anymore at block %d", __func__, winner.nMessVersion, nHeight);
+            LogPrintf("%s : nMessVersion=%d not accepted anymore at block %d\n", __func__, winner.nMessVersion, nHeight);
             return;
         }
 
