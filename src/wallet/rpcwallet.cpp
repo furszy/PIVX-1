@@ -1185,7 +1185,7 @@ UniValue getdelegatedbalance(const UniValue& params, bool fHelp)
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
     if (params.size() == 0)
-        return ValueFromAmount(pwalletMain->GetColdStakingBalance());
+        return ValueFromAmount(pwalletMain->GetDelegatedBalance());
 
     std::string strAccount = params[0].get_str();
     return ValueFromAmount(GetAccountBalance(strAccount, /*nMinDepth*/ 1, ISMINE_SPENDABLE_DELEGATED));
