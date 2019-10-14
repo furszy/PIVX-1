@@ -147,6 +147,7 @@ bool CChainParams::IsValidBlockTimeStamp(const int64_t nTime, const int nHeight)
         return true;
 
     // Time protocol v2 requires time in slots
+    return (nTime % TimeSlotLength()) == 0;
 }
 
 
