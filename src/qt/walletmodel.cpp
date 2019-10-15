@@ -992,6 +992,12 @@ bool WalletModel::isSpent(const COutPoint& outpoint) const
     return wallet->IsSpent(outpoint.hash, outpoint.n);
 }
 
+bool WalletModel::isDelegatedCoin(const uint256& hash, unsigned int n) const
+{
+    LOCK2(cs_main, wallet->cs_wallet);
+    return wallet->IsDelegatedCoin(hash, n);
+}
+
 // AvailableCoins + LockedCoins grouped by wallet address (put change in one group with wallet address)
 void WalletModel::listCoins(std::map<QString, std::vector<COutput> >& mapCoins) const
 {
@@ -1004,12 +1010,12 @@ void WalletModel::listCoins(std::map<QString, std::vector<COutput> >& mapCoins) 
 
     // add locked coins
     for (const COutPoint& outpoint : vLockedCoins) {
-        if (!wallet->mapWallet.count(outpoint.hash)) continue;
+        if (!wallet->mapWallet.count(outpoint.hash) || isSpent(outpoint)) continue;
         bool fConflicted;
         int nDepth = wallet->mapWallet[outpoint.hash].GetDepthAndMempool(fConflicted);
         if (nDepth < 0 || fConflicted) continue;
         COutput out(&wallet->mapWallet[outpoint.hash], outpoint.n, nDepth, true);
-        if (outpoint.n < out.tx->vout.size() && wallet->IsMine(out.tx->vout[outpoint.n]) == ISMINE_SPENDABLE)
+        if (outpoint.n < out.tx->vout.size() && bool(wallet->IsMine(out.tx->vout[outpoint.n]) & ISMINE_SPENDABLE_ALL))
             vCoins.push_back(out);
     }
 
