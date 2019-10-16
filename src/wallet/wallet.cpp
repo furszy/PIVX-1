@@ -757,6 +757,9 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletD
             }
         }
 
+        // Lock P2CS outputs - owner side
+        LockUnlockDelegatedCoins(wtx);
+
         //// debug print
         LogPrintf("AddToWallet %s  %s%s\n", wtxIn.GetHash().ToString(), (fInsertedNew ? "new" : ""), (fUpdated ? "update" : ""));
 
@@ -1985,6 +1988,10 @@ void CWallet::AvailableCoins(
         bool fIncludeDelegated) const
 {
     vCoins.clear();
+    const bool fCoinsSelected = (coinControl != nullptr) && coinControl->HasSelected();
+    // include delegated coins when coinControl is active (they are locked by default)
+    if (!fIncludeDelegated && fCoinsSelected)
+        fIncludeDelegated = true;
 
     {
         LOCK2(cs_main, cs_wallet);
@@ -2039,22 +2046,6 @@ void CWallet::AvailableCoins(
                 if (mine == ISMINE_NO)
                     continue;
 
-                // skip cold coins
-                if (mine == ISMINE_COLD) {
-                    if (!fIncludeColdStaking)
-                        continue;
-                    if (!HasDelegator(pcoin->vout[i]))
-                        continue;
-                }
-
-                // skip delegated coins
-                if (!fIncludeDelegated && mine == ISMINE_SPENDABLE_DELEGATED)
-                    continue;
-
-                // skip auto-delegated coins
-                if (!fIncludeColdStaking && !fIncludeDelegated && mine == ISMINE_SPENDABLE_STAKEABLE)
-                    continue;
-
                 if ((mine == ISMINE_MULTISIG || mine == ISMINE_SPENDABLE) && nWatchonlyConfig == 2)
                     continue;
 
@@ -2065,8 +2056,16 @@ void CWallet::AvailableCoins(
                     continue;
                 if (pcoin->vout[i].nValue <= 0 && !fIncludeZeroValue)
                     continue;
-                if (coinControl && coinControl->HasSelected() && !coinControl->fAllowOtherInputs && !coinControl->IsSelected((*it).first, i))
+                if (fCoinsSelected && !coinControl->fAllowOtherInputs && !coinControl->IsSelected((*it).first, i))
                     continue;
+
+                // --Skip P2CS outputs
+                // skip cold coins
+                if (mine == ISMINE_COLD && (!fIncludeColdStaking || !HasDelegator(pcoin->vout[i]))) continue;
+                // skip delegated coins
+                if (mine == ISMINE_SPENDABLE_DELEGATED && !fIncludeDelegated) continue;
+                // skip auto-delegated coins
+                if (mine == ISMINE_SPENDABLE_STAKEABLE && !fIncludeColdStaking && !fIncludeDelegated) continue;
 
                 bool fIsValid = (
                         ((mine & ISMINE_SPENDABLE) != ISMINE_NO) ||
@@ -2559,6 +2558,8 @@ bool CWallet::CreateTransaction(const std::vector<std::pair<CScript, CAmount> >&
 
 
                 for (PAIRTYPE(const CWalletTx*, unsigned int) pcoin : setCoins) {
+                    if(pcoin.first->vout[pcoin.second].scriptPubKey.IsPayToColdStaking())
+                        wtxNew.fStakeDelegationVoided = true;
                     CAmount nCredit = pcoin.first->vout[pcoin.second].nValue;
                     //The coin age after the next block (depth+1) is used instead of the current,
                     //reflecting an assumption the user would accept a bit more delay for
@@ -3402,6 +3403,35 @@ void CWallet::GetAllReserveKeys(std::set<CKeyID>& setAddress) const
     }
 }
 
+void CWallet::LockUnlockDelegatedCoins()
+{
+    LOCK(cs_wallet);
+    for(const auto& mw : mapWallet) {
+        LockUnlockDelegatedCoins(mw.second);
+    }
+}
+
+void CWallet::LockUnlockDelegatedCoins(const CWalletTx& wtx)
+{
+    if (!CheckFinalTx(wtx) || !wtx.IsTrusted()) return;
+
+    // Unlock inputs
+    if (IsFromMe(wtx)) {
+        for (const CTxIn& in : wtx.vin)
+            UnlockCoin(in.prevout);
+    }
+
+    // Lock outputs
+    uint256 hash = wtx.GetHash();
+    for (uint32_t i = 0; i < wtx.vout.size(); i++) {
+        if (bool(IsMine(wtx.vout[i]) & ISMINE_SPENDABLE_DELEGATED) && !IsSpent(hash, i)) {
+            COutPoint out(hash, i);
+            LockCoin(out);
+        }
+    }
+    return;
+}
+
 bool CWallet::UpdatedTransaction(const uint256& hashTx)
 {
     {
@@ -3416,13 +3446,13 @@ bool CWallet::UpdatedTransaction(const uint256& hashTx)
     return false;
 }
 
-void CWallet::LockCoin(COutPoint& output)
+void CWallet::LockCoin(const COutPoint& output)
 {
     AssertLockHeld(cs_wallet); // setLockedCoins
     setLockedCoins.insert(output);
 }
 
-void CWallet::UnlockCoin(COutPoint& output)
+void CWallet::UnlockCoin(const COutPoint& output)
 {
     AssertLockHeld(cs_wallet); // setLockedCoins
     setLockedCoins.erase(output);
@@ -3434,12 +3464,16 @@ void CWallet::UnlockAllCoins()
     setLockedCoins.clear();
 }
 
-bool CWallet::IsLockedCoin(uint256 hash, unsigned int n) const
+bool CWallet::IsLockedCoin(const COutPoint& outpt) const
 {
     AssertLockHeld(cs_wallet); // setLockedCoins
-    COutPoint outpt(hash, n);
-
     return (setLockedCoins.count(outpt) > 0);
+}
+
+bool CWallet::IsLockedCoin(const uint256& hash, unsigned int n) const
+{
+    COutPoint outpt(hash, n);
+    return IsLockedCoin(outpt);
 }
 
 void CWallet::ListLockedCoins(std::vector<COutPoint>& vOutpts)
@@ -3450,6 +3484,20 @@ void CWallet::ListLockedCoins(std::vector<COutPoint>& vOutpts)
         COutPoint outpt = (*it);
         vOutpts.push_back(outpt);
     }
+}
+
+bool CWallet::IsDelegatedCoin(const COutPoint& outpt) const
+{
+    return IsDelegatedCoin(outpt.hash, outpt.n);
+}
+
+bool CWallet::IsDelegatedCoin(const uint256& hash, unsigned int n) const
+{
+    AssertLockHeld(cs_wallet); // mapWallet
+    std::map<uint256, CWalletTx>::const_iterator mi = mapWallet.find(hash);
+    return (mi != mapWallet.end() &&
+            bool(IsMine(mi->second.vout[n]) & ISMINE_SPENDABLE_DELEGATED)
+            );
 }
 
 /** @} */ // end of Actions
@@ -5639,7 +5687,7 @@ CAmount CWallet::GetDebit(const CTransaction& tx, const isminefilter& filter) co
 CAmount CWallet::GetCredit(const CTransaction& tx, const isminefilter& filter, const bool fUnspent) const
 {
     CAmount nCredit = 0;
-    for (int i = 0; i < tx.vout.size(); i++) {
+    for (uint32_t i = 0; i < tx.vout.size(); i++) {
         if (fUnspent && IsSpent(tx.GetHash(), i)) continue;
         nCredit += GetCredit(tx.vout[i], filter);
     }
@@ -5728,6 +5776,7 @@ void CWalletTx::Init(const CWallet* pwalletIn)
     fColdCreditCached = false;
     fDelegatedDebitCached = false;
     fDelegatedCreditCached = false;
+    fStakeDelegationVoided = false;
     nDebitCached = 0;
     nCreditCached = 0;
     nImmatureCreditCached = 0;

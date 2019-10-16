@@ -345,11 +345,16 @@ public:
 
     bool IsSpent(const uint256& hash, unsigned int n) const;
 
-    bool IsLockedCoin(uint256 hash, unsigned int n) const;
-    void LockCoin(COutPoint& output);
-    void UnlockCoin(COutPoint& output);
+    bool IsLockedCoin(const COutPoint& outpt) const;
+    bool IsLockedCoin(const uint256& hash, const unsigned int n) const;
+    bool IsDelegatedCoin(const COutPoint& outpt) const;
+    bool IsDelegatedCoin(const uint256& hash, unsigned int n) const;
+    void LockCoin(const COutPoint& output);
+    void UnlockCoin(const COutPoint& output);
     void UnlockAllCoins();
     void ListLockedCoins(std::vector<COutPoint>& vOutpts);
+    void LockUnlockDelegatedCoins();
+    void LockUnlockDelegatedCoins(const CWalletTx& wtx);
 
     //  keystore implementation
     // Generate a new key
@@ -718,6 +723,7 @@ public:
     mutable bool fColdCreditCached;
     mutable bool fDelegatedDebitCached;
     mutable bool fDelegatedCreditCached;
+    mutable bool fStakeDelegationVoided;
     mutable CAmount nDebitCached;
     mutable CAmount nCreditCached;
     mutable CAmount nImmatureCreditCached;

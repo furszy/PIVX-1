@@ -1928,6 +1928,9 @@ bool AppInit2()
         }
     }
 
+    // lock P2CS (cold staking delegations) owned
+    pwalletMain->LockUnlockDelegatedCoins();
+
     fEnableZeromint = GetBoolArg("-enablezeromint", true);
 
     nZeromintPercentage = GetArg("-zeromintpercentage", 10);
