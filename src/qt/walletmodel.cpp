@@ -1012,9 +1012,13 @@ void WalletModel::listCoins(std::map<QString, std::vector<COutput> >& mapCoins) 
     for (const COutPoint& outpoint : vLockedCoins) {
         if (!wallet->mapWallet.count(outpoint.hash) || isSpent(outpoint)) continue;
         bool fConflicted;
-        int nDepth = wallet->mapWallet[outpoint.hash].GetDepthAndMempool(fConflicted);
+        const CWalletTx& pcoin = wallet->mapWallet[outpoint.hash];
+        int nDepth = pcoin.GetDepthAndMempool(fConflicted);
         if (nDepth < 0 || fConflicted) continue;
-        COutput out(&wallet->mapWallet[outpoint.hash], outpoint.n, nDepth, true);
+        // check maturity for coinbase/coinstake txes
+        if ((pcoin.IsCoinBase() || pcoin.IsCoinStake()) && pcoin.GetBlocksToMaturity() > 0)
+            continue;
+        COutput out(&pcoin, outpoint.n, nDepth, true);
         if (outpoint.n < out.tx->vout.size() && bool(wallet->IsMine(out.tx->vout[outpoint.n]) & ISMINE_SPENDABLE_ALL))
             vCoins.push_back(out);
     }

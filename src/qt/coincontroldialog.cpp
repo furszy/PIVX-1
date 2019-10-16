@@ -902,11 +902,6 @@ void CoinControlDialog::updateView()
                 itemOutput->setIcon(COLUMN_CHECKBOX, QIcon(":/icons/lock_closed"));
             }
 
-            /* highlight delegated coins
-            if (model->isDelegatedCoin(txhash, out.i)) {
-                itemOutput->setIcon(COLUMN_CHECKBOX, QIcon(":/icons/onion"));
-            }*/
-
             // set checkbox
             if (coinControl->IsSelected(txhash, out.i))
                 itemOutput->setCheckState(COLUMN_CHECKBOX, Qt::Checked);
