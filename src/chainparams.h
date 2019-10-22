@@ -41,6 +41,7 @@ public:
         EXT_PUBLIC_KEY, // BIP32
         EXT_SECRET_KEY, // BIP32
         EXT_COIN_TYPE,  // BIP44
+        STAKING_ADDRESS,
 
         MAX_BASE58_TYPES
     };
@@ -102,6 +103,8 @@ public:
     /** Return the number of blocks in a budget cycle */
     int GetBudgetCycleBlocks() const { return nBudgetCycleBlocks; }
     int64_t GetProposalEstablishmentTime() const { return nProposalEstablishmentTime; }
+
+    CAmount GetMinColdStakingAmount() const { return nMinColdStakingAmount; }
 
     /** Spork key and Masternode Handling **/
     std::string SporkPubKey() const { return strSporkPubKey; }
@@ -225,6 +228,8 @@ protected:
     int nPublicZCSpends;
     int nBlockStakeModifierlV2;
     int nBlockEnforceNewMessageSignatures;
+
+    CAmount nMinColdStakingAmount;
 
     // fake serial attack
     int nFakeSerialBlockheightEnd = 0;
