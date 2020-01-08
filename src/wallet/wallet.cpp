@@ -3001,6 +3001,17 @@ CBitcoinAddress CWallet::ParseIntoAddress(const CTxDestination& dest, const std:
 
 bool CWallet::SetAddressBook(const CTxDestination& address, const std::string& strName, const std::string& strPurpose)
 {
+    // First check address validity
+    CBitcoinAddress cAddress = ParseIntoAddress(address, strPurpose);
+    if (!cAddress.IsValid())
+        return false;
+
+    // Second check if purpose == receive or coldstaking, if true then address must be mine
+    bool isMine = ::IsMine(*this, address);
+    if (!isMine && (strPurpose == AddressBook::AddressBookPurpose::RECEIVE || strPurpose == AddressBook::AddressBookPurpose::COLD_STAKING))
+        return false;
+
+    // All good, store/update the record
     bool fUpdated = HasAddressBook(address);
     {
         LOCK(cs_wallet); // mapAddressBook
@@ -3012,7 +3023,7 @@ bool CWallet::SetAddressBook(const CTxDestination& address, const std::string& s
         strPurpose, (fUpdated ? CT_UPDATED : CT_NEW));
     if (!fFileBacked)
         return false;
-    std::string addressStr = ParseIntoAddress(address, strPurpose).ToString();
+    std::string addressStr = cAddress.ToString();
     if (!strPurpose.empty() && !CWalletDB(strWalletFile).WritePurpose(addressStr, strPurpose))
         return false;
     return CWalletDB(strWalletFile).WriteName(addressStr, strName);
