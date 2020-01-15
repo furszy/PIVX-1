@@ -15,17 +15,21 @@ QWidget* TxViewHolder::createHolder(int pos){
     return txRow;
 }
 
-void TxViewHolder::init(QWidget* holder,const QModelIndex &index, bool isHovered, bool isSelected) const{
+void TxViewHolder::init(QWidget* holder, const QModelIndex &index, bool isHovered, bool isSelected) const {
+
+    QModelIndex rIndex = (filter) ? filter->mapToSource(index) : index;
+    int type = rIndex.data(TransactionTableModel::TypeRole).toInt();
+
     TxRow *txRow = static_cast<TxRow*>(holder);
     txRow->updateStatus(isLightTheme, isHovered, isSelected);
 
-    QModelIndex rIndex = (filter) ? filter->mapToSource(index) : index;
     QDateTime date = rIndex.data(TransactionTableModel::DateRole).toDateTime();
     qint64 amount = rIndex.data(TransactionTableModel::AmountRole).toLongLong();
     QString amountText = BitcoinUnits::formatWithUnit(nDisplayUnit, amount, true, BitcoinUnits::separatorAlways);
     QModelIndex indexType = rIndex.sibling(rIndex.row(),TransactionTableModel::Type);
     QString label = indexType.data(Qt::DisplayRole).toString();
-    int type = rIndex.data(TransactionTableModel::TypeRole).toInt();
+
+    txRow->showHideSecondAmount(type == TransactionRecord::P2CSDelegationSentStaker);
 
     if(type != TransactionRecord::ZerocoinMint &&
             type !=  TransactionRecord::ZerocoinSpend_Change_zPiv &&
@@ -46,7 +50,8 @@ void TxViewHolder::init(QWidget* holder,const QModelIndex &index, bool isHovered
 
     txRow->setDate(date);
     txRow->setLabel(label);
-    txRow->setAmount(amountText);
+    // TODO: Complete me..
+    txRow->setAmount(amountText, tr("Delegation %1").arg("10.00 tPIV"));
     txRow->setType(isLightTheme, type, !isUnconfirmed);
 }
 

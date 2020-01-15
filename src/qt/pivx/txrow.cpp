@@ -13,11 +13,19 @@ TxRow::TxRow(QWidget *parent) :
     ui(new Ui::TxRow)
 {
     ui->setupUi(this);
+    ui->lblAmountBottom->setVisible(false);
 }
 
 void TxRow::init(bool isLightTheme) {
     setConfirmStatus(true);
     updateStatus(isLightTheme, false, false);
+}
+
+void TxRow::showHideSecondAmount(bool show) {
+    if (show != isDoubleAmount) {
+        isDoubleAmount = show;
+        ui->lblAmountBottom->setVisible(show);
+    }
 }
 
 void TxRow::setConfirmStatus(bool isConfirm){
@@ -45,13 +53,15 @@ void TxRow::setLabel(QString str){
     ui->lblAddress->setText(str);
 }
 
-void TxRow::setAmount(QString str){
-    ui->lblAmount->setText(str);
+void TxRow::setAmount(QString top, QString bottom) {
+    ui->lblAmountTop->setText(top);
+    ui->lblAmountBottom->setText(bottom);
 }
 
 void TxRow::setType(bool isLightTheme, int type, bool isConfirmed){
     QString path;
     QString css;
+    QString cssAmountBottom;
     bool sameIcon = false;
     switch (type) {
         case TransactionRecord::ZerocoinMint:
@@ -92,6 +102,11 @@ void TxRow::setType(bool isLightTheme, int type, bool isConfirmed){
             path = "://ic-transaction-stake-hot";
             css = "text-list-amount-unconfirmed";
             break;
+        case TransactionRecord::P2CSDelegationSentStaker:
+            path = "://ic-transaction-cs-contract";
+            css = "text-list-amount-send";
+            cssAmountBottom = "text-list-amount-unconfirmed";
+            break;
         case TransactionRecord::P2CSDelegationSent:
         case TransactionRecord::P2CSDelegationSentOwner:
             path = "://ic-transaction-cs-contract";
@@ -119,12 +134,14 @@ void TxRow::setType(bool isLightTheme, int type, bool isConfirmed){
 
     if (!isConfirmed){
         css = "text-list-amount-unconfirmed";
+        cssAmountBottom = "text-list-amount-unconfirmed";
         path += "-inactive";
         setConfirmStatus(false);
     }else{
         setConfirmStatus(true);
     }
-    setCssProperty(ui->lblAmount, css, true);
+    setCssProperty(ui->lblAmountTop, css, true);
+    if (isDoubleAmount) setCssProperty(ui->lblAmountBottom, cssAmountBottom, true);
     ui->icon->setIcon(QIcon(path));
 }
 

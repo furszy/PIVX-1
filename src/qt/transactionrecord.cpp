@@ -378,16 +378,24 @@ void TransactionRecord::loadHotOrColdStakeOrContract(
         }
     }
 
-    bool isSpendable = (wallet->IsMine(p2csUtxo) & ISMINE_SPENDABLE_DELEGATED);
+    isminetype mineType = wallet->IsMine(p2csUtxo);
+    bool isSpendable = (mineType & ISMINE_SPENDABLE_DELEGATED);
     bool isFromMe = wallet->IsFromMe(wtx);
+    bool isDelegatedToMe = (mineType & ISMINE_COLD);
 
     if (isContract) {
         if (isSpendable && isFromMe) {
-            // Wallet delegating balance
+            // Wallet delegating balance, continuing with the coin ownership
             record.type = TransactionRecord::P2CSDelegationSentOwner;
         } else if (isFromMe){
-            // Wallet delegating balance and transfering ownership
-            record.type = TransactionRecord::P2CSDelegationSent;
+            if (isDelegatedToMe) {
+                // Wallet transferring ownership to a remote address and
+                // Receiving the delegation for hot staking here.
+                record.type = TransactionRecord::P2CSDelegationSentStaker;
+            } else {
+                // Wallet delegating balance and transferring ownership
+                record.type = TransactionRecord::P2CSDelegationSent;
+            }
         } else {
             // Wallet receiving a delegation
             record.type = TransactionRecord::P2CSDelegation;
@@ -534,7 +542,7 @@ bool TransactionRecord::isCoinStake() const
 bool TransactionRecord::isAnyColdStakingType() const
 {
     return (type == TransactionRecord::P2CSDelegation || type == TransactionRecord::P2CSDelegationSent
-            || type == TransactionRecord::P2CSDelegationSentOwner
+            || type == TransactionRecord::P2CSDelegationSentOwner || type == TransactionRecord::P2CSDelegationSentStaker
             || type == TransactionRecord::StakeDelegated || type == TransactionRecord::StakeHot
             || type == TransactionRecord::P2CSUnlockOwner || type == TransactionRecord::P2CSUnlockStaker);
 }
