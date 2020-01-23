@@ -9,6 +9,7 @@
 #include <qt/walletmodel.h>
 
 #include <qt/addresstablemodel.h>
+#include <qt/clientmodel.h>
 #include <qt/guiconstants.h>
 #include <qt/optionsmodel.h>
 #include <qt/paymentserver.h>
@@ -32,8 +33,8 @@
 #include <QTimer>
 
 
-WalletModel::WalletModel(std::unique_ptr<interfaces::Wallet> wallet, interfaces::Node& node, const PlatformStyle *platformStyle, OptionsModel *_optionsModel, ClientModel *clientModel, QObject *parent) :
-    QObject(parent), m_wallet(std::move(wallet)), m_node(node), optionsModel(_optionsModel), addressTableModel(nullptr),
+WalletModel::WalletModel(std::unique_ptr<interfaces::Wallet> wallet, interfaces::Node& node, const PlatformStyle *platformStyle, OptionsModel *_optionsModel, ClientModel *_clientModel, QObject *parent) :
+    QObject(parent), m_wallet(std::move(wallet)), m_node(node), optionsModel(_optionsModel), clientModel(_clientModel), addressTableModel(nullptr),
     transactionTableModel(nullptr),
     recentRequestsTableModel(nullptr),
     cachedEncryptionStatus(Unencrypted),
@@ -81,12 +82,13 @@ void WalletModel::pollBalanceChanged()
         return;
     }
 
-    if(fForceCheckBalanceChanged || m_node.getNumBlocks() != cachedNumBlocks)
+    int nHeight = clientModel->getNumBlocks();
+    if(fForceCheckBalanceChanged || nHeight != cachedNumBlocks)
     {
         fForceCheckBalanceChanged = false;
 
         // Balance and number of transactions might have changed
-        cachedNumBlocks = m_node.getNumBlocks();
+        cachedNumBlocks = nHeight;
 
         checkBalanceChanged(new_balances);
         if(transactionTableModel)

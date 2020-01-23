@@ -170,6 +170,7 @@ private:
     // Wallet has an options model for wallet-specific options
     // (transaction fee, for example)
     OptionsModel *optionsModel;
+    ClientModel *clientModel;
 
     AddressTableModel *addressTableModel;
     TransactionTableModel *transactionTableModel;
