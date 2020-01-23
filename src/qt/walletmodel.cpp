@@ -38,7 +38,7 @@ WalletModel::WalletModel(std::unique_ptr<interfaces::Wallet> wallet, interfaces:
     transactionTableModel(nullptr),
     recentRequestsTableModel(nullptr),
     cachedEncryptionStatus(Unencrypted),
-    cachedNumBlocks(0)
+    m_cached_last_update_tip(uint256())
 {
     fHaveWatchOnly = m_wallet->haveWatchOnly();
     addressTableModel = new AddressTableModel(this);
@@ -82,13 +82,13 @@ void WalletModel::pollBalanceChanged()
         return;
     }
 
-    int nHeight = clientModel->getNumBlocks();
-    if(fForceCheckBalanceChanged || nHeight != cachedNumBlocks)
+    uint256 blockHash = clientModel->getBestBlockHash();
+    if(fForceCheckBalanceChanged || blockHash != m_cached_last_update_tip)
     {
         fForceCheckBalanceChanged = false;
 
         // Balance and number of transactions might have changed
-        cachedNumBlocks = nHeight;
+        m_cached_last_update_tip = blockHash;
 
         checkBalanceChanged(new_balances);
         if(transactionTableModel)
