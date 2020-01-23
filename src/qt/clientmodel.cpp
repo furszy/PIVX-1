@@ -36,6 +36,9 @@ ClientModel::ClientModel(interfaces::Node& node, OptionsModel *_optionsModel, QO
     cachedBestHeaderHeight = -1;
     cachedBestHeaderTime = -1;
     cachedNumBlocks = -1;
+    cachedBestHeaderHash = uint256();
+    cachedBestBlockHash = uint256();
+
     peerTableModel = new PeerTableModel(m_node, this);
     banTableModel = new BanTableModel(m_node, this);
 
@@ -112,6 +115,14 @@ int ClientModel::getNumBlocks() const
         cachedNumBlocks = m_node.getNumBlocks();
     }
     return cachedNumBlocks;
+}
+
+uint256 ClientModel::getBestBlockHash() const
+{
+    if (cachedBestBlockHash.load().IsNull()) {
+        cachedBestBlockHash = m_node.getBestBlockHash();
+    }
+    return cachedBestBlockHash;
 }
 
 void ClientModel::updateNumConnections(int numConnections)
@@ -235,7 +246,7 @@ static void BannedListChanged(ClientModel *clientmodel)
     assert(invoked);
 }
 
-static void BlockTipChanged(ClientModel *clientmodel, bool initialSync, int height, int64_t blockTime, double verificationProgress, bool fHeader)
+static void BlockTipChanged(ClientModel *clientmodel, bool initialSync, const uint256 blockHash, int height, int64_t blockTime, double verificationProgress, bool fHeader)
 {
     // lock free async UI updates in case we have a new block tip
     // during initial sync, only update the UI if the last update
@@ -250,8 +261,10 @@ static void BlockTipChanged(ClientModel *clientmodel, bool initialSync, int heig
         // cache best headers time and height to reduce future cs_main locks
         clientmodel->cachedBestHeaderHeight = height;
         clientmodel->cachedBestHeaderTime = blockTime;
+        clientmodel->cachedBestHeaderHash = blockHash;
     } else {
         clientmodel->cachedNumBlocks = height;
+        clientmodel->cachedBestBlockHash = blockHash;
     }
     // if we are in-sync or if we notify a header update, update the UI regardless of last update time
     if (fHeader || !initialSync || now - nLastUpdateNotification > MODEL_UPDATE_DELAY) {
@@ -274,8 +287,8 @@ void ClientModel::subscribeToCoreSignals()
     m_handler_notify_network_active_changed = m_node.handleNotifyNetworkActiveChanged(std::bind(NotifyNetworkActiveChanged, this, std::placeholders::_1));
     m_handler_notify_alert_changed = m_node.handleNotifyAlertChanged(std::bind(NotifyAlertChanged, this));
     m_handler_banned_list_changed = m_node.handleBannedListChanged(std::bind(BannedListChanged, this));
-    m_handler_notify_block_tip = m_node.handleNotifyBlockTip(std::bind(BlockTipChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, false));
-    m_handler_notify_header_tip = m_node.handleNotifyHeaderTip(std::bind(BlockTipChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, true));
+    m_handler_notify_block_tip = m_node.handleNotifyBlockTip(std::bind(BlockTipChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, false));
+    m_handler_notify_header_tip = m_node.handleNotifyHeaderTip(std::bind(BlockTipChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, true));
 }
 
 void ClientModel::unsubscribeFromCoreSignals()

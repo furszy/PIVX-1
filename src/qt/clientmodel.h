@@ -10,6 +10,7 @@
 
 #include <atomic>
 #include <memory>
+#include <uint256.h>
 
 class BanTableModel;
 class OptionsModel;
@@ -57,6 +58,7 @@ public:
     //! Return number of connections, default is in- and outbound (total)
     int getNumConnections(unsigned int flags = CONNECTIONS_ALL) const;
     int getNumBlocks() const;
+    uint256 getBestBlockHash() const;
     int getHeaderTipHeight() const;
     int64_t getHeaderTipTime() const;
 
@@ -78,6 +80,9 @@ public:
     mutable std::atomic<int> cachedBestHeaderHeight;
     mutable std::atomic<int64_t> cachedBestHeaderTime;
     mutable std::atomic<int> cachedNumBlocks;
+
+    mutable std::atomic<uint256> cachedBestHeaderHash;
+    mutable std::atomic<uint256> cachedBestBlockHash;
 
 private:
     interfaces::Node& m_node;
