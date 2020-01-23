@@ -179,7 +179,9 @@ private:
     // Cache some values to be able to detect changes
     interfaces::WalletBalances m_cached_balances;
     EncryptionStatus cachedEncryptionStatus;
-    int cachedNumBlocks;
+
+    // Block hash denoting when the last balance, polling, update was done.
+    mutable std::atomic<uint256> cachedLastBalanceUpdate;
 
     void subscribeToCoreSignals();
     void unsubscribeFromCoreSignals();
