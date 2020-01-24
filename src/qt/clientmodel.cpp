@@ -33,6 +33,7 @@ ClientModel::ClientModel(interfaces::Node& node, OptionsModel *_optionsModel, QO
     banTableModel(nullptr),
     m_thread(new QThread(this))
 {
+    // Cached data
     cachedBestHeaderHeight = -1;
     cachedBestHeaderTime = -1;
     cachedNumBlocks = -1;
@@ -246,7 +247,7 @@ static void BannedListChanged(ClientModel *clientmodel)
     assert(invoked);
 }
 
-static void BlockTipChanged(ClientModel *clientmodel, bool initialSync, const uint256 blockHash, int height, int64_t blockTime, double verificationProgress, bool fHeader)
+static void BlockTipChanged(ClientModel *clientmodel, bool initialSync, interfaces::BlockTip tip, double verificationProgress, bool fHeader)
 {
     // lock free async UI updates in case we have a new block tip
     // during initial sync, only update the UI if the last update
@@ -259,19 +260,19 @@ static void BlockTipChanged(ClientModel *clientmodel, bool initialSync, const ui
 
     if (fHeader) {
         // cache best headers time and height to reduce future cs_main locks
-        clientmodel->cachedBestHeaderHeight = height;
-        clientmodel->cachedBestHeaderTime = blockTime;
-        clientmodel->cachedBestHeaderHash = blockHash;
+        clientmodel->cachedBestHeaderHeight = tip.block_height;
+        clientmodel->cachedBestHeaderTime = tip.block_time;
+        clientmodel->cachedBestHeaderHash = tip.block_hash;
     } else {
-        clientmodel->cachedNumBlocks = height;
-        clientmodel->cachedBestBlockHash = blockHash;
+        clientmodel->cachedNumBlocks = tip.block_height;
+        clientmodel->cachedBestBlockHash = tip.block_hash;
     }
     // if we are in-sync or if we notify a header update, update the UI regardless of last update time
     if (fHeader || !initialSync || now - nLastUpdateNotification > MODEL_UPDATE_DELAY) {
         //pass an async signal to the UI thread
         bool invoked = QMetaObject::invokeMethod(clientmodel, "numBlocksChanged", Qt::QueuedConnection,
-                                  Q_ARG(int, height),
-                                  Q_ARG(QDateTime, QDateTime::fromTime_t(blockTime)),
+                                  Q_ARG(int, tip.block_height),
+                                  Q_ARG(QDateTime, QDateTime::fromTime_t(tip.block_time)),
                                   Q_ARG(double, verificationProgress),
                                   Q_ARG(bool, fHeader));
         assert(invoked);
@@ -287,8 +288,8 @@ void ClientModel::subscribeToCoreSignals()
     m_handler_notify_network_active_changed = m_node.handleNotifyNetworkActiveChanged(std::bind(NotifyNetworkActiveChanged, this, std::placeholders::_1));
     m_handler_notify_alert_changed = m_node.handleNotifyAlertChanged(std::bind(NotifyAlertChanged, this));
     m_handler_banned_list_changed = m_node.handleBannedListChanged(std::bind(BannedListChanged, this));
-    m_handler_notify_block_tip = m_node.handleNotifyBlockTip(std::bind(BlockTipChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, false));
-    m_handler_notify_header_tip = m_node.handleNotifyHeaderTip(std::bind(BlockTipChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, true));
+    m_handler_notify_block_tip = m_node.handleNotifyBlockTip(std::bind(BlockTipChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, false));
+    m_handler_notify_header_tip = m_node.handleNotifyHeaderTip(std::bind(BlockTipChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, true));
 }
 
 void ClientModel::unsubscribeFromCoreSignals()

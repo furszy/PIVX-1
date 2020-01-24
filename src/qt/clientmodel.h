@@ -76,13 +76,14 @@ public:
 
     bool getProxyInfo(std::string& ip_port) const;
 
-    // caches for the best header, number of blocks
+    // caches for the best header: hash, number of blocks and block time
     mutable std::atomic<int> cachedBestHeaderHeight;
     mutable std::atomic<int64_t> cachedBestHeaderTime;
-    mutable std::atomic<int> cachedNumBlocks;
-
     mutable std::atomic<uint256> cachedBestHeaderHash;
+
+    // caches the best block: hash and height
     mutable std::atomic<uint256> cachedBestBlockHash;
+    mutable std::atomic<int> cachedNumBlocks;
 
 private:
     interfaces::Node& m_node;

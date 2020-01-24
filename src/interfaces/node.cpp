@@ -318,7 +318,7 @@ public:
     std::unique_ptr<Handler> handleNotifyBlockTip(NotifyBlockTipFn fn) override
     {
         return MakeHandler(::uiInterface.NotifyBlockTip_connect([fn](bool initial_download, const CBlockIndex* block) {
-            fn(initial_download, block->GetBlockHash() , block->nHeight, block->GetBlockTime(),
+            fn(initial_download, MakeTip(block->GetBlockHash() , block->nHeight, block->GetBlockTime()),
                 GuessVerificationProgress(Params().TxData(), block));
         }));
     }
@@ -326,7 +326,7 @@ public:
     {
         return MakeHandler(
             ::uiInterface.NotifyHeaderTip_connect([fn](bool initial_download, const CBlockIndex* block) {
-                fn(initial_download, block->GetBlockHash(), block->nHeight, block->GetBlockTime(),
+                fn(initial_download, MakeTip(block->GetBlockHash(), block->nHeight, block->GetBlockTime()),
                     /* verification progress is unused when a header was received */ 0);
             }));
     }
@@ -337,5 +337,14 @@ public:
 } // namespace
 
 std::unique_ptr<Node> MakeNode() { return MakeUnique<NodeImpl>(); }
+
+BlockTip MakeTip(uint256 block_hash, int block_height, int64_t block_time)
+{
+    BlockTip tip;
+    tip.block_hash = block_hash;
+    tip.block_height = block_height;
+    tip.block_time = block_time;
+    return tip;
+}
 
 } // namespace interfaces
