@@ -17,6 +17,8 @@
 #include <interfaces/wallet.h>
 #include <support/allocators/secure.h>
 
+#include <atomic>
+#include <memory>
 #include <vector>
 
 #include <QObject>

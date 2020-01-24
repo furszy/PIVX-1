@@ -261,12 +261,12 @@ static void BlockTipChanged(ClientModel *clientmodel, bool initialSync, interfac
 
     if (fHeader) {
         // cache best headers time and height to reduce future cs_main locks
-        clientmodel->cachedBestHeaderHeight = height;
-        clientmodel->cachedBestHeaderTime = blockTime;
-        WITH_LOCK(clientmodel->m_cached_tip_mutex, clientmodel->m_cached_tip_headers = blockHash; );
+        clientmodel->cachedBestHeaderHeight = tip.block_height;
+        clientmodel->cachedBestHeaderTime = tip.block_time;
+        WITH_LOCK(clientmodel->m_cached_tip_mutex, clientmodel->m_cached_tip_headers = tip.block_hash; );
     } else {
-        clientmodel->cachedNumBlocks = height;
-        WITH_LOCK(clientmodel->m_cached_tip_mutex, clientmodel->m_cached_tip_blocks = blockHash; );
+        clientmodel->cachedNumBlocks = tip.block_height;
+        WITH_LOCK(clientmodel->m_cached_tip_mutex, clientmodel->m_cached_tip_blocks = tip.block_hash; );
     }
 
     // if we are in-sync or if we notify a header update, update the UI regardless of last update time
