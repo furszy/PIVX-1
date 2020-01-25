@@ -30,7 +30,6 @@
 #include <QDebug>
 #include <QMessageBox>
 #include <QSet>
-#include <QTimer>
 
 
 WalletModel::WalletModel(std::unique_ptr<interfaces::Wallet> wallet, interfaces::Node& node, const PlatformStyle *platformStyle, OptionsModel *_optionsModel, ClientModel *_clientModel, QObject *parent) :
@@ -38,6 +37,7 @@ WalletModel::WalletModel(std::unique_ptr<interfaces::Wallet> wallet, interfaces:
     transactionTableModel(nullptr),
     recentRequestsTableModel(nullptr),
     cachedEncryptionStatus(Unencrypted),
+    pollingTimer(nullptr),
     m_cached_last_update_tip(uint256())
 {
     fHaveWatchOnly = m_wallet->haveWatchOnly();
@@ -50,15 +50,16 @@ WalletModel::WalletModel(std::unique_ptr<interfaces::Wallet> wallet, interfaces:
 
 WalletModel::~WalletModel()
 {
+    if (pollingTimer) pollingTimer->stop();
     unsubscribeFromCoreSignals();
 }
 
 void WalletModel::startPollBalance()
 {
     // This timer will be fired repeatedly to update the balance
-    QTimer* timer = new QTimer(this);
-    connect(timer, &QTimer::timeout, this, &WalletModel::pollBalanceChanged);
-    timer->start(MODEL_UPDATE_DELAY);
+    pollingTimer = new QTimer(this);
+    connect(pollingTimer, &QTimer::timeout, this, &WalletModel::pollBalanceChanged);
+    pollingTimer->start(MODEL_UPDATE_DELAY);
 }
 
 void WalletModel::updateStatus()
@@ -72,6 +73,10 @@ void WalletModel::updateStatus()
 
 void WalletModel::pollBalanceChanged()
 {
+    // Do not even try to poll if shutdown was requested.
+    if (m_node.shutdownRequested())
+        return;
+
     // Try to get balances and return early if locks can't be acquired. This
     // avoids the GUI from getting stuck on periodical polls if the core is
     // holding the locks for a longer time - for example, during a wallet

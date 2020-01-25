@@ -22,6 +22,7 @@
 #include <vector>
 
 #include <QObject>
+#include <QTimer>
 
 enum class OutputType;
 
@@ -181,6 +182,9 @@ private:
     // Cache some values to be able to detect changes
     interfaces::WalletBalances m_cached_balances;
     EncryptionStatus cachedEncryptionStatus;
+
+    // Balance polling timer
+    QTimer* pollingTimer;
 
     // Block hash denoting when the last balance update was done.
     uint256 m_cached_last_update_tip;
