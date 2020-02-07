@@ -61,6 +61,9 @@ RPC Changes
 
  Mints are disabled, therefore it is no longer possible to mint the change of a zerocoin spend. The change is minimized by default.
 
+- `dumpwallet` no longer allows overwriting files. This is a security measure
+   as well as prevents dangerous user mistakes.
+
 ### Removed commands
 
 The following commands have been removed from the RPC interface:
