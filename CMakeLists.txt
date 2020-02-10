@@ -346,9 +346,11 @@ set(WALLET_SOURCES
         ./src/masternodeman.cpp
         ./src/messagesigner.cpp
         ./src/zpiv/mintpool.cpp
+        ./src/wallet/hdchain.cpp
         ./src/wallet/rpcdump.cpp
         ./src/zpiv/deterministicmint.cpp
         ./src/zpiv/zerocoin.cpp
+        ./src/wallet/scriptpubkeyman.cpp
         ./src/wallet/rpcwallet.cpp
         ./src/kernel.cpp
         ./src/wallet/wallet.cpp
@@ -446,6 +448,7 @@ set(COMMON_SOURCES
         ./src/bip38.cpp
         ./src/chainparams.cpp
         ./src/coins.cpp
+        ./src/key_io.cpp
         ./src/compressor.cpp
         ./src/consensus/merkle.cpp
         ./src/consensus/tx_verify.cpp
