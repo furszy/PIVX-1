@@ -677,59 +677,66 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
 {
     RenameThread("pivx-loadblk");
 
-    // -reindex
-    if (fReindex) {
+    {
         CImportingNow imp;
-        int nFile = 0;
-        while (true) {
-            CDiskBlockPos pos(nFile, 0);
-            if (!boost::filesystem::exists(GetBlockPosFilename(pos, "blk")))
-                break; // No block files left to reindex
-            FILE* file = OpenBlockFile(pos, true);
-            if (!file)
-                break; // This error is logged in OpenBlockFile
-            LogPrintf("Reindexing block file blk%05u.dat...\n", (unsigned int)nFile);
-            LoadExternalBlockFile(file, &pos);
-            nFile++;
+        // -reindex
+        if (fReindex) {
+            int nFile = 0;
+            while (true) {
+                CDiskBlockPos pos(nFile, 0);
+                if (!boost::filesystem::exists(GetBlockPosFilename(pos, "blk")))
+                    break; // No block files left to reindex
+                FILE *file = OpenBlockFile(pos, true);
+                if (!file)
+                    break; // This error is logged in OpenBlockFile
+                LogPrintf("Reindexing block file blk%05u.dat...\n", (unsigned int) nFile);
+                LoadExternalBlockFile(file, &pos);
+                nFile++;
+            }
+            pblocktree->WriteReindexing(false);
+            fReindex = false;
+            LogPrintf("Reindexing finished\n");
+            // To avoid ending up in a situation without genesis block, re-try initializing (no-op if reindexing worked):
+            InitBlockIndex();
         }
-        pblocktree->WriteReindexing(false);
-        fReindex = false;
-        LogPrintf("Reindexing finished\n");
-        // To avoid ending up in a situation without genesis block, re-try initializing (no-op if reindexing worked):
-        InitBlockIndex();
-    }
 
-    // hardcoded $DATADIR/bootstrap.dat
-    boost::filesystem::path pathBootstrap = GetDataDir() / "bootstrap.dat";
-    if (boost::filesystem::exists(pathBootstrap)) {
-        FILE* file = fopen(pathBootstrap.string().c_str(), "rb");
-        if (file) {
-            CImportingNow imp;
-            boost::filesystem::path pathBootstrapOld = GetDataDir() / "bootstrap.dat.old";
-            LogPrintf("Importing bootstrap.dat...\n");
-            LoadExternalBlockFile(file);
-            RenameOver(pathBootstrap, pathBootstrapOld);
-        } else {
-            LogPrintf("Warning: Could not open bootstrap file %s\n", pathBootstrap.string());
+        // hardcoded $DATADIR/bootstrap.dat
+        boost::filesystem::path pathBootstrap = GetDataDir() / "bootstrap.dat";
+        if (boost::filesystem::exists(pathBootstrap)) {
+            FILE *file = fopen(pathBootstrap.string().c_str(), "rb");
+            if (file) {
+                boost::filesystem::path pathBootstrapOld = GetDataDir() / "bootstrap.dat.old";
+                LogPrintf("Importing bootstrap.dat...\n");
+                LoadExternalBlockFile(file);
+                RenameOver(pathBootstrap, pathBootstrapOld);
+            } else {
+                LogPrintf("Warning: Could not open bootstrap file %s\n", pathBootstrap.string());
+            }
         }
-    }
 
-    // -loadblock=
-    for (boost::filesystem::path& path : vImportFiles) {
-        FILE* file = fopen(path.string().c_str(), "rb");
-        if (file) {
-            CImportingNow imp;
-            LogPrintf("Importing blocks file %s...\n", path.string());
-            LoadExternalBlockFile(file);
-        } else {
-            LogPrintf("Warning: Could not open blocks file %s\n", path.string());
+        // -loadblock=
+        for (boost::filesystem::path &path : vImportFiles) {
+            FILE *file = fopen(path.string().c_str(), "rb");
+            if (file) {
+                LogPrintf("Importing blocks file %s...\n", path.string());
+                LoadExternalBlockFile(file);
+            } else {
+                LogPrintf("Warning: Could not open blocks file %s\n", path.string());
+            }
         }
-    }
 
-    if (GetBoolArg("-stopafterblockimport", false)) {
-        LogPrintf("Stopping after block import\n");
-        StartShutdown();
-    }
+        // scan for better chains in the block chain database, that are not yet connected in the active best chain
+        CValidationState state;
+        if (!ActivateBestChain(state)) {
+            LogPrintf("Failed to connect best block");
+            StartShutdown();
+        }
+
+        if (GetBoolArg("-stopafterblockimport", false)) {
+            LogPrintf("Stopping after block import\n");
+            StartShutdown();
+        }
+    } // End of CImportingNow
 }
 
 /** Sanity checks
@@ -1779,11 +1786,6 @@ bool AppInit2()
 
     if (mapArgs.count("-blocksizenotify"))
         uiInterface.NotifyBlockSize.connect(BlockSizeNotifyCallback);
-
-    // scan for better chains in the block chain database, that are not yet connected in the active best chain
-    CValidationState state;
-    if (!ActivateBestChain(state))
-        strErrors << "Failed to connect best block";
 
     std::vector<boost::filesystem::path> vImportFiles;
     if (mapArgs.count("-loadblock")) {

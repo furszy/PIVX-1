@@ -4522,7 +4522,8 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex, 
 {
     AssertLockHeld(cs_main);
 
-    CBlockIndex*& pindex = *ppindex;
+    CBlockIndex *pindexDummy = nullptr;
+    CBlockIndex *&pindex = ppindex ? *ppindex : pindexDummy;
 
     // Get prev block index
     CBlockIndex* pindexPrev = NULL;
@@ -5370,8 +5371,9 @@ bool LoadExternalBlockFile(FILE* fileIn, CDiskBlockPos* dbp)
 
                 // process in case the block isn't known yet
                 if (mapBlockIndex.count(hash) == 0 || (mapBlockIndex[hash]->nStatus & BLOCK_HAVE_DATA) == 0) {
+                    LOCK(cs_main);
                     CValidationState state;
-                    if (ProcessNewBlock(state, NULL, &block, dbp))
+                    if (AcceptBlock(block, state, nullptr, dbp))
                         nLoaded++;
                     if (state.IsError())
                         break;
@@ -5391,8 +5393,9 @@ bool LoadExternalBlockFile(FILE* fileIn, CDiskBlockPos* dbp)
                         if (ReadBlockFromDisk(block, it->second)) {
                             LogPrintf("%s: Processing out of order child %s of %s\n", __func__, block.GetHash().ToString(),
                                 head.ToString());
+                            LOCK(cs_main);
                             CValidationState dummy;
-                            if (ProcessNewBlock(dummy, NULL, &block, &it->second)) {
+                            if (AcceptBlock(block, dummy, nullptr, &it->second)) {
                                 nLoaded++;
                                 queue.push_back(block.GetHash());
                             }
