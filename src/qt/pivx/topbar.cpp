@@ -337,8 +337,8 @@ void TopBar::loadClientModel(){
         setNumConnections(clientModel->getNumConnections());
         connect(clientModel, SIGNAL(numConnectionsChanged(int)), this, SLOT(setNumConnections(int)));
 
-        setNumBlocks(clientModel->getNumBlocks());
-        connect(clientModel, SIGNAL(numBlocksChanged(int)), this, SLOT(setNumBlocks(int)));
+        setNumBlocks(clientModel->getNumBlocks(), false);
+        connect(clientModel, SIGNAL(numBlocksChanged(int, const bool&)), this, SLOT(setNumBlocks(int, const bool&)));
 
         timerStakingIcon = new QTimer(ui->pushButtonStack);
         connect(timerStakingIcon, SIGNAL(timeout()), this, SLOT(updateStakingStatus()));
@@ -379,7 +379,7 @@ void TopBar::setNumConnections(int count) {
     ui->pushButtonConnection->setButtonText(tr("%n active connection(s)", "", count));
 }
 
-void TopBar::setNumBlocks(int count) {
+void TopBar::setNumBlocks(int count, const bool& fHeader) {
     if (!clientModel)
         return;
 

@@ -25,7 +25,7 @@ public:
 
 private Q_SLOTS:
     void setNumConnections(int count);
-    void setNumBlocks(int count);
+    void setNumBlocks(int count, const bool& fHeader);
     void openNetworkMonitor();
 
 private:

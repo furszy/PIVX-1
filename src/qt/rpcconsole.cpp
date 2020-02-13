@@ -388,8 +388,8 @@ void RPCConsole::setClientModel(ClientModel* model)
         setNumConnections(model->getNumConnections());
         connect(model, SIGNAL(numConnectionsChanged(int)), this, SLOT(setNumConnections(int)));
 
-        setNumBlocks(model->getNumBlocks());
-        connect(model, SIGNAL(numBlocksChanged(int)), this, SLOT(setNumBlocks(int)));
+        setNumBlocks(model->getNumBlocks(), false);
+        connect(model, SIGNAL(numBlocksChanged(int, const bool&)), this, SLOT(setNumBlocks(int, const bool&)));
 
         setMasternodeCount(model->getMasternodeCountString());
         connect(model, SIGNAL(strMasternodesChanged(QString)), this, SLOT(setMasternodeCount(QString)));
@@ -673,12 +673,14 @@ void RPCConsole::setNumConnections(int count)
     ui->numberOfConnections->setText(connections);
 }
 
-void RPCConsole::setNumBlocks(int count)
+void RPCConsole::setNumBlocks(int count, const bool& fHeader)
 {
-    ui->numberOfBlocks->setText(QString::number(count));
-    if (clientModel) {
-        ui->lastBlockTime->setText(clientModel->getLastBlockDate().toString());
-        ui->lastBlockHash->setText(clientModel->getLastBlockHash());
+    if (!fHeader) {
+        ui->numberOfBlocks->setText(QString::number(count));
+        if (clientModel) {
+            ui->lastBlockTime->setText(clientModel->getLastBlockDate().toString());
+            ui->lastBlockHash->setText(clientModel->getLastBlockHash());
+        }
     }
 }
 

@@ -131,8 +131,8 @@ void SettingsInformationWidget::loadClientModel(){
         setNumConnections(clientModel->getNumConnections());
         connect(clientModel, SIGNAL(numConnectionsChanged(int)), this, SLOT(setNumConnections(int)));
 
-        setNumBlocks(clientModel->getNumBlocks());
-        connect(clientModel, SIGNAL(numBlocksChanged(int)), this, SLOT(setNumBlocks(int)));
+        setNumBlocks(clientModel->getNumBlocks(), false);
+        connect(clientModel, SIGNAL(numBlocksChanged(int, const bool&)), this, SLOT(setNumBlocks(int, const bool&)));
     }
 }
 
@@ -147,7 +147,7 @@ void SettingsInformationWidget::setNumConnections(int count){
     ui->labelInfoConnections->setText(connections);
 }
 
-void SettingsInformationWidget::setNumBlocks(int count){
+void SettingsInformationWidget::setNumBlocks(int count, const bool& fHeader){
     ui->labelInfoBlockNumber->setText(QString::number(count));
     if (clientModel)
         ui->labelInfoBlockTime->setText(clientModel->getLastBlockDate().toString());

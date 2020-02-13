@@ -43,7 +43,7 @@ public Q_SLOTS:
     void updateDisplayUnit();
 
     void setNumConnections(int count);
-    void setNumBlocks(int count);
+    void setNumBlocks(int count, const bool& fHeader);
     void setStakingStatusActive(bool fActive);
     void updateStakingStatus();
 
