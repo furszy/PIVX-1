@@ -693,8 +693,6 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
                 LoadExternalBlockFile(file, &pos);
                 nFile++;
             }
-            pblocktree->WriteReindexing(false);
-            fReindex = false;
             LogPrintf("Reindexing finished\n");
             // To avoid ending up in a situation without genesis block, re-try initializing (no-op if reindexing worked):
             InitBlockIndex();
@@ -730,6 +728,12 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
         if (!ActivateBestChain(state)) {
             LogPrintf("Failed to connect best block");
             StartShutdown();
+        }
+
+        // Now that the best chain was activated, reset reindex flag.
+        if (fReindex) {
+            pblocktree->WriteReindexing(false);
+            fReindex = false;
         }
 
         if (GetBoolArg("-stopafterblockimport", false)) {
