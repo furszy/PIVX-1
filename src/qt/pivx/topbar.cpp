@@ -385,13 +385,13 @@ void TopBar::setNumBlocks(int count, const bool& fHeader) {
 
     // Acquire current block source
     enum BlockSource blockSource = clientModel->getBlockSource();
-    std::string text = "";
+    std::string text;
     switch (blockSource) {
         case BLOCK_SOURCE_NETWORK:
             text = "Synchronizing..";
             break;
         case BLOCK_SOURCE_DISK:
-            text = "Importing blocks from disk..";
+            text = fHeader ? "Indexing blocks on disk..." : "Processing blocks on disk...";
             break;
         case BLOCK_SOURCE_REINDEX:
             text = "Reindexing blocks on disk..";
