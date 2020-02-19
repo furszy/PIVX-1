@@ -1698,7 +1698,8 @@ bool AppInit2()
             pwalletMain->SetBestChain(chainActive.GetLocator());
         }
 
-        LogPrintf("Init errors: %s\n", strErrors.str());
+        std::string errors = strErrors.str();
+        LogPrintf("Init errors: %s\n", (errors.empty() ? "no errors" : errors));
         LogPrintf("Wallet completed loading in %15dms\n", GetTimeMillis() - nWalletStartTime);
         zwalletMain = new CzPIVWallet(pwalletMain->strWalletFile);
         pwalletMain->setZWallet(zwalletMain);
@@ -1716,9 +1717,10 @@ bool AppInit2()
             else
                 pindexRescan = chainActive.Genesis();
         }
-        if (chainActive.Tip() && chainActive.Tip() != pindexRescan) {
+        CBlockIndex* tip = chainActive.Tip();
+        if (tip && tip != pindexRescan) {
             uiInterface.InitMessage(_("Rescanning..."));
-            LogPrintf("Rescanning last %i blocks (from block %i)...\n", chainActive.Height() - pindexRescan->nHeight, pindexRescan->nHeight);
+            LogPrintf("Rescanning last %i blocks (from block %i)...\n", tip->nHeight - pindexRescan->nHeight, pindexRescan->nHeight);
             const int64_t nWalletRescanTime = GetTimeMillis();
             if (pwalletMain->ScanForWalletTransactions(pindexRescan, true, true) == -1) {
                 return error("Shutdown requested over the txs scan. Exiting.");
@@ -1779,11 +1781,6 @@ bool AppInit2()
 
     if (mapArgs.count("-blocksizenotify"))
         uiInterface.NotifyBlockSize.connect(BlockSizeNotifyCallback);
-
-    // scan for better chains in the block chain database, that are not yet connected in the active best chain
-    CValidationState state;
-    if (!ActivateBestChain(state))
-        strErrors << "Failed to connect best block";
 
     std::vector<boost::filesystem::path> vImportFiles;
     if (mapArgs.count("-loadblock")) {
@@ -1898,7 +1895,7 @@ bool AppInit2()
         LOCK(pwalletMain->cs_wallet);
         LogPrintf("Locking Masternodes:\n");
         uint256 mnTxHash;
-        for (CMasternodeConfig::CMasternodeEntry mne : masternodeConfig.getEntries()) {
+        for (const CMasternodeConfig::CMasternodeEntry& mne : masternodeConfig.getEntries()) {
             LogPrintf("  %s %s\n", mne.getTxHash(), mne.getOutputIndex());
             mnTxHash.SetHex(mne.getTxHash());
             COutPoint outpoint = COutPoint(mnTxHash, (unsigned int) std::stoul(mne.getOutputIndex().c_str()));

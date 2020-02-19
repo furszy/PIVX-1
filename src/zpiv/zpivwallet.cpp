@@ -193,7 +193,7 @@ void CzPIVWallet::SyncWithChain(bool fGenerateMintPool)
 
         std::set<uint256> setChecked;
         std::list<std::pair<uint256,uint32_t> > listMints = mintPool.List();
-        for (std::pair<uint256, uint32_t> pMint : listMints) {
+        for (const std::pair<uint256, uint32_t>& pMint : listMints) {
             LOCK(cs_main);
             if (setChecked.count(pMint.first))
                 return;
