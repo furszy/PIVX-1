@@ -3091,17 +3091,23 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
     }
 
-    //A one-time event where money supply counts were off and recalculated on a certain block.
-    if (pindex->nHeight == Params().Zerocoin_Block_RecalculateAccumulators() + 1) {
-        RecalculateZPIVMinted();
-        RecalculateZPIVSpent();
-        RecalculatePIVSupply(Params().Zerocoin_StartHeight());
-    }
+    // Mints were disabled a little bit before the zc public spend enforcement.
+    if (pindex->nHeight < Params().Zerocoin_Block_Public_Spend_Enabled()) {
+        //A one-time event where money supply counts were off and recalculated on a certain block.
+        if (pindex->nHeight == Params().Zerocoin_Block_RecalculateAccumulators() + 1) {
+            RecalculateZPIVMinted();
+            RecalculateZPIVSpent();
+            RecalculatePIVSupply(Params().Zerocoin_StartHeight());
+        }
 
-    //Track zPIV money supply in the block index
-    if (!UpdateZPIVSupply(block, pindex, fJustCheck))
-        return state.DoS(100, error("%s: Failed to calculate new zPIV supply for block=%s height=%d", __func__,
-                                    block.GetHash().GetHex(), pindex->nHeight), REJECT_INVALID);
+        //Track zPIV money supply in the block index
+        if (!UpdateZPIVSupply(block, pindex, fJustCheck))
+            return state.DoS(100, error("%s: Failed to calculate new zPIV supply for block=%s height=%d", __func__,
+                                        block.GetHash().GetHex(), pindex->nHeight), REJECT_INVALID);
+    } else if (vMints.size() > 0) {
+        // This must never happen but just for the sake of be absolutely sure about this, check it
+        return error("%s: connection failed, trying to include a mint after the public spends activation", __func__);
+    }
 
     // track money supply and mint amount info
     CAmount nMoneySupplyPrev = pindex->pprev ? pindex->pprev->nMoneySupply : 0;
