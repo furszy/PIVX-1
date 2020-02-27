@@ -63,7 +63,9 @@ bool TransactionFilterProxy::filterAcceptsRow(int sourceRow, const QModelIndex& 
     if (fOnlyZc && !isZcTx(type)){
         return false;
     }
-    if ((fOnlyStakes && !isStakeTx(type)) && (fShowOwnColdStakes && !isColdStakeMine(type)))
+    if ((fOnlyStakes && !isStakeTx(type)) &&
+        (fShowOwnColdStakes && !isColdStakeMine(type)) &&
+        (fIncludeMNReward && !(type == TransactionRecord::MNReward) ))
         return false;
 
     if (fOnlyColdStaking && !isColdStake(type))
@@ -128,10 +130,12 @@ void TransactionFilterProxy::setShowZcTxes(bool fOnlyZc)
     invalidateFilter();
 }
 
-void TransactionFilterProxy::setOnlyStakes(bool fOnlyStakes, bool fShowColdStakes)
+void TransactionFilterProxy::setOnlyStakes(const bool& fOnlyStakes, const bool& fIncludeZPIV, const bool& fShowColdStakes, const bool& fIncludeMNReward)
 {
     this->fOnlyStakes = fOnlyStakes;
     this->fShowOwnColdStakes = fShowColdStakes;
+    this->fShowZpivStakes = fIncludeZPIV;
+    this->fIncludeMNReward = fIncludeMNReward;
     invalidateFilter();
 }
 
@@ -163,7 +167,7 @@ bool TransactionFilterProxy::isZcTx(int type) const {
 }
 
 bool TransactionFilterProxy::isStakeTx(int type) const {
-    return type == TransactionRecord::StakeMint || type == TransactionRecord::Generated || type == TransactionRecord::StakeZPIV;
+    return type == TransactionRecord::StakeMint || type == TransactionRecord::Generated || (fShowZpivStakes && type == TransactionRecord::StakeZPIV);
 }
 
 bool TransactionFilterProxy::isColdStakeMine(int type) const {
