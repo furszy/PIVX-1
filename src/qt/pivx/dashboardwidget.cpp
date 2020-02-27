@@ -230,7 +230,7 @@ void DashboardWidget::loadWalletModel(){
         stakesFilter->setSortCaseSensitivity(Qt::CaseInsensitive);
         stakesFilter->setFilterCaseSensitivity(Qt::CaseInsensitive);
         stakesFilter->setSortRole(Qt::EditRole);
-        stakesFilter->setOnlyStakes(true);
+        stakesFilter->setOnlyStakes(true, true);
         stakesFilter->setSourceModel(txModel);
         stakesFilter->sort(TransactionTableModel::Date, Qt::AscendingOrder);
         hasStakes = stakesFilter->rowCount() > 0;
