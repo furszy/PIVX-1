@@ -604,7 +604,7 @@ void TopBar::updateBalances(const CAmount& balance, const CAmount& unconfirmedBa
     if (walletModel) {
         nLockedBalance = walletModel->getLockedBalance();
     }
-    ui->labelTitle1->setText(nLockedBalance > 0 ? tr("Available (Locked included)") : tr("Available"));
+    ui->labelTitle1->setText(nLockedBalance + delegatedBalance > 0 ? tr("Available (Locked included)") : tr("Available"));
 
     // PIV Total
     CAmount pivAvailableBalance = balance;
