@@ -39,21 +39,29 @@ sudo make install
 **NOTE:** If you are testing the wallet through terminal (command line) only, to start the wallet use the `./pivxd --testnet` command instead of the last line (`./pivx-qt --testnet`).
 
 ---------------------------------------------
-## COMPILING THE WALLET AGAIN WHEN YOU HAVE THE OLD VERSION ALREADY COMPILED
+## COMPILING THE WALLET FOR THE FIRST TIME
 
 Open the Terminal (command line) and type line by line:
 
 ```
-rm -rf pivx
-cd /usr/local/bin
-sudo rm -f pivx-cli pivxd pivx-qt pivx-tx test_pivx test_pivx-qt
-cd ~ && git clone https://github.com/pivx-project/pivx.git
-cd pivx
-./autogen.sh
-./configure
-make
-sudo make install
-./pivx-qt --testnet &
+git clone https://github.com/pivx-project/pivx.git PIVX
+cd PIVX
+./autogen.sh && ./configure
+make -j<threads_num> 
+./src/qt/pivx-qt --testnet &
 ```
+
+## COMPILING WHEN YOU ALREADY HAVE THE WALET
+
+Inside PIVX directory:
+```
+git pull origin master
+make -j<threads_num>
+./src/qt/pivx-qt --testnet &
+```
+
+Extra information:
+
+The <threads_num> needs to be less than the amount of processors, otherwise it will slow down the process.
 
 #### **Congratulations, you have successfully compiled and started FRESH PIVX Qt Core Wallet!**
