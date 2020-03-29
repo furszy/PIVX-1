@@ -7,6 +7,7 @@
 #include "transactiontablemodel.h"
 
 #include "addresstablemodel.h"
+#include "clientmodel.h"
 #include "guiconstants.h"
 #include "guiutil.h"
 #include "optionsmodel.h"
@@ -305,9 +306,10 @@ public:
     }
 };
 
-TransactionTableModel::TransactionTableModel(CWallet* wallet, WalletModel* parent) : QAbstractTableModel(parent),
+TransactionTableModel::TransactionTableModel(CWallet* wallet, WalletModel* parent, ClientModel* _clientModel) : QAbstractTableModel(parent),
                                                                                      wallet(wallet),
                                                                                      walletModel(parent),
+                                                                                     clientModel(_clientModel),
                                                                                      priv(new TransactionTablePriv(wallet, this)),
                                                                                      fProcessingQueuedTransactions(false)
 {
@@ -829,18 +831,41 @@ private:
 
 static bool fQueueNotifications = false;
 static std::vector<TransactionNotification> vQueueNotifications;
+static int64_t lastNotification = 0;
 
-static void NotifyTransactionChanged(TransactionTableModel* ttm, CWallet* wallet, const uint256& hash, ChangeType status)
+static void ProcessNotificationsQueue(TransactionTableModel* ttm)
+{
+    if (!vQueueNotifications.empty()) {
+        if (vQueueNotifications.size() > 10) // prevent balloon spam, show maximum 10 balloons
+            QMetaObject::invokeMethod(ttm, "setProcessingQueuedTransactions", Qt::QueuedConnection, Q_ARG(bool, true));
+        for (unsigned int i = 0; i < vQueueNotifications.size(); ++i) {
+            if (vQueueNotifications.size() - i <= 10)
+                QMetaObject::invokeMethod(ttm, "setProcessingQueuedTransactions", Qt::QueuedConnection,
+                                          Q_ARG(bool, false));
+
+            vQueueNotifications[i].invoke(ttm);
+        }
+        std::vector<TransactionNotification>().swap(vQueueNotifications); // clear
+    }
+}
+
+static void NotifyTransactionChanged(TransactionTableModel* ttm, ClientModel* clientModel, CWallet* wallet, const uint256& hash, ChangeType status)
 {
 
-    TransactionNotification notification(hash, status);
+    fQueueNotifications = fQueueNotifications || (clientModel->IsImporting() || clientModel->IsReindexing() || clientModel->inInitialBlockDownload());
 
-    if (fQueueNotifications)
-    {
+    TransactionNotification notification(hash, status);
+    int size = vQueueNotifications.size();
+    if (fQueueNotifications && size < 15) {
         vQueueNotifications.push_back(notification);
         return;
     }
-    notification.invoke(ttm);
+
+    if (size == 0) {
+        notification.invoke(ttm);
+    } else {
+        ProcessNotificationsQueue(ttm);
+    }
 }
 
 static void ShowProgress(TransactionTableModel* ttm, const std::string& title, int nProgress)
@@ -850,28 +875,20 @@ static void ShowProgress(TransactionTableModel* ttm, const std::string& title, i
 
     if (nProgress == 100) {
         fQueueNotifications = false;
-        if (vQueueNotifications.size() > 10) // prevent balloon spam, show maximum 10 balloons
-            QMetaObject::invokeMethod(ttm, "setProcessingQueuedTransactions", Qt::QueuedConnection, Q_ARG(bool, true));
-        for (unsigned int i = 0; i < vQueueNotifications.size(); ++i) {
-            if (vQueueNotifications.size() - i <= 10)
-                QMetaObject::invokeMethod(ttm, "setProcessingQueuedTransactions", Qt::QueuedConnection, Q_ARG(bool, false));
-
-            vQueueNotifications[i].invoke(ttm);
-        }
-        std::vector<TransactionNotification>().swap(vQueueNotifications); // clear
+        ProcessNotificationsQueue(ttm);
     }
 }
 
 void TransactionTableModel::subscribeToCoreSignals()
 {
     // Connect signals to wallet
-    wallet->NotifyTransactionChanged.connect(boost::bind(NotifyTransactionChanged, this, _1, _2, _3));
+    wallet->NotifyTransactionChanged.connect(boost::bind(NotifyTransactionChanged, this, clientModel, _1, _2, _3));
     wallet->ShowProgress.connect(boost::bind(ShowProgress, this, _1, _2));
 }
 
 void TransactionTableModel::unsubscribeFromCoreSignals()
 {
     // Disconnect signals from wallet
-    wallet->NotifyTransactionChanged.disconnect(boost::bind(NotifyTransactionChanged, this, _1, _2, _3));
+    wallet->NotifyTransactionChanged.disconnect(boost::bind(NotifyTransactionChanged, this, clientModel, _1, _2, _3));
     wallet->ShowProgress.disconnect(boost::bind(ShowProgress, this, _1, _2));
 }

@@ -11,6 +11,7 @@
 #include <QAbstractTableModel>
 #include <QStringList>
 
+class ClientModel;
 class TransactionRecord;
 class TransactionTablePriv;
 class WalletModel;
@@ -24,7 +25,7 @@ class TransactionTableModel : public QAbstractTableModel
     Q_OBJECT
 
 public:
-    explicit TransactionTableModel(CWallet* wallet, WalletModel* parent = 0);
+    explicit TransactionTableModel(CWallet* wallet, WalletModel* parent = 0, ClientModel* clientModel = nullptr);
     ~TransactionTableModel();
 
     enum ColumnIndex {
@@ -85,6 +86,7 @@ Q_SIGNALS:
 private:
     CWallet* wallet;
     WalletModel* walletModel;
+    ClientModel* clientModel;
     QStringList columns;
     TransactionTablePriv* priv;
     bool fProcessingQueuedTransactions;
