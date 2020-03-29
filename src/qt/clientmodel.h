@@ -69,6 +69,9 @@ public:
     //! Return true if core is doing initial block download
     bool inInitialBlockDownload() const;
     //! Return true if core is importing blocks
+    bool IsImporting() const { return cachedImporting; }
+    //! Return true if it's reindexing.
+    bool IsReindexing() const { return cachedReindexing; }
     enum BlockSource getBlockSource() const;
     //! Return warnings to be displayed in status bar
     QString getStatusBarWarnings() const;
