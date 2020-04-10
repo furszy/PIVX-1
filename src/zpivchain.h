@@ -21,7 +21,8 @@ class CValidationState;
 class CZerocoinMint;
 class uint256;
 
-bool BlockToZerocoinMintList(const CBlock& block, std::list<CZerocoinMint>& vMints, bool fFilterInvalid);
+bool BlockToZerocoinLists(const CBlock& block, std::list<CZerocoinMint>& vMints, std::list<libzerocoin::CoinDenomination>& vSpends,
+                          bool fFilterInvalid, bool includeMints, bool includeSpends);
 void FindMints(std::vector<CMintMeta> vMintsToFind, std::vector<CMintMeta>& vMintsToUpdate, std::vector<CMintMeta>& vMissingMints);
 int GetZerocoinStartHeight();
 bool GetZerocoinMint(const CBigNum& bnPubcoin, uint256& txHash);
@@ -33,7 +34,6 @@ bool RemoveSerialFromDB(const CBigNum& bnSerial);
 std::string ReindexZerocoinDB();
 libzerocoin::CoinSpend TxInToZerocoinSpend(const CTxIn& txin);
 bool TxOutToPublicCoin(const CTxOut& txout, libzerocoin::PublicCoin& pubCoin, CValidationState& state);
-std::list<libzerocoin::CoinDenomination> ZerocoinSpendListFromBlock(const CBlock& block, bool fFilterInvalid);
 
 
 #endif //PIVX_ZPIVCHAIN_H

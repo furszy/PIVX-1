@@ -14,46 +14,72 @@
 // For Script size (BIGNUM/Uint256 size)
 #define BIGNUM_SIZE   4
 
-//return a list of zerocoin mints contained in a specific block
-bool BlockToZerocoinMintList(const CBlock& block, std::list<CZerocoinMint>& vMints, bool fFilterInvalid)
+//return a list of zerocoin mints and spends contained in a specific block
+bool BlockToZerocoinLists(const CBlock& block, std::list<CZerocoinMint>& vMints, std::list<libzerocoin::CoinDenomination>& vSpends,
+        bool fFilterInvalid, bool includeMints, bool includeSpends)
 {
     for (const CTransaction& tx : block.vtx) {
-        if(!tx.HasZerocoinMintOutputs())
-            continue;
+        // Only over mints or spends.
+        bool hasMints = false;
+        bool hasSpends = false;
+        if((includeMints && (hasMints = tx.HasZerocoinMintOutputs())) ||
+            (includeSpends && (hasSpends = tx.HasZerocoinSpendInputs()))) {
+            // Filter out mints that have used invalid outpoints
+            if (fFilterInvalid) {
+                bool fValid = true;
+                for (const CTxIn &in : tx.vin) {
 
-        // Filter out mints that have used invalid outpoints
-        if (fFilterInvalid) {
-            bool fValid = true;
-            for (const CTxIn& in : tx.vin) {
-                if (!ValidOutPoint(in.prevout, INT_MAX)) {
-                    fValid = false;
-                    break;
+                    if (hasMints && includeMints) {
+                        if (!ValidOutPoint(in.prevout, INT_MAX)) {
+                            fValid = false;
+                            break;
+                        }
+                    }
+
+                    if (hasSpends && includeSpends) {
+                        bool isPublicSpend = in.IsZerocoinPublicSpend();
+                        if (!in.IsZerocoinSpend() && !isPublicSpend)
+                            continue;
+
+                        if (!isPublicSpend) {
+                            libzerocoin::CoinSpend spend = TxInToZerocoinSpend(in);
+                            if (invalid_out::ContainsSerial(spend.getCoinSerialNumber()))
+                                continue;
+                        }
+
+                        vSpends.push_back(libzerocoin::IntToZerocoinDenomination(in.nSequence));
+                    }
+                }
+                if (!fValid)
+                    continue;
+            }
+
+            if (hasMints && includeMints) {
+                uint256 txHash = tx.GetHash();
+                for (unsigned int i = 0; i < tx.vout.size(); i++) {
+                    //Filter out mints that use invalid outpoints - edge case: invalid spend with minted change
+                    if (fFilterInvalid && !ValidOutPoint(COutPoint(txHash, i), INT_MAX))
+                        break;
+
+                    const CTxOut txOut = tx.vout[i];
+                    if (!txOut.IsZerocoinMint())
+                        continue;
+
+                    CValidationState state;
+                    libzerocoin::PublicCoin pubCoin(Params().GetConsensus().Zerocoin_Params(false));
+                    if (!TxOutToPublicCoin(txOut, pubCoin, state))
+                        return false;
+
+                    //version should not actually matter here since it is just a reference to the pubcoin, not to the privcoin
+                    uint8_t version = 1;
+                    CZerocoinMint mint = CZerocoinMint(pubCoin.getDenomination(), pubCoin.getValue(), 0, 0, false,
+                                                       version,
+                                                       nullptr);
+                    mint.SetTxHash(tx.GetHash());
+                    mint.tx = &tx;
+                    vMints.push_back(mint);
                 }
             }
-            if (!fValid)
-                continue;
-        }
-
-        uint256 txHash = tx.GetHash();
-        for (unsigned int i = 0; i < tx.vout.size(); i++) {
-            //Filter out mints that use invalid outpoints - edge case: invalid spend with minted change
-            if (fFilterInvalid && !ValidOutPoint(COutPoint(txHash, i), INT_MAX))
-                break;
-
-            const CTxOut txOut = tx.vout[i];
-            if(!txOut.IsZerocoinMint())
-                continue;
-
-            CValidationState state;
-            libzerocoin::PublicCoin pubCoin(Params().GetConsensus().Zerocoin_Params(false));
-            if(!TxOutToPublicCoin(txOut, pubCoin, state))
-                return false;
-
-            //version should not actually matter here since it is just a reference to the pubcoin, not to the privcoin
-            uint8_t version = 1;
-            CZerocoinMint mint = CZerocoinMint(pubCoin.getDenomination(), pubCoin.getValue(), 0, 0, false, version, nullptr);
-            mint.SetTxHash(tx.GetHash());
-            vMints.push_back(mint);
         }
     }
 
@@ -298,31 +324,5 @@ bool TxOutToPublicCoin(const CTxOut& txout, libzerocoin::PublicCoin& pubCoin, CV
     pubCoin = checkPubCoin;
 
     return true;
-}
-
-//return a list of zerocoin spends contained in a specific block, list may have many denominations
-std::list<libzerocoin::CoinDenomination> ZerocoinSpendListFromBlock(const CBlock& block, bool fFilterInvalid)
-{
-    std::list<libzerocoin::CoinDenomination> vSpends;
-    for (const CTransaction& tx : block.vtx) {
-        if (!tx.HasZerocoinSpendInputs())
-            continue;
-
-        for (const CTxIn& txin : tx.vin) {
-            bool isPublicSpend = txin.IsZerocoinPublicSpend();
-            if (!txin.IsZerocoinSpend() && !isPublicSpend)
-                continue;
-
-            if (fFilterInvalid && !isPublicSpend) {
-                libzerocoin::CoinSpend spend = TxInToZerocoinSpend(txin);
-                if (invalid_out::ContainsSerial(spend.getCoinSerialNumber()))
-                    continue;
-            }
-
-            libzerocoin::CoinDenomination c = libzerocoin::IntToZerocoinDenomination(txin.nSequence);
-            vSpends.push_back(c);
-        }
-    }
-    return vSpends;
 }
 

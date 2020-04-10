@@ -315,28 +315,32 @@ bool UpdateZPIVSupply(const CBlock& block, CBlockIndex* pindex, bool fJustCheck)
     pindex->mapZerocoinSupply = pindex->pprev->mapZerocoinSupply;
 
     //Add mints to zPIV supply (mints are forever disabled after last checkpoint)
-    if (pindex->nHeight < consensus.height_last_ZC_AccumCheckpoint) {
-        std::list<CZerocoinMint> listMints;
+    bool isMintingEnabled = pindex->nHeight < consensus.height_last_ZC_AccumCheckpoint;
+    std::list<CZerocoinMint> listMints;
+    std::list<libzerocoin::CoinDenomination> listDenomsSpent;
+    if (!BlockToZerocoinLists(block, listMints, listDenomsSpent, true, isMintingEnabled, true)) {
+        return error("Block contains invalid mints/spends");
+    }
+    if (isMintingEnabled) {
         std::set<uint256> setAddedToWallet;
-        BlockToZerocoinMintList(block, listMints, true);
         for (const auto& m : listMints) {
             pindex->mapZerocoinSupply.at(m.GetDenomination())++;
             //Remove any of our own mints from the mintpool
-            if (!fJustCheck && pwalletMain) {
+            if (!fJustCheck && pwalletMain && pwalletMain->zwalletMain
+                && pwalletMain->zwalletMain->IsEnabled()) {
+
                 if (pwalletMain->IsMyMint(m.GetValue())) {
-                    pwalletMain->UpdateMint(m.GetValue(), pindex->nHeight, m.GetTxHash(), m.GetDenomination());
-                    // Add the transaction to the wallet
-                    for (auto& tx : block.vtx) {
-                        uint256 txid = tx.GetHash();
+                    uint256 txid = m.GetTxHash();
+                    if (pwalletMain->UpdateMint(m.GetValue(), pindex->nHeight, txid, m.GetDenomination())) {
+
+                        // Add the transaction to the wallet
                         if (setAddedToWallet.count(txid))
                             continue;
-                        if (txid == m.GetTxHash()) {
-                            CWalletTx wtx(pwalletMain, tx);
-                            wtx.nTimeReceived = block.GetBlockTime();
-                            wtx.SetMerkleBranch(block);
-                            pwalletMain->AddToWallet(wtx, false, nullptr);
-                            setAddedToWallet.insert(txid);
-                        }
+                        CWalletTx wtx(pwalletMain, *m.tx);
+                        wtx.nTimeReceived = block.GetBlockTime();
+                        wtx.SetMerkleBranch(block);
+                        pwalletMain->AddToWallet(wtx, false, nullptr);
+                        setAddedToWallet.insert(txid);
                     }
                 }
             }
@@ -344,7 +348,6 @@ bool UpdateZPIVSupply(const CBlock& block, CBlockIndex* pindex, bool fJustCheck)
     }
 
     //Remove spends from zPIV supply
-    std::list<libzerocoin::CoinDenomination> listDenomsSpent = ZerocoinSpendListFromBlock(block, true);
     for (const auto& denom : listDenomsSpent) {
         pindex->mapZerocoinSupply.at(denom)--;
         // zerocoin failsafe

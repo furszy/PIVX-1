@@ -4540,7 +4540,8 @@ UniValue spendrawzerocoin(const UniValue& params, bool fHelp)
                 if (!ReadBlockFromDisk(block, pindex))
                     throw JSONRPCError(RPC_INTERNAL_ERROR, "Unable to read block from disk");
                 std::list<CZerocoinMint> listMints;
-                BlockToZerocoinMintList(block, listMints, true);
+                std::list<libzerocoin::CoinDenomination> unused;
+                BlockToZerocoinLists(block, listMints, unused, true, true, false);
                 for (const CZerocoinMint& m : listMints) {
                     if (m.GetValue() == mintValue && m.GetDenomination() == denom) {
                         // mint found. update txid

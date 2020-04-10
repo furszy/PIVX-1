@@ -24,7 +24,7 @@ private:
 
 public:
     CzPIVWallet(CWallet* parent);
-
+    bool IsEnabled();
     void AddToMintPool(const std::pair<uint256, uint32_t>& pMint, bool fVerbose);
     bool SetMasterSeed(const uint256& seedMaster, bool fResetCount = false);
     uint256 GetMasterSeed() { return seedMaster; }

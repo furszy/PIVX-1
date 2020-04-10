@@ -68,6 +68,12 @@ CzPIVWallet::CzPIVWallet(CWallet* parent)
     this->mintPool = CMintPool(nCountLastUsed);
 }
 
+bool CzPIVWallet::IsEnabled()
+{
+    // If there are no created keys, this is not used.
+    return nCountLastUsed != 0;
+}
+
 bool CzPIVWallet::SetMasterSeed(const uint256& seedMaster, bool fResetCount)
 {
 

@@ -10,6 +10,7 @@
 #include <chainparams.h>
 #include "libzerocoin/bignum.h"
 #include "libzerocoin/Denominations.h"
+#include "primitives/transaction.h"
 #include "key.h"
 #include "serialize.h"
 
@@ -51,6 +52,8 @@ private:
 public:
     static const int STAKABLE_VERSION = 2;
     static const int CURRENT_VERSION = 2;
+
+    const CTransaction* tx{nullptr};
 
     CZerocoinMint()
     {
