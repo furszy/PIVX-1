@@ -18,11 +18,10 @@
 #include <stdint.h>
 
 /*
- * Decompose CWallet transaction to model transaction records.
+ * Decompose CWallet transaction to model transaction record.
  */
-QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* wallet, const CWalletTx& wtx)
+TransactionRecord TransactionRecord::decomposeTransaction(const CWallet* wallet, const CWalletTx& wtx)
 {
-    QList<TransactionRecord> parts;
     int64_t nTime = wtx.GetComputedTxTime();
     CAmount nCredit = wtx.GetCredit(ISMINE_ALL);
     CAmount nDebit = wtx.GetDebit(ISMINE_ALL);
@@ -41,7 +40,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
 
         CTxDestination address;
         if (!wtx.HasZerocoinSpendInputs() && !ExtractDestination(wtx.vout[1].scriptPubKey, address))
-            return parts;
+            return TransactionRecord(); // Invalid transaction -- shouldn't never happen..
 
         if (wtx.HasZerocoinSpendInputs() && (fZSpendFromMe || wallet->zpivTracker->HasMintTx(hash))) {
             //zPIV stake reward
@@ -61,8 +60,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
                 sub.credit = nCredit;
                 sub.debit = -nDebit;
                 loadHotOrColdStakeOrContract(wallet, wtx, sub);
-                parts.append(sub);
-                return parts;
+                return sub;
             } else {
                 // PIV stake reward
                 sub.involvesWatchAddress = mine & ISMINE_WATCH_ONLY;
@@ -83,7 +81,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
             }
         }
 
-        parts.append(sub);
+        return sub;
     } else if (wtx.HasZerocoinSpendInputs()) {
         //zerocoin spend outputs
         bool fFeeAssigned = false;
@@ -104,8 +102,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
                     fFeeAssigned = true;
                 }
                 sub.idx = parts.size();
-                parts.append(sub);
-                continue;
+                return sub;
             }
 
             std::string strAddress = "";
@@ -128,8 +125,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
                 if (strAddress != "")
                     sub.address = strAddress;
                 sub.idx = parts.size();
-                parts.append(sub);
-                continue;
+                return sub;
             }
 
             // spend is not from us, so do not display the spend side of the record
@@ -145,7 +141,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
             if (strAddress != "")
                 sub.address = strAddress;
             sub.idx = parts.size();
-            parts.append(sub);
+            return sub;
         }
     } else if (wtx.HasP2CSOutputs()) {
         // Delegate tx.
@@ -153,14 +149,12 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
         sub.credit = nCredit;
         sub.debit = -nDebit;
         loadHotOrColdStakeOrContract(wallet, wtx, sub, true);
-        parts.append(sub);
-        return parts;
+        return sub;
     } else if (wtx.HasP2CSInputs()) {
         // Delegation unlocked
         TransactionRecord sub(hash, nTime, wtx.GetTotalSize());
         loadUnlockColdStake(wallet, wtx, sub);
-        parts.append(sub);
-        return parts;
+        return sub;
     } else if (nNet > 0 || wtx.IsCoinBase()) {
         //
         // Credit
@@ -187,7 +181,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
                     sub.type = TransactionRecord::Generated;
                 }
 
-                parts.append(sub);
+                return sub;
             }
         }
     } else {
@@ -219,8 +213,9 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
         }
 
         if (fAllFromMeDenom && fAllToMeDenom && ((nFromMe * nToMe) != 0)) {
-            parts.append(TransactionRecord(hash, nTime, wtx.GetTotalSize(), TransactionRecord::ObfuscationDenominate, "", -nDebit, nCredit));
-            parts.last().involvesWatchAddress = false; // maybe pass to TransactionRecord as constructor argument
+            TransactionRecord sub = TransactionRecord(hash, nTime, wtx.GetTotalSize(), TransactionRecord::ObfuscationDenominate, "", -nDebit, nCredit);
+            sub.involvesWatchAddress = false;
+            return sub;
         } else if (fAllFromMe && fAllToMe) {
             // Payment to self
             // TODO: this section still not accurate but covers most cases,
@@ -262,8 +257,8 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
 
             sub.debit = -(nDebit - nChange);
             sub.credit = nCredit - nChange;
-            parts.append(sub);
-            parts.last().involvesWatchAddress = involvesWatchAddress; // maybe pass to TransactionRecord as constructor argument
+            sub.involvesWatchAddress = involvesWatchAddress;
+            return sub;
         } else if (fAllFromMe || wtx.HasZerocoinMintOutputs()) {
             //
             // Debit
@@ -313,14 +308,16 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
                 }
                 sub.debit = -nValue;
 
-                parts.append(sub);
+                return sub;
             }
         } else {
             //
             // Mixed debit transaction, can't break down payees
+            // todo: Review this type properly.
             //
-            parts.append(TransactionRecord(hash, nTime, wtx.GetTotalSize(), TransactionRecord::Other, "", nNet, 0));
-            parts.last().involvesWatchAddress = involvesWatchAddress;
+            TransactionRecord sub(hash, nTime, wtx.GetTotalSize(), TransactionRecord::Other, "", nNet, 0);
+            sub.involvesWatchAddress = involvesWatchAddress;
+            return sub;
         }
     }
 

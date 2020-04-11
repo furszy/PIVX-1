@@ -153,16 +153,16 @@ public:
 
         bool hasZcTxes = tablePriv->hasZcTxes;
         for (const auto &tx : walletTxes) {
-            QList<TransactionRecord> records = TransactionRecord::decomposeTransaction(wallet, tx);
+            TransactionRecord record = TransactionRecord::decomposeTransaction(wallet, tx);
 
-            if (!hasZcTxes) {
-                for (const TransactionRecord &record : records) {
+            if (!record.isNull()) {
+                if (!hasZcTxes) {
                     hasZcTxes = HasZcTxesIfNeeded(record);
                     if (hasZcTxes) break;
                 }
-            }
 
-            cachedWallet.append(records);
+                cachedWallet.append(record);
+            }
         }
 
         if (hasZcTxes) // Only update it if it's true, multi-thread operation.
@@ -222,9 +222,9 @@ public:
                         break;
                     }
                     // Added -- insert at the right position
-                    QList<TransactionRecord> toInsert =
+                    TransactionRecord toInsert =
                         TransactionRecord::decomposeTransaction(wallet, mi->second);
-                    if (!toInsert.isEmpty()) { /* only if something to insert */
+                    if (!toInsert.isNull()) { /* only if something to insert */
                         parent->beginInsertRows(QModelIndex(), lowerIndex, lowerIndex + toInsert.size() - 1);
                         int insert_idx = lowerIndex;
                         for (const TransactionRecord& rec : toInsert) {
