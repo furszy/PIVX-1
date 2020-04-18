@@ -437,7 +437,34 @@ bool CWallet::ChangeWalletPassphrase(const SecureString& strOldWalletPassphrase,
 void CWallet::SetBestChain(const CBlockLocator& loc)
 {
     CWalletDB walletdb(strWalletFile);
-    walletdb.WriteBestBlock(loc);
+
+    if (!walletdb.TxnBegin()) {
+        // This needs to be done atomically, so don't do it at all
+        LogPrintf("%s: Couldn't start atomic write\n", __func__);
+        return;
+    }
+
+    // Store the best block
+    if (!walletdb.WriteBestBlock(loc)) {
+        LogPrintf("SetBestChain(): Failed to write best block, aborting atomic write\n");
+        walletdb.TxnAbort();
+        return;
+    }
+
+    // Store sapling witness cache size
+    if (m_sspk_man->nWitnessCacheNeedsUpdate) {
+        if (!walletdb.WriteWitnessCacheSize(m_sspk_man->nWitnessCacheSize)) {
+            LogPrintf("%s: Failed to write nWitnessCacheSize\n", __func__);
+            walletdb.TxnAbort();
+            return;
+        }
+    }
+
+    if (!walletdb.TxnCommit()) {
+        // Couldn't commit all to db, but in-memory state is fine
+        LogPrintf("%s: Couldn't commit atomic write\n", __func__);
+        return;
+    }
 }
 
 bool CWallet::SetMinVersion(enum WalletFeature nVersion, CWalletDB* pwalletdbIn, bool fExplicit)
@@ -4133,8 +4160,9 @@ void CWallet::SetNull()
     fCombineDust = false;
     nAutoCombineThreshold = 0;
 
-    // Sapling
-    nWitnessCacheSize = 0;
+    // Sapling.
+    m_sspk_man->nWitnessCacheSize = 0;
+    m_sspk_man->nWitnessCacheNeedsUpdate = true;
 }
 
 bool CWallet::isMultiSendEnabled()
