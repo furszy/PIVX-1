@@ -4132,6 +4132,9 @@ void CWallet::SetNull()
     //Auto Combine Dust
     fCombineDust = false;
     nAutoCombineThreshold = 0;
+
+    // Sapling
+    nWitnessCacheSize = 0;
 }
 
 bool CWallet::isMultiSendEnabled()
@@ -4244,6 +4247,12 @@ int CWallet::GetVersion()
 ////////////////////////////////////////////////////////////
 
 libzcash::SaplingPaymentAddress CWallet::GenerateNewSaplingZKey() { return m_sspk_man->GenerateNewSaplingZKey(); }
+
+void CWallet::IncrementNoteWitnesses(const CBlockIndex* pindex,
+                            const CBlock* pblock,
+                            SaplingMerkleTree& saplingTree) { m_sspk_man->IncrementNoteWitnesses(pindex, pblock, saplingTree); }
+
+void CWallet::DecrementNoteWitnesses(const CBlockIndex* pindex) { m_sspk_man->DecrementNoteWitnesses(pindex); }
 
 bool CWallet::AddSaplingZKey(const libzcash::SaplingExtendedSpendingKey &key) { return m_sspk_man->AddSaplingZKey(key); }
 
