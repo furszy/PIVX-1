@@ -257,6 +257,18 @@ std::pair<mapSaplingNoteData_t, SaplingIncomingViewingKeyMap> SaplingScriptPubKe
     return std::make_pair(noteData, viewingKeysToAdd);
 }
 
+bool SaplingScriptPubKeyMan::IsSaplingNullifierFromMe(const uint256& nullifier) const
+{
+    {
+        LOCK(wallet->cs_wallet);
+        if (mapSaplingNullifiersToNotes.count(nullifier) &&
+            wallet->mapWallet.count(mapSaplingNullifiersToNotes.at(nullifier).hash)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool SaplingScriptPubKeyMan::UpdatedNoteData(const CWalletTx& wtxIn, CWalletTx& wtx)
 {
     bool unchangedSaplingFlag = (wtxIn.mapSaplingNoteData.empty() || wtxIn.mapSaplingNoteData == wtx.mapSaplingNoteData);
