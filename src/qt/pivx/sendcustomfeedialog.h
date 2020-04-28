@@ -10,6 +10,7 @@
 
 class PIVXGUI;
 class WalletModel;
+class SnackBar;
 
 namespace Ui {
 class SendCustomFeeDialog;
@@ -42,6 +43,10 @@ private:
     Ui::SendCustomFeeDialog *ui;
     WalletModel* walletModel = nullptr;
     CFeeRate feeRate;
+
+    SnackBar* snackBar{nullptr};
+
+    void inform(QString text);
 };
 
 #endif // SENDCUSTOMFEEDIALOG_H

@@ -5,6 +5,7 @@
 #include "qt/pivx/sendcustomfeedialog.h"
 #include "qt/pivx/forms/ui_sendcustomfeedialog.h"
 #include "qt/pivx/qtutils.h"
+#include "qt/pivx/snackbar.h"
 #include "walletmodel.h"
 #include "optionsmodel.h"
 #include "guiutil.h"
@@ -124,8 +125,15 @@ void SendCustomFeeDialog::updateFee()
 void SendCustomFeeDialog::accept()
 {
     // Persist custom fee in the wallet
-    if (walletModel)
-        walletModel->setWalletCustomFee(ui->checkBoxCustom->checkState() == Qt::Checked, getFeeRate().GetFeePerK());
+    if (walletModel) {
+        CFeeRate fee = getFeeRate();
+        if (fee < CWallet::minTxFee) {
+            inform(tr("Fee needs to be at least\n%1").arg((BitcoinUnits::formatWithUnit(walletModel->getOptionsModel()->getDisplayUnit(),
+                                                                                 CWallet::minTxFee.GetFeePerK()) + "/kB").toStdString().c_str()));
+            return;
+        }
+        walletModel->setWalletCustomFee(ui->checkBoxCustom->checkState() == Qt::Checked, fee.GetFeePerK());
+    }
     QDialog::accept();
 }
 
@@ -144,6 +152,16 @@ bool SendCustomFeeDialog::isCustomFeeChecked()
 {
     return ui->checkBoxCustom->checkState() == Qt::Checked;
 }
+
+void SendCustomFeeDialog::inform(QString text)
+{
+    if (!snackBar)
+        snackBar = new SnackBar(nullptr, this);
+    snackBar->setText(text);
+    snackBar->resize(this->width(), snackBar->height());
+    openDialog(snackBar, this);
+}
+
 
 void SendCustomFeeDialog::onChangeTheme(bool isLightTheme, QString& theme)
 {
