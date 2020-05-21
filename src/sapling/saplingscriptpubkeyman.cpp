@@ -328,7 +328,7 @@ std::pair<mapSaplingNoteData_t, SaplingIncomingViewingKeyMap> SaplingScriptPubKe
             }
 
             // Check if we already have it.
-            auto address = ivk.address(result.get().d);
+            boost::optional<libzcash::SaplingPaymentAddress> address = ivk.address(result.get().d);
             if (address && wallet->mapSaplingIncomingViewingKeys.count(address.get()) == 0) {
                 viewingKeysToAdd[address.get()] = ivk;
             }
@@ -343,6 +343,30 @@ std::pair<mapSaplingNoteData_t, SaplingIncomingViewingKeyMap> SaplingScriptPubKe
     }
 
     return std::make_pair(noteData, viewingKeysToAdd);
+}
+
+std::vector<libzcash::SaplingPaymentAddress> SaplingScriptPubKeyMan::FindMySaplingAddresses(const CTransaction &tx) const
+{
+    LOCK(wallet->cs_KeyStore);
+    uint256 hash = tx.GetHash();
+    std::vector<libzcash::SaplingPaymentAddress> ret;
+
+    // Protocol Spec: 4.19 Block Chain Scanning (Sapling)
+    for (uint32_t i = 0; i < tx.sapData->vShieldedOutput.size(); ++i) {
+        const OutputDescription output = tx.sapData->vShieldedOutput[i];
+        for (auto it = wallet->mapSaplingFullViewingKeys.begin(); it != wallet->mapSaplingFullViewingKeys.end(); ++it) {
+            libzcash::SaplingIncomingViewingKey ivk = it->first;
+            auto result = libzcash::SaplingNotePlaintext::decrypt(output.encCiphertext, ivk, output.ephemeralKey, output.cmu);
+            if (!result) {
+                continue;
+            }
+            boost::optional<libzcash::SaplingPaymentAddress> address = ivk.address(result.get().d);
+            if (address && wallet->mapSaplingIncomingViewingKeys.count(address.get()) != 0) {
+                ret.emplace_back(address.get());
+            }
+        }
+    }
+    return ret;
 }
 
 bool SaplingScriptPubKeyMan::IsSaplingNullifierFromMe(const uint256& nullifier) const
