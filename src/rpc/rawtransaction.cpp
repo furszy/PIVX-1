@@ -23,6 +23,8 @@
 #include "utilmoneystr.h"
 #include "zpivchain.h"
 #ifdef ENABLE_WALLET
+#include "sapling/key_io_sapling.h"
+#include "sapling/address.hpp"
 #include "wallet/wallet.h"
 #endif
 
@@ -65,6 +67,20 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry)
     // available to code in bitcoin-common, so we query them here and push the
     // data into the returned UniValue.
     TxToUniv(tx, uint256(), entry);
+
+    // Sapling
+    if (tx.nVersion >= CTransaction::SAPLING_VERSION) {
+        // Add information that only this wallet knows about the transaction if is possible
+        if (pwalletMain->HasSaplingSPKM()) {
+            std::vector<libzcash::SaplingPaymentAddress> addresses =
+                    pwalletMain->GetSaplingScriptPubKeyMan()->FindMySaplingAddresses(tx);
+            UniValue addrs(UniValue::VARR);
+            for (const auto &addr : addresses) {
+                addrs.push_back(KeyIO::EncodePaymentAddress(addr));
+            }
+            entry.pushKV("zaddresses", addrs);
+        }
+    }
 
     if (!hashBlock.IsNull()) {
         entry.pushKV("blockhash", hashBlock.GetHex());
