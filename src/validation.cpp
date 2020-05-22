@@ -2418,6 +2418,21 @@ bool ReceivedBlockTransactions(const CBlock& block, CValidationState& state, CBl
         pindexNew->SetProofOfStake();
     pindexNew->nTx = block.vtx.size();
     pindexNew->nChainTx = 0;
+
+    // Sapling
+    CAmount saplingValue = 0;
+    for (const auto& tx : block.vtx) {
+        if (tx->isSapling() && tx->hasSaplingData()) {
+            // Negative valueBalance "takes" money from the transparent value pool
+            // and adds it to the Sapling value pool. Positive valueBalance "gives"
+            // money to the transparent value pool, removing from the Sapling value
+            // pool. So we invert the sign here.
+            saplingValue += -tx->sapData->valueBalance;
+        }
+    }
+    pindexNew->nSaplingValue = saplingValue;
+    pindexNew->nChainSaplingValue = boost::none;
+
     pindexNew->nFile = pos.nFile;
     pindexNew->nDataPos = pos.nPos;
     pindexNew->nUndoPos = 0;
@@ -2435,6 +2450,18 @@ bool ReceivedBlockTransactions(const CBlock& block, CValidationState& state, CBl
             CBlockIndex* pindex = queue.front();
             queue.pop_front();
             pindex->nChainTx = (pindex->pprev ? pindex->pprev->nChainTx : 0) + pindex->nTx;
+
+            // Sapling, update chain value
+            if (pindex->pprev) {
+                if (pindex->pprev->nChainSaplingValue) {
+                    pindex->nChainSaplingValue = *pindex->pprev->nChainSaplingValue + pindex->nSaplingValue;
+                } else {
+                    pindex->nChainSaplingValue = boost::none;
+                }
+            } else {
+                pindex->nChainSaplingValue = pindex->nSaplingValue;
+            }
+
             {
                 LOCK(cs_nBlockSequenceId);
                 pindex->nSequenceId = nBlockSequenceId++;
@@ -3504,12 +3531,21 @@ bool static LoadBlockIndexDB(std::string& strError)
             if (pindex->pprev) {
                 if (pindex->pprev->nChainTx) {
                     pindex->nChainTx = pindex->pprev->nChainTx + pindex->nTx;
+                    // Sapling, calculate chain index value
+                    if (pindex->pprev->nChainSaplingValue) {
+                        pindex->nChainSaplingValue = *pindex->pprev->nChainSaplingValue + pindex->nSaplingValue;
+                    } else {
+                        pindex->nChainSaplingValue = boost::none;
+                    }
+
                 } else {
                     pindex->nChainTx = 0;
+                    pindex->nChainSaplingValue = boost::none;
                     mapBlocksUnlinked.emplace(pindex->pprev, pindex);
                 }
             } else {
                 pindex->nChainTx = pindex->nTx;
+                pindex->nChainSaplingValue = pindex->nSaplingValue;
             }
         }
         if (pindex->IsValid(BLOCK_VALID_TRANSACTIONS) && (pindex->nChainTx || pindex->pprev == NULL))

@@ -75,6 +75,25 @@ double GetDifficulty(const CBlockIndex* blockindex)
     return dDiff;
 }
 
+static UniValue ValuePoolDesc(
+        const std::string &name,
+        const boost::optional<CAmount> chainValue,
+        const boost::optional<CAmount> valueDelta)
+{
+    UniValue rv(UniValue::VOBJ);
+    rv.pushKV("id", name);
+    rv.pushKV("monitored", (bool)chainValue);
+    if (chainValue) {
+        rv.pushKV("chainValue", ValueFromAmount(*chainValue));
+        rv.pushKV("chainValueZat", *chainValue);
+    }
+    if (valueDelta) {
+        rv.pushKV("valueDelta", ValueFromAmount(*valueDelta));
+        rv.pushKV("valueDeltaZat", *valueDelta);
+    }
+    return rv;
+}
+
 UniValue blockheaderToJSON(const CBlockIndex* blockindex)
 {
     UniValue result(UniValue::VOBJ);
@@ -94,7 +113,8 @@ UniValue blockheaderToJSON(const CBlockIndex* blockindex)
     result.pushKV("difficulty", GetDifficulty(blockindex));
     result.pushKV("chainwork", blockindex->nChainWork.GetHex());
     result.pushKV("acc_checkpoint", blockindex->nAccumulatorCheckpoint.GetHex());
-
+// Sapling shielded pool value
+    result.push_back(ValuePoolDesc("shielded_pool_value", blockindex->nChainSaplingValue, blockindex->nSaplingValue));
     if (blockindex->pprev)
         result.pushKV("previousblockhash", blockindex->pprev->GetBlockHash().GetHex());
     CBlockIndex *pnext = chainActive.Next(blockindex);
@@ -931,6 +951,8 @@ UniValue getblockchaininfo(const JSONRPCRequest& request)
     obj.pushKV("difficulty", (double)GetDifficulty());
     obj.pushKV("verificationprogress", Checkpoints::GuessVerificationProgress(pChainTip));
     obj.pushKV("chainwork", pChainTip ? pChainTip->nChainWork.GetHex() : "");
+    // Sapling shielded pool value
+    obj.push_back(ValuePoolDesc("shielded_pool_value", pChainTip->nChainSaplingValue, pChainTip->nSaplingValue));
     UniValue softforks(UniValue::VARR);
     softforks.push_back(SoftForkDesc("bip65", 5, pChainTip));
     obj.pushKV("softforks",             softforks);
