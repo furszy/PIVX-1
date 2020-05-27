@@ -21,6 +21,18 @@
 
 extern UniValue CallRPC(std::string args); // Implemented in rpc_tests.cpp
 
+void CheckRPCThrows(std::string rpcString, std::string expectedErrorMessage) {
+    try {
+        CallRPC(rpcString);
+        // Note: CallRPC catches (const UniValue& objError) and rethrows a runtime_error
+        BOOST_FAIL("Should have caused an error");
+    } catch (const std::runtime_error& e) {
+        BOOST_CHECK_EQUAL(expectedErrorMessage, e.what());
+    } catch(const std::exception& e) {
+        BOOST_FAIL(std::string("Unexpected exception: ") + typeid(e).name() + ", message=\"" + e.what() + "\"");
+    }
+}
+
 BOOST_FIXTURE_TEST_SUITE(sapling_rpc_wallet_tests, WalletTestingSetup)
 
 /**
@@ -59,6 +71,31 @@ BOOST_AUTO_TEST_CASE(rpc_wallet_sapling_validateaddress)
     BOOST_CHECK_EQUAL(b, false);
     BOOST_CHECK_EQUAL(find_value(resultObj, "diversifier").get_str(), "e1fd627f1b9a8e4c7e6657");
     BOOST_CHECK_EQUAL(find_value(resultObj, "diversifiedtransmissionkey").get_str(), "d35e0d0897edbd3cf02b3d2327622a14c685534dbd2d3f4f4fa3e0e56cc2f008");
+}
+
+
+// Check if address is of given type and spendable from our wallet.
+void CheckHaveAddr(const libzcash::PaymentAddress& addr) {
+
+    BOOST_CHECK(IsValidPaymentAddress(addr));
+    auto addr_of_type = boost::get<libzcash::SaplingPaymentAddress>(&addr);
+    BOOST_ASSERT(addr_of_type != nullptr);
+    BOOST_CHECK(pwalletMain->HaveSpendingKeyForPaymentAddress(*addr_of_type));
+}
+
+BOOST_AUTO_TEST_CASE(rpc_wallet_getnewshieldedaddress) {
+    UniValue addr;
+
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+    if (!pwalletMain->HasSaplingSPKM()) {
+        pwalletMain->SetupSPKM(false);
+    }
+
+    // No parameter defaults to sapling address
+    addr = CallRPC("getnewshieldedaddress");
+    CheckHaveAddr(KeyIO::DecodePaymentAddress(addr.get_str()));
+    // Too many arguments will throw with the help
+    BOOST_CHECK_THROW(CallRPC("getnewshieldedaddress many args"), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
