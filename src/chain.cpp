@@ -69,7 +69,8 @@ CBlockIndex::CBlockIndex(const CBlock& block):
         hashMerkleRoot{block.hashMerkleRoot},
         nTime{block.nTime},
         nBits{block.nBits},
-        nNonce{block.nNonce}
+        nNonce{block.nNonce},
+        hashFinalSaplingRoot(block.hashFinalSaplingRoot)
 {
     if(block.nVersion > 3 && block.nVersion < 7)
         nAccumulatorCheckpoint = block.nAccumulatorCheckpoint;
@@ -115,6 +116,7 @@ CBlockHeader CBlockIndex::GetBlockHeader() const
     block.nBits = nBits;
     block.nNonce = nNonce;
     if (nVersion > 3 && nVersion < 7) block.nAccumulatorCheckpoint = nAccumulatorCheckpoint;
+    if (nVersion >= 8) block.hashFinalSaplingRoot = hashFinalSaplingRoot;
     return block;
 }
 

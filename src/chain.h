@@ -229,6 +229,7 @@ public:
     //! block header
     int nVersion{0};
     uint256 hashMerkleRoot{};
+    uint256 hashFinalSaplingRoot{};
     unsigned int nTime{0};
     unsigned int nBits{0};
     unsigned int nNonce{0};
@@ -333,11 +334,15 @@ public:
             if(this->nVersion > 3 && this->nVersion < 7)
                 READWRITE(nAccumulatorCheckpoint);
 
+            // Sapling blocks
+            if (this->nVersion >= 8) {
+                READWRITE(hashFinalSaplingRoot);
 
-            // Only read/write nSaplingValue if the client version used to create
-            // this index was storing them.
-            if (nSerVersion >= DBI_SER_VERSION_SAPLING) {
-                READWRITE(nSaplingValue);
+                // Only read/write nSaplingValue if the client version used to create
+                // this index was storing them.
+                if (nSerVersion >= DBI_SER_VERSION_SAPLING) {
+                    READWRITE(nSaplingValue);
+                }
             }
 
         } else if (nSerVersion > DBI_OLD_SER_VERSION && ser_action.ForRead()) {
@@ -410,6 +415,8 @@ public:
         block.nNonce = nNonce;
         if (nVersion > 3 && nVersion < 7)
             block.nAccumulatorCheckpoint = nAccumulatorCheckpoint;
+        if (nVersion >= 8)
+            block.hashFinalSaplingRoot = hashFinalSaplingRoot;
         return block.GetHash();
     }
 

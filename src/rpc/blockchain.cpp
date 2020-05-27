@@ -137,6 +137,7 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
     result.pushKV("version", block.nVersion);
     result.pushKV("merkleroot", block.hashMerkleRoot.GetHex());
     result.pushKV("acc_checkpoint", block.nAccumulatorCheckpoint.GetHex());
+    result.pushKV("finalsaplingroot", block.hashFinalSaplingRoot.GetHex());
     UniValue txs(UniValue::VARR);
     for (const auto& txIn : block.vtx) {
         const CTransaction& tx = *txIn;
