@@ -4281,12 +4281,14 @@ bool ProcessNewBlock(CValidationState& state, CNode* pfrom, CBlock* pblock, CDis
     if (!ActivateBestChain(state, pblock, checked))
         return error("%s : ActivateBestChain failed", __func__);
 
+    /*
     if (!fLiteMode) {
         if (masternodeSync.RequestedMasternodeAssets > MASTERNODE_SYNC_LIST) {
             masternodePayments.ProcessBlock(GetHeight() + 10);
             budget.NewBlock();
         }
     }
+     */
 
     if (pwalletMain) {
         /* disable multisend

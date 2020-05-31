@@ -326,7 +326,7 @@ bool IsBlockPayeeValid(const CBlock& block, int nBlockHeight)
 void FillBlockPayee(CMutableTransaction& txNew, CAmount nFees, bool fProofOfStake, bool fZPIVStake)
 {
     CBlockIndex* pindexPrev = chainActive.Tip();
-    if (!pindexPrev) return;
+    if(!pindexPrev) return;
 
     if (sporkManager.IsSporkActive(SPORK_13_ENABLE_SUPERBLOCKS) && budget.IsBudgetPaymentBlock(pindexPrev->nHeight + 1)) {
         budget.FillBlockPayee(txNew, nFees, fProofOfStake);
@@ -346,14 +346,14 @@ std::string GetRequiredPaymentsString(int nBlockHeight)
 
 void CMasternodePayments::FillBlockPayee(CMutableTransaction& txNew, int64_t nFees, bool fProofOfStake, bool fZPIVStake)
 {
-    CBlockIndex* pindexPrev = chainActive.Tip();
-    if (!pindexPrev) return;
+    if(!pCurrentBlockIndex) return;
+    int tipHeight = pCurrentBlockIndex->nHeight;
 
     bool hasPayment = true;
     CScript payee;
 
     //spork
-    if (!masternodePayments.GetBlockPayee(pindexPrev->nHeight + 1, payee)) {
+    if (!masternodePayments.GetBlockPayee(tipHeight + 1, payee)) {
         //no masternode detected
         CMasternode* winningNode = mnodeman.GetCurrentMasterNode(1);
         if (winningNode) {
@@ -364,7 +364,7 @@ void CMasternodePayments::FillBlockPayee(CMutableTransaction& txNew, int64_t nFe
         }
     }
 
-    CAmount blockValue = GetBlockValue(pindexPrev->nHeight);
+    CAmount blockValue = GetBlockValue(tipHeight);
     CAmount masternodePayment = GetMasternodePayment();
 
     if (hasPayment) {
@@ -446,12 +446,7 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
 
         if (pfrom->nVersion < ActiveProtocol()) return;
 
-        int nHeight;
-        {
-            TRY_LOCK(cs_main, locked);
-            if (!locked || chainActive.Tip() == NULL) return;
-            nHeight = chainActive.Tip()->nHeight;
-        }
+        int nHeight = pCurrentBlockIndex->nHeight;
 
         if (masternodePayments.mapMasternodePayeeVotes.count(winner.GetHash())) {
             LogPrint(BCLog::MASTERNODE, "mnw - Already seen - %s bestHeight %d\n", winner.GetHash().ToString().c_str(), nHeight);
@@ -519,12 +514,7 @@ bool CMasternodePayments::IsScheduled(CMasternode& mn, int nNotBlockHeight)
 {
     LOCK(cs_mapMasternodeBlocks);
 
-    int nHeight;
-    {
-        TRY_LOCK(cs_main, locked);
-        if (!locked || chainActive.Tip() == NULL) return false;
-        nHeight = chainActive.Tip()->nHeight;
-    }
+    int nHeight = pCurrentBlockIndex->nHeight;
 
     CScript mnpayee;
     mnpayee = GetScriptForDestination(mn.pubKeyCollateralAddress.GetID());
@@ -658,14 +648,11 @@ bool CMasternodePayments::IsTransactionValid(const CTransaction& txNew, int nBlo
 
 void CMasternodePayments::CleanPaymentList()
 {
+    if(!pCurrentBlockIndex) return;
+
     LOCK2(cs_mapMasternodePayeeVotes, cs_mapMasternodeBlocks);
 
-    int nHeight;
-    {
-        TRY_LOCK(cs_main, locked);
-        if (!locked || chainActive.Tip() == NULL) return;
-        nHeight = chainActive.Tip()->nHeight;
-    }
+    int nHeight = pCurrentBlockIndex->nHeight;
 
     //keep up to five cycles for historical sake
     int nLimit = std::max(int(mnodeman.size() * 1.25), 1000);
@@ -762,12 +749,7 @@ void CMasternodePayments::Sync(CNode* node, int nCountNeeded)
 {
     LOCK(cs_mapMasternodePayeeVotes);
 
-    int nHeight;
-    {
-        TRY_LOCK(cs_main, locked);
-        if (!locked || chainActive.Tip() == NULL) return;
-        nHeight = chainActive.Tip()->nHeight;
-    }
+    int nHeight = pCurrentBlockIndex->nHeight;
 
     int nCount = (mnodeman.CountEnabled() * 1.25);
     if (nCountNeeded > nCount) nCountNeeded = nCount;
@@ -829,3 +811,13 @@ int CMasternodePayments::GetNewestBlock()
 
     return nNewestBlock;
 }
+
+void CMasternodePayments::UpdatedBlockTip(const CBlockIndex *pindex)
+{
+    pCurrentBlockIndex = pindex;
+    LogPrint(BCLog::MNBUDGET, "pCurrentBlockIndex->nHeight: %d\n", pCurrentBlockIndex->nHeight);
+
+    if(!fLiteMode && masternodeSync.RequestedMasternodeAssets > MASTERNODE_SYNC_LIST)
+        ProcessBlock(pindex->nHeight+10);
+}
+

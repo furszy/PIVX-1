@@ -1,0 +1,23 @@
+// Copyright (c) 2015 The Dash Core developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#include "dsnotificationinterface.h"
+#include "masternode-budget.h"
+#include "masternode-payments.h"
+#include "masternode-sync.h"
+
+CDSNotificationInterface::CDSNotificationInterface()
+{
+}
+
+CDSNotificationInterface::~CDSNotificationInterface()
+{
+}
+
+void CDSNotificationInterface::UpdatedBlockTip(const CBlockIndex *pindex)
+{
+    masternodePayments.UpdatedBlockTip(pindex);
+    budget.UpdatedBlockTip(pindex);
+    masternodeSync.UpdatedBlockTip(pindex);
+}

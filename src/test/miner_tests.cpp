@@ -6,6 +6,7 @@
 #include "init.h"
 #include "consensus/merkle.h"
 #include "main.h"
+#include "masternode-payments.h"
 #include "miner.h"
 #include "pubkey.h"
 #include "uint256.h"
@@ -63,6 +64,9 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
 
     LOCK(cs_main);
     Checkpoints::fEnabled = false;
+
+    // force UpdatedBlockTip to initialize pCurrentBlockIndex
+    mnpayments.UpdatedBlockTip(chainActive.Tip());
 
     // Simple block creation, nothing special yet:
     BOOST_CHECK(pblocktemplate = CreateNewBlock(scriptPubKey, pwalletMain, false));

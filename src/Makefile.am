@@ -109,6 +109,7 @@ BITCOIN_CORE_H = \
   primitives/block.h \
   primitives/transaction.h \
   core_io.h \
+  dsnotificationinterface.h \
   crypter.h \
   pairresult.h \
   addressbook.h \
@@ -272,6 +273,7 @@ libbitcoin_wallet_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_wallet_a_SOURCES = \
   activemasternode.cpp \
   bip38.cpp \
+  dsnotificationinterface.cpp \
   denomination_functions.cpp \
   addressbook.cpp \
   crypter.cpp \

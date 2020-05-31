@@ -63,16 +63,9 @@ bool CMasternodeSync::IsBlockchainSynced()
 
     if (fImporting || fReindex) return false;
 
-    int64_t blockTime = 0;
-    {
-        TRY_LOCK(cs_main, lockMain);
-        if (!lockMain) return false;
-        CBlockIndex *pindex = chainActive.Tip();
-        if (pindex == nullptr) return false;
-        blockTime = pindex->nTime;
-    }
+    if(!pCurrentBlockIndex) return false;
 
-    if (blockTime + 60 * 60 < lastProcess)
+    if (pCurrentBlockIndex->nTime + 60 * 60 < lastProcess)
         return false;
 
     fBlockchainSynced = true;
@@ -259,6 +252,8 @@ void CMasternodeSync::Process()
 
     if (tick++ % MASTERNODE_SYNC_TIMEOUT != 0) return;
 
+    if(!pCurrentBlockIndex) return;
+
     if (IsSynced()) {
         /*
             Resync if we lose all masternodes from sleep/wake or failure to sync originally
@@ -419,4 +414,9 @@ void CMasternodeSync::Process()
             }
         }
     }
+}
+
+void CMasternodeSync::UpdatedBlockTip(const CBlockIndex *pindex)
+{
+    pCurrentBlockIndex = pindex;
 }

@@ -47,6 +47,8 @@
 #include "validationinterface.h"
 #include "zpivchain.h"
 
+#include "dsnotificationinterface.h"
+
 #ifdef ENABLE_WALLET
 #include "wallet/db.h"
 #include "wallet/wallet.h"
@@ -84,6 +86,8 @@ volatile bool fRestartRequested = false; // true: restart false: shutdown
 #if ENABLE_ZMQ
 static CZMQNotificationInterface* pzmqNotificationInterface = NULL;
 #endif
+
+static CDSNotificationInterface* pdsNotificationInterface = nullptr;
 
 #ifdef WIN32
 // Win32 LevelDB doesn't use filedescriptors, and the ones used for
@@ -265,6 +269,12 @@ void PrepareShutdown()
 
     // Disconnect all slots
     UnregisterAllValidationInterfaces();
+
+    if (pdsNotificationInterface) {
+        UnregisterValidationInterface(pdsNotificationInterface);
+        delete pdsNotificationInterface;
+        pdsNotificationInterface = nullptr;
+    }
 
 #ifndef WIN32
     try {
@@ -1412,6 +1422,10 @@ bool AppInit2()
     }
 #endif
 
+    // Register tier two interface
+    pdsNotificationInterface = new CDSNotificationInterface();
+    RegisterValidationInterface(pdsNotificationInterface);
+
     // ********************************************************* Step 7: load block chain
 
     fReindex = GetBoolArg("-reindex", false);
@@ -1978,6 +1992,12 @@ bool AppInit2()
     LogPrintf("fLiteMode %d\n", fLiteMode);
     LogPrintf("nSwiftTXDepth %d\n", nSwiftTXDepth);
     LogPrintf("Budget Mode %s\n", strBudgetMode.c_str());
+
+    // force UpdatedBlockTip to initialize pCurrentBlockIndex for DS, MN payments and budgets
+    {
+        LOCK(cs_main);
+        GetMainSignals().UpdatedBlockTip(chainActive.Tip());
+    }
 
     threadGroup.create_thread(boost::bind(&ThreadCheckMasternodes));
 

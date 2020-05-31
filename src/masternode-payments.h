@@ -231,6 +231,8 @@ class CMasternodePayments
 private:
     int nSyncedFromPeer;
     int nLastBlockHeight;
+    // Keep track of current block index
+    const CBlockIndex *pCurrentBlockIndex;
 
 public:
     std::map<uint256, CMasternodePaymentWinner> mapMasternodePayeeVotes;
@@ -292,6 +294,8 @@ public:
         READWRITE(mapMasternodePayeeVotes);
         READWRITE(mapMasternodeBlocks);
     }
+
+    void UpdatedBlockTip(const CBlockIndex *pindex);
 };
 
 

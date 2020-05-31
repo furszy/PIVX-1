@@ -181,6 +181,9 @@ private:
     // XX42    std::map<uint256, CTransaction> mapCollateral;
     std::map<uint256, uint256> mapCollateralTxids;
 
+    // Keep track of current block index
+    const CBlockIndex *pCurrentBlockIndex;
+
 public:
     // critical section to protect the inner data structures
     mutable RecursiveMutex cs;
@@ -275,6 +278,8 @@ public:
         READWRITE(mapProposals);
         READWRITE(mapFinalizedBudgets);
     }
+
+    void UpdatedBlockTip(const CBlockIndex *pindex);
 };
 
 
@@ -332,7 +337,7 @@ public:
     double GetScore();
     bool HasMinimumRequiredSupport();
 
-    bool IsValid(std::string& strError, bool fCheckCollateral = true);
+    bool IsValid(const CBlockIndex* pindex, std::string& strError, bool fCheckCollateral=true);
 
     std::string GetName() { return strBudgetName; }
     std::string GetProposals();
@@ -486,7 +491,7 @@ public:
     bool HasMinimumRequiredSupport();
     std::pair<std::string, std::string> GetVotes();
 
-    bool IsValid(std::string& strError, bool fCheckCollateral = true);
+    bool IsValid(const CBlockIndex* pindex, std::string& strError, bool fCheckCollateral = true);
 
     bool IsEstablished();
     bool IsPassing(const CBlockIndex* pindexPrev, int nBlockStartBudget, int nBlockEndBudget, int mnCount);
@@ -497,9 +502,9 @@ public:
     int GetBlockEnd() { return nBlockEnd; }
     CScript GetPayee() { return address; }
     int GetTotalPaymentCount();
-    int GetRemainingPaymentCount();
+    int GetRemainingPaymentCount(const CBlockIndex* pindex);
     int GetBlockStartCycle();
-    int GetBlockCurrentCycle();
+    int GetBlockCurrentCycle(const CBlockIndex* pindex);
     int GetBlockEndCycle();
     double GetRatio();
     int GetYeas() const;
