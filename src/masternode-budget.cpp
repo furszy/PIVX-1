@@ -516,8 +516,10 @@ void CBudgetManager::FillBlockPayee(CMutableTransaction& txNew, CAmount nFees, b
 {
     LOCK(cs);
 
-    if(!pCurrentBlockIndex) return;
-    int nHeight = pCurrentBlockIndex->nHeight;
+    AssertLockHeld(cs_main);
+    CBlockIndex* tip = chainActive.Tip();
+    if(!tip) return;
+    int nHeight = tip->nHeight;
 
     int nHighestCount = 0;
     CScript payee;
