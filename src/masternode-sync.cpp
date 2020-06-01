@@ -157,7 +157,8 @@ bool CMasternodeSync::IsBudgetFinEmpty()
 
 void CMasternodeSync::GetNextAsset()
 {
-    switch (RequestedMasternodeAssets) {
+    int asset = RequestedMasternodeAssets;
+    switch (asset) {
     case (MASTERNODE_SYNC_INITIAL):
     case (MASTERNODE_SYNC_FAILED): // should never be used here actually, use Reset() instead
         ClearFulfilledRequest();
@@ -183,7 +184,8 @@ void CMasternodeSync::GetNextAsset()
 
 std::string CMasternodeSync::GetSyncStatus()
 {
-    switch (masternodeSync.RequestedMasternodeAssets) {
+    int asset = masternodeSync.RequestedMasternodeAssets;
+    switch (asset) {
     case MASTERNODE_SYNC_INITIAL:
         return _("MNs synchronization pending...");
     case MASTERNODE_SYNC_SPORKS:

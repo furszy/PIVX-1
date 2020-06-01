@@ -56,7 +56,7 @@ public:
     int countBudgetItemFin;
 
     // Count peers we've requested the list from
-    int RequestedMasternodeAssets;
+    std::atomic<int> RequestedMasternodeAssets;
     int RequestedMasternodeAttempt;
 
     // Time when current masternode asset sync started
