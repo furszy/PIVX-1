@@ -6,6 +6,7 @@
 
 #include "consensus/consensus.h"
 #include "consensus/zerocoin_verify.h"
+#include "sapling/sapling_validation.h"
 #include "script/interpreter.h"
 #include "../validation.h"
 
@@ -54,8 +55,15 @@ unsigned int GetP2SHSigOpCount(const CTransaction& tx, const CCoinsViewCache& in
     return nSigOps;
 }
 
-bool CheckTransaction(const CTransaction& tx, bool fZerocoinActive, bool fRejectBadUTXO, CValidationState& state, bool fFakeSerialAttack, bool fColdStakingActive)
+bool CheckTransaction(const CTransaction& tx, bool fZerocoinActive, bool fRejectBadUTXO, CValidationState& state, bool fFakeSerialAttack, bool fColdStakingActive, bool fSaplingActive)
 {
+
+    // Dispatch to Sapling validator
+    CAmount nValueOut = 0;
+    if (!SaplingValidation::CheckTransaction(tx, state, nValueOut, fSaplingActive)) {
+        return false;
+    }
+
     // Basic checks that don't depend on any context
     if (tx.vin.empty())
         return state.DoS(10, false, REJECT_INVALID, "bad-txns-vin-empty");
@@ -70,7 +78,6 @@ bool CheckTransaction(const CTransaction& tx, bool fZerocoinActive, bool fReject
 
     // Check for negative or overflow output values
     const Consensus::Params& consensus = Params().GetConsensus();
-    CAmount nValueOut = 0;
     for (const CTxOut& txout : tx.vout) {
         if (txout.IsEmpty() && !tx.IsCoinBase() && !tx.IsCoinStake())
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-vout-empty");
