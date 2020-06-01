@@ -2185,7 +2185,8 @@ bool CWallet::AvailableCoins(std::vector<COutput>* pCoins,      // --> populates
                              bool fIncludeColdStaking,          // Default: false
                              AvailableCoinsType nCoinType,      // Default: ALL_COINS
                              bool fOnlyConfirmed,               // Default: true
-                             bool fUseIX                       // Default: false
+                             bool fUseIX,                       // Default: false
+                             bool fIncludeCoinStake             // Default: true
                              ) const
 {
     if (pCoins) pCoins->clear();
@@ -2207,6 +2208,10 @@ bool CWallet::AvailableCoins(std::vector<COutput>* pCoins,      // --> populates
 
             // Check min depth requirement for stake inputs
             if (nCoinType == STAKEABLE_COINS && nDepth < Params().GetConsensus().nStakeMinDepth) continue;
+
+            // Include or not coin stakes
+            if (pcoin->IsCoinStake() && !fIncludeCoinStake)
+                continue;
 
             for (unsigned int i = 0; i < pcoin->vout.size(); i++) {
                 const auto& output = pcoin->vout[i];
