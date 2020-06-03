@@ -243,6 +243,8 @@ public:
             std::vector<boost::optional<SaplingWitness>>& witnesses,
             uint256 &final_anchor);
 
+    std::set<std::pair<libzcash::PaymentAddress, uint256>> GetNullifiersForAddresses(const std::set<libzcash::PaymentAddress> & addresses);
+
     //! Update note data if is needed
     bool UpdatedNoteData(const CWalletTx& wtxIn, CWalletTx& wtx);
 
