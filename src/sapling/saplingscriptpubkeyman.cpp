@@ -504,6 +504,26 @@ std::set<std::pair<libzcash::PaymentAddress, uint256>> SaplingScriptPubKeyMan::G
     return nullifierSet;
 }
 
+bool SaplingScriptPubKeyMan::IsNoteSaplingChange(const std::set<std::pair<libzcash::PaymentAddress, uint256>> & nullifierSet,
+                                  const libzcash::PaymentAddress & address,
+                                  const SaplingOutPoint & op)
+{
+    // A Note is marked as "change" if the address that received it
+    // also spent Notes in the same transaction. This will catch,
+    // for instance:
+    // - Change created by spending fractions of Notes (because
+    //   z_sendmany sends change to the originating shielded address).
+    // - Notes created by consolidation transactions (e.g. using
+    //   z_mergetoaddress).
+    // - Notes sent from one address to itself.
+    for (const SpendDescription &spend : wallet->mapWallet[op.hash].sapData->vShieldedSpend) {
+        if (nullifierSet.count(std::make_pair(address, spend.nullifier))) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void SaplingScriptPubKeyMan::GetSaplingNoteWitnesses(std::vector<SaplingOutPoint> notes,
                                       std::vector<boost::optional<SaplingWitness>>& witnesses,
                                       uint256 &final_anchor)
