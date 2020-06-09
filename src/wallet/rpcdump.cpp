@@ -330,6 +330,29 @@ UniValue importwallet(const JSONRPCRequest& request)
         boost::split(vstr, line, boost::is_any_of(" "));
         if (vstr.size() < 2)
             continue;
+
+        // Sapling keys
+        // Let's see if the address is a valid PIVX spending key
+        if (pwalletMain->HasSaplingSPKM()) {
+            libzcash::SpendingKey spendingkey = KeyIO::DecodeSpendingKey(vstr[0]);
+            int64_t nTime = DecodeDumpTime(vstr[1]);
+            if (IsValidSpendingKey(spendingkey)) {
+                libzcash::SaplingExtendedSpendingKey saplingSpendingKey = *boost::get<libzcash::SaplingExtendedSpendingKey>(&spendingkey);
+                auto addResult = pwalletMain->GetSaplingScriptPubKeyMan()->AddSpendingKeyToWallet(
+                        Params().GetConsensus(), saplingSpendingKey, nTime);
+                if (addResult == KeyAlreadyExists){
+                    LogPrint(BCLog::SAPLING, "Skipping import of shielded addr (key already present)\n");
+                } else if (addResult == KeyNotAdded) {
+                    // Something went wrong
+                    fGood = false;
+                }
+                continue;
+            } else {
+                LogPrint(BCLog::SAPLING, "Importing detected an error: invalid spending key. Trying as a transparent key...\n");
+                // Not a valid spending key, so carry on and see if it's a PIVX style transparent address.
+            }
+        }
+
         CKey key = DecodeSecret(vstr[0]);
         if (!key.IsValid())
             continue;
