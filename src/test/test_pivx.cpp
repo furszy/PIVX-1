@@ -10,6 +10,7 @@
 #include "main.h"
 #include "random.h"
 #include "txdb.h"
+#include "txmempool.h"
 #include "guiinterface.h"
 
 #include <boost/test/unit_test.hpp>
@@ -66,6 +67,11 @@ TestingSetup::~TestingSetup()
         delete pcoinsdbview;
         delete pblocktree;
         fs::remove_all(pathTemp);
+}
+
+CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(CMutableTransaction &tx, CTxMemPool *pool) {
+    return CTxMemPoolEntry(tx, nFee, nTime, dPriority, nHeight,
+                           pool ? pool->HasNoInputsOf(tx) : hadNoDependencies);
 }
 
 [[noreturn]] void Shutdown(void* parg)
