@@ -1987,39 +1987,53 @@ bool CWallet::GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& 
     // wait for reindex and/or import to finish
     if (fImporting || fReindex) return false;
 
-    // Find possible candidates (remove delegated)
-    std::vector<COutput> vPossibleCoins;
-    AvailableCoins(&vPossibleCoins,
-                   nullptr,        // coin control
-                   false,          // fIncludeDelegated
-                   false,          // fIncludeColdStaking
-                   ONLY_10000);    // coin type
-
-    if (vPossibleCoins.empty()) {
-        LogPrintf("CWallet::GetMasternodeVinAndKeys -- Could not locate any valid masternode vin\n");
-        return false;
+    if (strTxHash.empty() || strOutputIndex.empty()) {
+        return error("%s: Invalid masternode hash or output index", __func__);
     }
-
-    if (strTxHash.empty()) // No output specified, select the first one
-        return GetVinAndKeysFromOutput(vPossibleCoins[0], txinRet, pubKeyRet, keyRet);
-
-    // Find specific vin
-    uint256 txHash = uint256S(strTxHash);
 
     int nOutputIndex;
     try {
         nOutputIndex = std::stoi(strOutputIndex.c_str());
     } catch (const std::exception& e) {
-        LogPrintf("%s: %s on strOutputIndex\n", __func__, e.what());
-        return false;
+        return error("%s: %s on strOutputIndex", __func__, e.what());
     }
 
-    for (COutput& out : vPossibleCoins)
-        if (out.tx->GetHash() == txHash && out.i == nOutputIndex) // found it!
-            return GetVinAndKeysFromOutput(out, txinRet, pubKeyRet, keyRet);
+    // Find specific vin
+    uint256 txHash = uint256S(strTxHash);
+    std::map<uint256, CWalletTx>::const_iterator mi = mapWallet.find(txHash);
+    if (mi == mapWallet.end()) {
+        return error("%s: tx hash %s not found in the wallet", __func__, strTxHash);
+    }
+    const CWalletTx& wtx = mi->second;
+    CTxOut txOut = wtx.vout[nOutputIndex];
 
-    LogPrintf("CWallet::GetMasternodeVinAndKeys -- Could not locate specified masternode vin\n");
-    return false;
+    // Masternode collateral value
+    if (txOut.nValue != 10000 * COIN) {
+        return error("%s: tx %s, index %d not a masternode collateral", __func__, strTxHash, nOutputIndex);
+    }
+
+    // Check availability
+    int nDepth = 0;
+    if (!CheckTXAvailability(&wtx, true, false, nDepth)) {
+        return error("%s: tx %s not available", __func__, strTxHash);
+    }
+    // Skip spent coins
+    if (IsSpent(txHash, nOutputIndex)) return error("%s: tx %s already spent", __func__, strTxHash);
+
+    // Depth must be at least MASTERNODE_MIN_CONFIRMATIONS
+    if (nDepth < MASTERNODE_MIN_CONFIRMATIONS) return error("%s: tx %s must be at least %d deep", __func__, strTxHash, MASTERNODE_MIN_CONFIRMATIONS);
+
+    // utxo need to be mine.
+    isminetype mine = IsMine(txOut);
+    if (mine != ISMINE_SPENDABLE) {
+        return error("%s: tx %s not mine", __func__, strTxHash);
+    }
+
+    return GetVinAndKeysFromOutput(
+            COutput(&wtx, nOutputIndex, nDepth, true),
+            txinRet,
+            pubKeyRet,
+            keyRet);
 }
 
 /**
