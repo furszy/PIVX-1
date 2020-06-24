@@ -771,12 +771,12 @@ public:
     mapValue_t mapValue;
     std::vector<std::pair<std::string, std::string> > vOrderForm;
     unsigned int fTimeReceivedIsTxTime;
-    unsigned int nTimeReceived; //! time received by this node
+    unsigned int nTimeReceived{0}; //! time received by this node
     /**
      * Stable timestamp representing the block time, for a transaction included in a block,
      * or else the time when the transaction was received if it isn't yet part of a block.
      */
-    unsigned int nTimeSmart;
+    unsigned int nTimeSmart{0};
     char fFromMe;
     std::string strFromAccount;
     int64_t nOrderPos; //! position in ordered transaction list
