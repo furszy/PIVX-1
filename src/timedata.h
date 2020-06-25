@@ -74,6 +74,7 @@ inline int64_t abs64(int64_t n) { return (n >= 0 ? n : -n); }
 int64_t GetTimeOffset();
 int64_t GetAdjustedTime();
 void AddTimeData(const CNetAddr& ip, int64_t nTime, int nOffsetLimit);
+bool CheckTimeOffset(CMedianFilter<int64_t>& vTimeOffsets, int nOffsetLimit); // only visible for testing
 
 // Time Protocol V2
 int64_t GetTimeSlot(const int64_t nTime);

@@ -51,6 +51,19 @@ void AddTimeData(const CNetAddr& ip, int64_t nOffsetSample, int nOffsetLimit)
     vTimeOffsets.input(nOffsetSample);
     LogPrintf("Added time data, samples %d, offset %+d (%+d minutes)\n", vTimeOffsets.size(), nOffsetSample, nOffsetSample / 60);
 
+    if (!CheckTimeOffset(vTimeOffsets, nOffsetLimit)) {
+        std::string strMessage = _("Warning: Please check that your computer's date and time are correct! If your clock is wrong PIVX Core will not work properly.");
+        strMiscWarning = strMessage;
+        LogPrintf("*** %s\n", strMessage);
+        uiInterface.ThreadSafeMessageBox(strMessage, "", CClientUIInterface::MSG_ERROR);
+    } else {
+        strMiscWarning = "";
+    }
+}
+
+bool CheckTimeOffset(CMedianFilter<int64_t>& vTimeOffsets, int nOffsetLimit)
+{
+    bool ret = false;
     // There is a known issue here (see issue #4521):
     //
     // - The structure vTimeOffsets contains up to 200 elements, after which
@@ -74,13 +87,10 @@ void AddTimeData(const CNetAddr& ip, int64_t nOffsetSample, int nOffsetLimit)
         // Only let other nodes change our time by so much
         if (abs64(nMedian) < nOffsetLimit) {
             nTimeOffset = nMedian;
-            strMiscWarning = "";
+            ret = true;
         } else {
             nTimeOffset = (nMedian > 0 ? 1 : -1) * nOffsetLimit;
-            std::string strMessage = _("Warning: Please check that your computer's date and time are correct! If your clock is wrong PIVX Core will not work properly.");
-            strMiscWarning = strMessage;
-            LogPrintf("*** %s\n", strMessage);
-            uiInterface.ThreadSafeMessageBox(strMessage, "", CClientUIInterface::MSG_ERROR);
+            ret = false;
         }
         if (!GetBoolArg("-shrinkdebugfile", g_logger->DefaultShrinkDebugFile())) {
             for (int64_t n : vSorted)
@@ -89,6 +99,7 @@ void AddTimeData(const CNetAddr& ip, int64_t nOffsetSample, int nOffsetLimit)
         }
         LogPrintf("nTimeOffset = %+d\n", nTimeOffset);
     }
+    return ret;
 }
 
 // Time Protocol V2
