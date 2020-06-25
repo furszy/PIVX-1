@@ -35,4 +35,35 @@ BOOST_AUTO_TEST_CASE(util_MedianFilter)
     BOOST_CHECK_EQUAL(filter.median(), 7);
 }
 
+BOOST_AUTO_TEST_CASE(timeOffset)
+{
+    SelectParams(CBaseChainParams::REGTEST);
+    const int nTimeSlotLength = Params().GetConsensus().nTimeSlotLength;
+
+    CMedianFilter<int64_t> vTimeOffsets1(200, 0);
+    int64_t curTime = GetTime();
+    // First test, "all good".
+    for (int i = 0; i < 16; ++i) {
+        int64_t nTimeOffset = curTime - GetTime();
+        vTimeOffsets1.input(nTimeOffset);
+    }
+    BOOST_CHECK(CheckTimeOffset(vTimeOffsets1, nTimeSlotLength));
+
+    // Second test, node time behind network
+    CMedianFilter<int64_t> vTimeOffsets2(200, 0);
+    for (int i = 0; i < 16; ++i) {
+        int64_t nTimeOffset = curTime - nTimeSlotLength - GetTime();
+        vTimeOffsets2.input(nTimeOffset);
+    }
+    BOOST_CHECK(!CheckTimeOffset(vTimeOffsets2, nTimeSlotLength));
+
+    // Second test, node time above network time
+    CMedianFilter<int64_t> vTimeOffsets3(200, 0);
+    for (int i = 0; i < 16; ++i) {
+        int64_t nTimeOffset = curTime + nTimeSlotLength - GetTime();
+        vTimeOffsets3.input(nTimeOffset);
+    }
+    BOOST_CHECK(!CheckTimeOffset(vTimeOffsets3, nTimeSlotLength));
+}
+
 BOOST_AUTO_TEST_SUITE_END()
