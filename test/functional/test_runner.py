@@ -61,7 +61,6 @@ BASE_SCRIPTS= [
 
     # vv Tests less than 5m vv
     'wallet_zapwallettxes.py',                  # ~ 300 sec
-    'p2p_time_offset.py',                       # ~ 267 sec
     'mining_pos_coldStaking.py',                # ~ 215 sec
     'mining_pos_reorg.py',                      # ~ 212 sec
     'wallet_abandonconflict.py',                # ~ 212 sec
@@ -166,7 +165,6 @@ LEGACY_SKIP_TESTS = [
     'mempool_resurrect.py',
     'mempool_spend_coinbase.py',
     'p2p_disconnect_ban.py',
-    'p2p_time_offset.py',
     'rpc_bip38.py',
     'rpc_blockchain.py',
     'rpc_budget.py',
