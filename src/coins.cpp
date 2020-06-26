@@ -349,11 +349,24 @@ bool CCoinsViewCache::HaveInputs(const CTransaction& tx) const
     return true;
 }
 
+// todo: Move field to fees.h when the class gets back ported (this is needed for the mempool unit tests)
+static const double MAX_PRIORITY = 1e16;
+
 double CCoinsViewCache::GetPriority(const CTransaction& tx, int nHeight, CAmount &inChainInputValue) const
 {
     inChainInputValue = 0;
     if (tx.IsCoinBase() || tx.IsCoinStake())
         return 0.0;
+
+
+    // Shielded transfers do not reveal any information about the value or age of a note, so we
+    // cannot apply the priority algorithm used for transparent utxos.  Instead, we just
+    // use the maximum priority for all (partially or fully) shielded transactions.
+    // (Note that coinbase/coinstakes transactions cannot contain Sapling shielded Spends or Outputs.)
+    if (tx.sapData->vShieldedSpend.size() > 0 || tx.sapData->vShieldedOutput.size() > 0) {
+        return MAX_PRIORITY;
+    }
+
     double dResult = 0.0;
     for (const CTxIn& txin : tx.vin) {
         const Coin& coin = AccessCoin(txin.prevout);
