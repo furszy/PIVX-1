@@ -586,7 +586,7 @@ ScriptPubKeyMan* CWallet::GetScriptPubKeyMan() const
  * Outpoint is spent if any non-conflicted transaction
  * spends it:
  */
-bool CWallet::IsSpent(const uint256& hash, unsigned int n) const
+bool CWallet::IsSpent(const uint256& hash, unsigned int n, int& nCachedDepth, bool& fCachedConflicted) const
 {
     const COutPoint outpoint(hash, n);
     std::pair<TxSpends::const_iterator, TxSpends::const_iterator> range;
@@ -595,15 +595,23 @@ bool CWallet::IsSpent(const uint256& hash, unsigned int n) const
         const uint256& wtxid = it->second;
         std::map<uint256, CWalletTx>::const_iterator mit = mapWallet.find(wtxid);
         if (mit != mapWallet.end()) {
-            bool fConflicted;
-            const int nDepth = mit->second.GetDepthAndMempool(fConflicted);
+            if (nCachedDepth == -999) {
+                nCachedDepth = mit->second.GetDepthAndMempool(fCachedConflicted);
+            }
             // not in mempool txes can spend coins only if not coinstakes
-            const bool fConflictedCoinstake = fConflicted && mit->second.IsCoinStake();
-            if (nDepth > 0  || (nDepth == 0 && !mit->second.isAbandoned() && !fConflictedCoinstake) )
+            const bool fConflictedCoinstake = fCachedConflicted && mit->second.IsCoinStake();
+            if (nCachedDepth > 0  || (nCachedDepth == 0 && !mit->second.isAbandoned() && !fConflictedCoinstake) )
                 return true; // Spent
         }
     }
     return false;
+}
+
+bool CWallet::IsSpent(const uint256& hash, unsigned int n) const
+{
+    int nCachedDepth = -999; // forces a depth check.
+    bool fCachedConflicted;
+    return IsSpent(hash, n, nCachedDepth, fCachedConflicted);
 }
 
 void CWallet::AddToSpends(const COutPoint& outpoint, const uint256& wtxid)
@@ -1945,7 +1953,7 @@ void CWallet::GetAvailableP2CSCoins(std::vector<COutput>& vCoins) const {
                 for (int i = 0; i < (int) pcoin->vout.size(); i++) {
                     const auto &utxo = pcoin->vout[i];
 
-                    if (IsSpent(wtxid, i))
+                    if (IsSpent(wtxid, i, nDepth, fConflicted))
                         continue;
 
                     if (utxo.scriptPubKey.IsPayToColdStaking()) {
@@ -2018,7 +2026,8 @@ bool CWallet::GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& 
         return error("%s: tx %s not available", __func__, strTxHash);
     }
     // Skip spent coins
-    if (IsSpent(txHash, nOutputIndex)) return error("%s: tx %s already spent", __func__, strTxHash);
+    bool fConflicted = false;
+    if (IsSpent(txHash, nOutputIndex, nDepth, fConflicted)) return error("%s: tx %s already spent", __func__, strTxHash);
 
     // Depth must be at least MASTERNODE_MIN_CONFIRMATIONS
     if (nDepth < MASTERNODE_MIN_CONFIRMATIONS) return error("%s: tx %s must be at least %d deep", __func__, strTxHash, MASTERNODE_MIN_CONFIRMATIONS);
@@ -2080,7 +2089,8 @@ bool CWallet::AvailableCoins(std::vector<COutput>* pCoins,      // --> populates
                 if (!found) continue;
 
                 if (nCoinType == STAKEABLE_COINS && pcoin->vout[i].IsZerocoinMint()) continue;
-                if (IsSpent(wtxid, i)) continue;
+                bool fConflicted = false; // CheckTXAvailability was passed, the tx is not conflicted.
+                if (IsSpent(wtxid, i, nDepth, fConflicted)) continue;
 
                 isminetype mine = IsMine(pcoin->vout[i]);
                 if (  (mine == ISMINE_NO) ||
@@ -3033,7 +3043,7 @@ std::map<CTxDestination, CAmount> CWallet::GetAddressBalances()
                         !ExtractDestination(pcoin->vout[i].scriptPubKey, addr, true) )
                     continue;
 
-                CAmount n = IsSpent(walletEntry.first, i) ? 0 : pcoin->vout[i].nValue;
+                CAmount n = IsSpent(walletEntry.first, i, nDepth, fConflicted) ? 0 : pcoin->vout[i].nValue;
 
                 if (!balances.count(addr))
                     balances[addr] = 0;

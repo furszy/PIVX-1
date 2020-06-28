@@ -372,6 +372,10 @@ public:
     bool GetVinAndKeysFromOutput(COutput out, CTxIn& txinRet, CPubKey& pubKeyRet, CKey& keyRet, bool fColdStake = false);
 
     bool IsSpent(const uint256& hash, unsigned int n) const;
+    // Checks if the output is spent or not.
+    // If nCachedDepth arg is -999: will look for the chain depth and conflicted flag and set them.
+    // If nCachedDepth is different than -999: it will not perform any depth and conflicted check lookup. Speeding up the method.
+    bool IsSpent(const uint256& hash, unsigned int n, int& nCachedDepth, bool& fCachedConflicted) const;
 
     bool IsLockedCoin(const uint256& hash, unsigned int n) const;
     void LockCoin(const COutPoint& output);
