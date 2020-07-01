@@ -337,12 +337,7 @@ public:
             // Sapling blocks
             if (this->nVersion >= 8) {
                 READWRITE(hashFinalSaplingRoot);
-
-                // Only read/write nSaplingValue if the client version used to create
-                // this index was storing them.
-                if (nSerVersion >= DBI_SER_VERSION_SAPLING) {
-                    READWRITE(nSaplingValue);
-                }
+                READWRITE(nSaplingValue);
             }
 
         } else if (nSerVersion > DBI_OLD_SER_VERSION && ser_action.ForRead()) {
