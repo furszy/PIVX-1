@@ -2388,7 +2388,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                         CWalletTx wtx(pwalletMain, tx);
                         wtx.nTimeReceived = pindex->GetBlockTime();
                         wtx.SetMerkleBranch(block);
-                        pwalletMain->AddToWallet(wtx, nullptr);
+                        pwalletMain->AddToWallet(wtx);
                         setAddedTx.insert(pSpend.second);
                     }
                 }
