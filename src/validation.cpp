@@ -515,10 +515,21 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
             }
         }
 
-        if (fRejectAbsurdFee && nFees > ::minRelayTxFee.GetFee(nSize) * 10000)
-            return state.Invalid(false,
-                REJECT_HIGHFEE, "absurdly-high-fee",
-                strprintf("%d > %d", nFees, ::minRelayTxFee.GetFee(nSize) * 10000));
+        if (!tx.hasSaplingData()) { // Sapling fee could be higher. Review it properly
+            if (fRejectAbsurdFee && nFees > ::minRelayTxFee.GetFee(nSize) * 10000) {
+                return state.Invalid(false,
+                                     REJECT_HIGHFEE, "absurdly-high-fee",
+                                     strprintf("%d > %d", nFees, ::minRelayTxFee.GetFee(nSize) * 10000));
+            }
+        } else {
+            // Accept a tx if it contains sapling and has at least the default fee specified (1 PIV).
+            // todo: this is a initial step, we can be more accurate with the fee calculation and use the regular fee flow.
+            if (nFees < COIN) {
+                return state.Invalid(false,
+                                     REJECT_HIGHFEE, "sapling-invalid-fee",
+                                     strprintf("sapling fee: %d < %d", nFees, COIN));
+            }
+        }
 
         // As zero fee transactions are not going to be accepted in the near future (4.0) and the code will be fully refactored soon.
         // This is just a quick inline towards that goal, the mempool by default will not accept them. Blocking
