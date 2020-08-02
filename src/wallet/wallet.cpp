@@ -1701,18 +1701,20 @@ bool CWalletTx::InMempool() const
 
 void CWalletTx::RelayWalletTransaction(std::string strCommand)
 {
-    LOCK(cs_main);
+    AssertLockHeld(cs_main);
     if (!IsCoinBase() && !IsCoinStake()) {
         if (GetDepthInMainChain() == 0 && !isAbandoned()) {
-            uint256 hash = GetHash();
-            LogPrintf("Relaying wtx %s\n", hash.ToString());
-
-            if (strCommand == NetMsgType::IX) {
-                mapTxLockReq.insert(std::make_pair(hash, (CTransaction) * this));
-                CreateNewLock(((CTransaction) * this));
-                RelayTransactionLockReq((CTransaction) * this, true);
-            } else {
-                RelayTransaction((CTransaction) * this);
+            /* GetDepthInMainChain already catches known conflicts. */
+            if (InMempool() || AcceptToMemoryPool()) {
+                uint256 hash = GetHash();
+                LogPrintf("Relaying wtx %s\n", hash.ToString());
+                if (strCommand == NetMsgType::IX) {
+                    mapTxLockReq.insert(std::make_pair(hash, (CTransaction) *this));
+                    CreateNewLock(((CTransaction) *this));
+                    RelayTransactionLockReq((CTransaction) *this, true);
+                } else {
+                    RelayTransaction((CTransaction) *this);
+                }
             }
         }
     }
