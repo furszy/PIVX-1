@@ -13,8 +13,6 @@ $(package)_config_opts+=threading=multi link=static -sNO_COMPRESSION=1
 $(package)_config_opts_linux=target-os=linux threadapi=pthread runtime-link=shared
 $(package)_config_opts_darwin=target-os=darwin runtime-link=shared
 $(package)_config_opts_mingw32=target-os=windows binary-format=pe threadapi=win32 runtime-link=static
-$(package)_toolset_$(host_os)=gcc
-$(package)_toolset_darwin=clang
 $(package)_config_opts_x86_64=architecture=x86 address-model=64
 $(package)_config_opts_i686=architecture=x86 address-model=32
 $(package)_config_opts_aarch64=address-model=64
@@ -24,7 +22,9 @@ $(package)_config_opts_sparc64_linux=address-model=64
 $(package)_config_opts_alpha_linux=address-model=64
 $(package)_config_opts_m68k_linux=address-model=32
 ifneq (,$(findstring clang,$($(package)_cxx)))
-   $(package)_toolset_$(host_os)=clang
+$(package)_toolset_$(host_os)=clang
+else
+$(package)_toolset_$(host_os)=gcc
 endif
 $(package)_archiver_$(host_os)=$($(package)_ar)
 $(package)_config_libraries=chrono,filesystem,system,thread,test
