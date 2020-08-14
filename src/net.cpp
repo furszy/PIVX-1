@@ -1106,8 +1106,13 @@ void CConnman::ThreadSocketHandler()
                 }
             }
         }
-        if(vNodes.size() != nPrevNodeCount) {
-            nPrevNodeCount = vNodes.size();
+        size_t vNodesSize;
+        {
+            LOCK(cs_vNodes);
+            vNodesSize = vNodes.size();
+        }
+        if(vNodesSize != nPrevNodeCount) {
+            nPrevNodeCount = vNodesSize;
             if(clientInterface)
                 clientInterface->NotifyNumConnectionsChanged(nPrevNodeCount);
         }
@@ -1160,10 +1165,6 @@ void CConnman::ThreadSocketHandler()
                 // * We process a message in the buffer (message handler thread).
                 {
                     LOCK(pnode->cs_vSend);
-                    if (pnode->nOptimisticBytesWritten) {
-                        RecordBytesSent(pnode->nOptimisticBytesWritten);
-                        pnode->nOptimisticBytesWritten = 0;
-                    }
                     if (!pnode->vSendMsg.empty()) {
                         FD_SET(pnode->hSocket, &fdsetSend);
                         continue;
@@ -1761,7 +1762,6 @@ void CConnman::ThreadMessageHandler()
     boost::mutex condition_mutex;
     boost::unique_lock<boost::mutex> lock(condition_mutex);
 
-    SetThreadPriority(THREAD_PRIORITY_BELOW_NORMAL);
     while (true) {
         std::vector<CNode*> vNodesCopy;
         {
