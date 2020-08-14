@@ -1010,7 +1010,7 @@ bool CWallet::LoadToWallet(const CWalletTx& wtxIn)
  * pblock is optional, but should be provided if the transaction is known to be in a block.
  * If fUpdate is true, existing transactions will be updated.
  */
-bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlockIndex* pIndex, int posInBlock, bool fUpdate)
+bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const uint256& blockHash, int posInBlock, bool fUpdate)
 {
     {
         AssertLockHeld(cs_wallet);
@@ -1020,8 +1020,8 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlockIndex
                 std::pair<TxSpends::const_iterator, TxSpends::const_iterator> range = mapTxSpends.equal_range(txin.prevout);
                 while (range.first != range.second) {
                     if (range.first->second != tx.GetHash()) {
-                        LogPrintf("Transaction %s (in block %s) conflicts with wallet transaction %s (both spend %s:%i)\n", tx.GetHash().ToString(), pIndex->GetBlockHash().ToString(), range.first->second.ToString(), range.first->first.hash.ToString(), range.first->first.n);
-                        MarkConflicted(pIndex->GetBlockHash(), range.first->second);
+                        LogPrintf("Transaction %s (in block %s) conflicts with wallet transaction %s (both spend %s:%i)\n", tx.GetHash().ToString(), blockHash.ToString(), range.first->second.ToString(), range.first->first.hash.ToString(), range.first->first.n);
+                        MarkConflicted(blockHash, range.first->second);
                     }
                     range.first++;
                 }
@@ -1066,7 +1066,7 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlockIndex
 
             // Get merkle branch if transaction was found in a block
             if (posInBlock != -1)
-                wtx.SetMerkleBranch(pIndex->GetBlockHash(), posInBlock);
+                wtx.SetMerkleBranch(blockHash, posInBlock);
 
             return AddToWallet(wtx, false);
         }
@@ -1194,7 +1194,7 @@ void CWallet::MarkConflicted(const uint256& hashBlock, const uint256& hashTx)
 void CWallet::SyncTransaction(const CTransaction& tx, const CBlockIndex *pindex, int posInBlock)
 {
     LOCK(cs_wallet);
-    if (!AddToWalletIfInvolvingMe(tx, pindex, posInBlock, true))
+    if (!AddToWalletIfInvolvingMe(tx, (pindex) ? pindex->GetBlockHash() : uint256(), posInBlock, true))
         return; // Not one of ours
 
     MarkAffectedTransactionsDirty(tx);
@@ -1640,7 +1640,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
             int posInBlock;
             for (posInBlock = 0; posInBlock < (int)block.vtx.size(); posInBlock++) {
                 const auto& tx = block.vtx[posInBlock];
-                if (AddToWalletIfInvolvingMe(*tx, pindex, posInBlock, fUpdate)) {
+                if (AddToWalletIfInvolvingMe(*tx, pindex->GetBlockHash(), posInBlock, fUpdate)) {
                     myTxHashes.push_back(tx->GetHash());
                     ret++;
                 }
