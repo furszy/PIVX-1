@@ -91,7 +91,10 @@ public:
         P2CSDelegationSent, // Non-spendable P2CS delegated utxo. (coin-owner transferred ownership to external wallet)
         P2CSDelegationSentOwner, // Spendable P2CS delegated utxo. (coin-owner)
         P2CSUnlockOwner, // Coin-owner spent the delegated utxo
-        P2CSUnlockStaker // Staker watching the owner spent the delegated utxo
+        P2CSUnlockStaker, // Staker watching the owner spent the delegated utxo
+        SendToShielded, // Shielded send
+        RecvWithShieldedAddress, // Shielded receive
+        SendToSelfShieldedAddress // Shielded send to self
     };
 
     /** Number of confirmation recommended for accepting a transaction */
@@ -143,7 +146,6 @@ public:
                                                   bool involvesWatchAddress, QList<TransactionRecord>& parts);
 
     static std::string getValueOrReturnEmpty(const std::map<std::string, std::string>& mapValue, const std::string& key);
-    static bool ExtractAddress(const CScript& scriptPubKey, bool fColdStake, std::string& addressStr);
     static void loadHotOrColdStakeOrContract(const CWallet* wallet, const CWalletTx& wtx,
                                             TransactionRecord& record, bool isContract = false);
     static void loadUnlockColdStake(const CWallet* wallet, const CWalletTx& wtx, TransactionRecord& record);

@@ -7,6 +7,7 @@
 #include "transactionrecord.h"
 
 #include "base58.h"
+#include "sapling/key_io_sapling.h"
 #include "timedata.h"
 #include "wallet/wallet.h"
 #include "zpivchain.h"
@@ -468,6 +469,21 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
     return parts;
 }
 
+bool ExtractAddress(const CScript& scriptPubKey, bool fColdStake, std::string& addressStr) {
+    CTxDestination address;
+    if (!ExtractDestination(scriptPubKey, address, fColdStake)) {
+        // this shouldn't happen..
+        addressStr = "No available address";
+        return false;
+    } else {
+        addressStr = EncodeDestination(
+                address,
+                (fColdStake ? CChainParams::STAKING_ADDRESS : CChainParams::PUBKEY_ADDRESS)
+        );
+        return true;
+    }
+}
+
 void TransactionRecord::loadUnlockColdStake(const CWallet* wallet, const CWalletTx& wtx, TransactionRecord& record)
 {
     record.involvesWatchAddress = false;
@@ -549,21 +565,6 @@ void TransactionRecord::loadHotOrColdStakeOrContract(
 
     // Extract and set the owner address
     ExtractAddress(p2csUtxo.scriptPubKey, false, record.address);
-}
-
-bool TransactionRecord::ExtractAddress(const CScript& scriptPubKey, bool fColdStake, std::string& addressStr) {
-    CTxDestination address;
-    if (!ExtractDestination(scriptPubKey, address, fColdStake)) {
-        // this shouldn't happen..
-        addressStr = "No available address";
-        return false;
-    } else {
-        addressStr = EncodeDestination(
-                address,
-                (fColdStake ? CChainParams::STAKING_ADDRESS : CChainParams::PUBKEY_ADDRESS)
-        );
-        return true;
-    }
 }
 
 bool IsZPIVType(TransactionRecord::Type type)
