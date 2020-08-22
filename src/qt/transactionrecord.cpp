@@ -258,6 +258,40 @@ bool TransactionRecord::decomposeSendToSelfTransaction(const CWalletTx& wtx, con
     return true;
 }
 
+bool TransactionRecord::decomposeShieldedDebitTransaction(const CWallet* wallet, const CWalletTx& wtx,
+                                                          bool involvesWatchAddress, QList<TransactionRecord>& parts)
+{
+    // Return early if there are no outputs.
+    if (wtx.sapData->vShieldedOutput.empty()) {
+        return false;
+    }
+
+    TransactionRecord sub(wtx.GetHash(), wtx.GetTxTime(), wtx.GetTotalSize());
+    auto sspkm = wallet->GetSaplingScriptPubKeyMan();
+    bool feeAdded = false;
+    for (int i = 0; i < (int) wtx.sapData->vShieldedOutput.size(); ++i) {
+        SaplingOutPoint out(sub.hash, i);
+        auto opAddr = sspkm->GetShieldedAddressFrom(wtx, out);
+        // skip change
+        if (!opAddr || sspkm->IsNoteSaplingChange(out, *opAddr)) {
+            continue;
+        }
+        sub.idx = i;
+        sub.involvesWatchAddress = involvesWatchAddress;
+        sub.type = TransactionRecord::SendToShielded;
+        sub.address = KeyIO::EncodePaymentAddress(*opAddr);
+        CAmount nValue = sspkm->GetDebit(wtx, out);
+        /* Add fee to first output */
+        if (!feeAdded) { // future, move from the hardcoded fee.
+            nValue += COIN;
+            feeAdded = true;
+        }
+        sub.debit = -nValue;
+        parts.append(sub);
+    }
+    return true;
+}
+
 /**
  * Decompose wtx outputs in records.
  */
@@ -266,7 +300,7 @@ bool TransactionRecord::decomposeDebitTransaction(const CWallet* wallet, const C
                                                   QList<TransactionRecord>& parts)
 {
     // Return early if there are no outputs.
-    if (wtx.vout.empty()) {
+    if (wtx.vout.empty() && wtx.sapData->vShieldedOutput.empty()) {
         return false;
     }
 
@@ -318,7 +352,9 @@ bool TransactionRecord::decomposeDebitTransaction(const CWallet* wallet, const C
 
         parts.append(sub);
     }
-    return true;
+
+    // Decompose shielded debit
+    return decomposeShieldedDebitTransaction(wallet, wtx, involvesWatchAddress, parts);
 }
 
 // Check whether all the shielded inputs and outputs are from and send to this wallet
@@ -357,11 +393,6 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
     if (wtx.HasZerocoinSpendInputs()) {
         libzerocoin::CoinSpend zcspend = wtx.HasZerocoinPublicSpendInputs() ? ZPIVModule::parseCoinSpend(wtx.vin[0]) : TxInToZerocoinSpend(wtx.vin[0]);
         fZSpendFromMe = wallet->IsMyZerocoinSpend(zcspend.getCoinSerialNumber());
-    }
-
-    // TODO: Add shielded transactions parsing.
-    if (wtx.IsShieldedTx()) {
-        return parts;
     }
 
     // Decompose coinstake if needed (if it's not a coinstake, the method will no perform any action).

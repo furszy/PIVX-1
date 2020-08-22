@@ -139,6 +139,9 @@ public:
                                                       const CAmount& nDebit, bool involvesWatchAddress,
                                                       QList<TransactionRecord>& parts);
 
+    static bool decomposeShieldedDebitTransaction(const CWallet* wallet, const CWalletTx& wtx,
+                                                  bool involvesWatchAddress, QList<TransactionRecord>& parts);
+
     static std::string getValueOrReturnEmpty(const std::map<std::string, std::string>& mapValue, const std::string& key);
     static bool ExtractAddress(const CScript& scriptPubKey, bool fColdStake, std::string& addressStr);
     static void loadHotOrColdStakeOrContract(const CWallet* wallet, const CWalletTx& wtx,
