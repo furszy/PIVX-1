@@ -206,6 +206,27 @@ bool TransactionRecord::decomposeCreditTransaction(const CWallet* wallet, const 
             parts.append(sub);
         }
     }
+
+    if (wtx.hasSaplingData()) {
+        auto sspkm = wallet->GetSaplingScriptPubKeyMan();
+        for (int i = 0; i < (int) wtx.sapData->vShieldedOutput.size(); ++i) {
+            SaplingOutPoint out(sub.hash, i);
+            auto opAddr = sspkm->GetShieldedAddressFrom(wtx, out);
+            if (opAddr) {
+                // skip it if change
+                if (sspkm->IsNoteSaplingChange(out, *opAddr)) {
+                    continue;
+                }
+
+                sub.address = (opAddr) ? KeyIO::EncodePaymentAddress(*opAddr) : "";
+                sub.type = TransactionRecord::RecvWithShieldedAddress;
+                sub.credit = sspkm->GetCredit(wtx, out);
+                sub.idx = i;
+                parts.append(sub);
+            }
+        }
+    }
+
     return true;
 }
 
