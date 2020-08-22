@@ -236,17 +236,20 @@ bool TransactionRecord::decomposeSendToSelfTransaction(const CWalletTx& wtx, con
 {
     // Payment to self tx is presented as a single record.
     TransactionRecord sub(wtx.GetHash(), wtx.GetTxTime(), wtx.GetTotalSize());
-    // Payment to self by default
-    sub.type = TransactionRecord::SendToSelf;
     sub.address = "";
-
-    // Label for payment to self
-    CTxDestination address;
-    if (ExtractDestination(wtx.vout[0].scriptPubKey, address)) {
-        sub.address = EncodeDestination(address);
-    }
-
     CAmount nChange = wtx.GetChange();
+    if (!wtx.hasSaplingData()) {
+        sub.type = TransactionRecord::SendToSelf;
+        // Label for payment to self
+        CTxDestination address;
+        if (ExtractDestination(wtx.vout[0].scriptPubKey, address)) {
+            sub.address = EncodeDestination(address);
+        }
+    } else {
+        // shielded send to self.
+        sub.type = TransactionRecord::SendToSelfShieldedAddress;
+        nChange += wtx.GetShieldedChange();
+    }
 
     sub.debit = -(nDebit - nChange);
     sub.credit = nCredit - nChange;
@@ -318,6 +321,29 @@ bool TransactionRecord::decomposeDebitTransaction(const CWallet* wallet, const C
     return true;
 }
 
+// Check whether all the shielded inputs and outputs are from and send to this wallet
+std::pair<bool, bool> areInputsAndOutputsFromAndToMe(const CWalletTx& wtx, SaplingScriptPubKeyMan* sspkm, bool& involvesWatchAddress)
+{
+    // Check if all the shielded spends are from me
+    bool allShieldedSpendsFromMe = true;
+    for (const auto& spend : wtx.sapData->vShieldedSpend) {
+        if (!sspkm->IsSaplingNullifierFromMe(spend.nullifier)) {
+            allShieldedSpendsFromMe = false;
+        }
+    }
+
+    // Check if all the shielded outputs are to me
+    bool allShieldedOutToMe = true;
+    for (int i = 0; i < (int) wtx.sapData->vShieldedOutput.size(); ++i) {
+        SaplingOutPoint op(wtx.GetHash(), i);
+        isminetype mine = sspkm->IsMine(wtx, op);
+        if (mine & ISMINE_WATCH_ONLY_SHIELDED) involvesWatchAddress = true;
+        if (mine != ISMINE_SPENDABLE_SHIELDED) allShieldedOutToMe = false;
+    }
+
+    return std::make_pair(allShieldedSpendsFromMe, allShieldedOutToMe);
+}
+
 /*
  * Decompose CWallet transaction to model transaction records.
  */
@@ -365,6 +391,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
         }
     }
 
+    auto sspkm = wallet->GetSaplingScriptPubKeyMan();
     // As the tx is not credit, need to check if all the inputs and outputs are from and to this wallet.
     // If it's true, then it's a sendToSelf. If not, then it's an outgoing tx.
 
@@ -383,8 +410,13 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet* 
         if (fAllToMe > mine) fAllToMe = mine;
     }
 
+    // Check whether all the shielded spends/outputs are from or to me.
+    bool allShieldedSpendsFromMe, allShieldedOutToMe = true;
+    std::tie(allShieldedSpendsFromMe, allShieldedOutToMe) =
+            areInputsAndOutputsFromAndToMe(wtx, sspkm, involvesWatchAddress);
+
     // Check if this tx is purely a payment to self.
-    if (fAllFromMe && fAllToMe) {
+    if (fAllFromMe && fAllToMe && allShieldedOutToMe && allShieldedSpendsFromMe) {
         // Single record for sendToSelf.
         if (decomposeSendToSelfTransaction(wtx, nCredit, nDebit, involvesWatchAddress, parts)) {
             return parts;
