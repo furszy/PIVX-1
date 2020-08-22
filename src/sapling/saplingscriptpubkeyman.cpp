@@ -551,6 +551,12 @@ CAmount SaplingScriptPubKeyMan::TryToRecoverAndSetAmount(const CWalletTx& tx, co
     return nCredit;
 }
 
+isminetype SaplingScriptPubKeyMan::IsMine(const CWalletTx& wtx, const SaplingOutPoint& op)
+{
+    Optional<libzcash::SaplingPaymentAddress> pa = GetShieldedAddressFrom(wtx, op);
+    return pa ? ::IsMine(*wallet, *pa) : ISMINE_NO;
+}
+
 CAmount SaplingScriptPubKeyMan::GetCredit(const CWalletTx& tx, const SaplingOutPoint& op)
 {
     const auto& it = tx.mapSaplingNoteData.find(op);

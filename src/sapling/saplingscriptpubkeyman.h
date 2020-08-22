@@ -268,6 +268,8 @@ public:
     //! Try to decrypt the note and load the amount into the always available SaplingNoteData
     CAmount TryToRecoverAndSetAmount(const CWalletTx& tx, const SaplingOutPoint& op);
 
+    //! Return true if the wallet can decrypt & spend the shielded output.
+    isminetype IsMine(const CWalletTx& wtx, const SaplingOutPoint& op);
     //! Return the shielded credit of an specific output description
     CAmount GetCredit(const CWalletTx& tx, const SaplingOutPoint& op);
     //! Return the shielded credit of the tx
