@@ -503,6 +503,39 @@ std::set<std::pair<libzcash::PaymentAddress, uint256>> SaplingScriptPubKeyMan::G
     return nullifierSet;
 }
 
+Optional<libzcash::SaplingPaymentAddress> SaplingScriptPubKeyMan::GetShieldedAddressFrom(const CWalletTx& tx, const SaplingOutPoint& op)
+{
+    // Try to decrypt it using the note data ivk (if exists)
+    auto noteAndAddress = tx.DecryptSaplingNote(op);
+    if (noteAndAddress) {
+        return Optional<libzcash::SaplingPaymentAddress>(noteAndAddress->second);
+    }
+
+    // Try to recover it with the ovks
+    Optional<libzcash::SaplingPaymentAddress> optAddRet = nullopt;
+    std::set<uint256> ovks;
+    ovks.emplace(getCommonOVKFromSeed());
+    if (!tx.sapData->vShieldedSpend.empty()) {
+        const SaplingOutPoint& prevOut = mapSaplingNullifiersToNotes[tx.sapData->vShieldedSpend[0].nullifier];
+        const CWalletTx& txPrev = wallet->mapWallet[prevOut.hash];
+        const auto& it = txPrev.mapSaplingNoteData.find(prevOut);
+        if (it != txPrev.mapSaplingNoteData.end()) {
+            const SaplingNoteData &noteData = it->second;
+            libzcash::SaplingExtendedSpendingKey extsk;
+            libzcash::SaplingExtendedFullViewingKey extfvk;
+            if (wallet->GetSaplingFullViewingKey(noteData.ivk, extfvk) &&
+                wallet->GetSaplingSpendingKey(extfvk, extsk)) {
+                ovks.emplace(extsk.expsk.ovk);
+            }
+        }
+    }
+    auto optNotePlainAndAddress = tx.RecoverSaplingNote(op, ovks);
+    if (optNotePlainAndAddress) {
+        optAddRet = optNotePlainAndAddress->second;
+    }
+    return optAddRet;
+}
+
 CAmount SaplingScriptPubKeyMan::TryToRecoverAndSetAmount(const CWalletTx& tx, const SaplingOutPoint& op)
 {
     CAmount nCredit = 0;
