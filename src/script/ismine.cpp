@@ -34,6 +34,21 @@ isminetype IsMine(const CKeyStore& keystore, const CTxDestination& dest)
     return IsMine(keystore, script);
 }
 
+isminetype IsMine(const CKeyStore& keystore, const libzcash::SaplingPaymentAddress& pa)
+{
+    libzcash::SaplingIncomingViewingKey ivk;
+    libzcash::SaplingExtendedFullViewingKey exfvk;
+    if (keystore.GetSaplingIncomingViewingKey(pa, ivk) &&
+        keystore.GetSaplingFullViewingKey(ivk, exfvk) &&
+        keystore.HaveSaplingSpendingKey(exfvk)) {
+        return ISMINE_SPENDABLE_SHIELDED;
+    } else if (!ivk.IsNull()) {
+        return ISMINE_WATCH_ONLY_SHIELDED;
+    } else {
+        return ISMINE_NO;
+    }
+}
+
 isminetype IsMine(const CKeyStore& keystore, const CScript& scriptPubKey)
 {
     std::vector<valtype> vSolutions;
