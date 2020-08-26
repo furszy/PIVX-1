@@ -1899,9 +1899,16 @@ CAmount CWallet::loopTxsBalance(std::function<void(const uint256&, const CWallet
     return nTotal;
 }
 
-CAmount CWallet::GetAvailableBalance(bool fIncludeDelegated) const
+CAmount CWallet::GetAvailableBalance(bool fIncludeDelegated, bool fIncludeShielded) const
 {
-    isminefilter filter = fIncludeDelegated ? ISMINE_SPENDABLE_ALL : ISMINE_SPENDABLE;
+    isminefilter filter;
+    if (fIncludeDelegated && fIncludeShielded) {
+        filter = ISMINE_SPENDABLE_ALL;
+    } else if (fIncludeDelegated){
+        filter = ISMINE_SPENDABLE_TRANSPARENT;
+    } else {
+        filter = ISMINE_SPENDABLE_NO_DELEGATED;
+    }
     return GetAvailableBalance(filter, true, 0);
 }
 
