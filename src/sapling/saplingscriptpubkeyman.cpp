@@ -513,6 +513,20 @@ Optional<libzcash::SaplingPaymentAddress> SaplingScriptPubKeyMan::GetShieldedAdd
 
     // Try to recover it with the ovks
     Optional<libzcash::SaplingPaymentAddress> optAddRet = nullopt;
+    auto optNotePlainAndAddress = TryToRecoverNote(tx, op);
+    if (optNotePlainAndAddress) {
+        optAddRet = optNotePlainAndAddress->second;
+    }
+    return optAddRet;
+}
+
+Optional<std::pair<
+        libzcash::SaplingNotePlaintext,
+        libzcash::SaplingPaymentAddress>>
+        SaplingScriptPubKeyMan::TryToRecoverNote(const CWalletTx& tx, const SaplingOutPoint& op)
+{
+    // Try to recover it with the ovks.
+    // todo: should add all of the wallet's ovk as well.
     std::set<uint256> ovks;
     ovks.emplace(getCommonOVKFromSeed());
     if (!tx.sapData->vShieldedSpend.empty()) {
@@ -529,11 +543,7 @@ Optional<libzcash::SaplingPaymentAddress> SaplingScriptPubKeyMan::GetShieldedAdd
             }
         }
     }
-    auto optNotePlainAndAddress = tx.RecoverSaplingNote(op, ovks);
-    if (optNotePlainAndAddress) {
-        optAddRet = optNotePlainAndAddress->second;
-    }
-    return optAddRet;
+    return tx.RecoverSaplingNote(op, ovks);
 }
 
 CAmount SaplingScriptPubKeyMan::TryToRecoverAndSetAmount(const CWalletTx& tx, const SaplingOutPoint& op)
@@ -541,12 +551,17 @@ CAmount SaplingScriptPubKeyMan::TryToRecoverAndSetAmount(const CWalletTx& tx, co
     CAmount nCredit = 0;
     // if amount was not set, let's try to decrypt the note and set it.
     auto noteAndAddress = tx.DecryptSaplingNote(op);
-    // todo: if cannot be decrypted, use RecoverSaplingNote.
     if (noteAndAddress) {
         const libzcash::SaplingNotePlaintext &note = noteAndAddress->first;
         nCredit = note.value();
         // if it's not set, then set it.
         wallet->mapWallet[tx.GetHash()].mapSaplingNoteData[op].amount = nCredit;
+    } else {
+        // if cannot be decrypted, use RecoverSaplingNote.
+        auto optNotePlainAndAddress = TryToRecoverNote(tx, op);
+        if (optNotePlainAndAddress) {
+            nCredit += optNotePlainAndAddress->first.value();
+        }
     }
     return nCredit;
 }

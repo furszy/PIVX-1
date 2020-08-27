@@ -267,6 +267,10 @@ public:
 
     //! Try to decrypt the note and load the amount into the always available SaplingNoteData
     CAmount TryToRecoverAndSetAmount(const CWalletTx& tx, const SaplingOutPoint& op);
+    //! Try to recover the note using the wallet's ovks (mostly used when the outpoint is a debit)
+    Optional<std::pair<
+            libzcash::SaplingNotePlaintext,
+            libzcash::SaplingPaymentAddress>> TryToRecoverNote(const CWalletTx& tx, const SaplingOutPoint& op);
 
     //! Return true if the wallet can decrypt & spend the shielded output.
     isminetype IsMine(const CWalletTx& wtx, const SaplingOutPoint& op);
