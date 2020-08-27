@@ -652,6 +652,10 @@ public:
     bool MultiSend();
     void AutoCombineDust(CConnman* connman);
 
+    // Shielded balances
+    CAmount GetAvailableShieldedBalance(bool fUseCache = true) const;
+    CAmount GetUnconfirmedShieldedBalance() const;
+
     static CFeeRate minTxFee;
     /**
      * Estimate the minimum fee considering user set parameters
