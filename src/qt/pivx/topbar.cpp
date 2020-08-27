@@ -1,6 +1,6 @@
 // Copyright (c) 2019-2020 The PIVX developers
 // Distributed under the MIT software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+// file COPYING or https://www.opensource.org/licenses/mit-license.php.
 
 #include "qt/pivx/topbar.h"
 #include "qt/pivx/forms/ui_topbar.h"
@@ -636,7 +636,7 @@ void TopBar::updateBalances(const interfaces::WalletBalances& newBalance)
     ui->labelAmountTopPiv->setText(totalPiv);
     // Expanded
     ui->labelAmountPiv->setText(totalPiv);
-    ui->labelPendingPiv->setText(GUIUtil::formatBalance(newBalance.unconfirmed_balance, nDisplayUnit));
+    ui->labelPendingPiv->setText(GUIUtil::formatBalance(newBalance.unconfirmed_balance + newBalance.unconfirmed_shielded_balance, nDisplayUnit));
     ui->labelImmaturePiv->setText(GUIUtil::formatBalance(newBalance.immature_balance, nDisplayUnit));
 }
 
