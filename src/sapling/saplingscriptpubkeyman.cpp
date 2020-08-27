@@ -572,6 +572,11 @@ isminetype SaplingScriptPubKeyMan::IsMine(const CWalletTx& wtx, const SaplingOut
     return pa ? ::IsMine(*wallet, *pa) : ISMINE_NO;
 }
 
+CAmount SaplingScriptPubKeyMan::GetDebit(const CWalletTx& tx, const SaplingOutPoint& op)
+{
+    return TryToRecoverAndSetAmount(tx, op);
+}
+
 CAmount SaplingScriptPubKeyMan::GetCredit(const CWalletTx& tx, const SaplingOutPoint& op)
 {
     const auto& it = tx.mapSaplingNoteData.find(op);
