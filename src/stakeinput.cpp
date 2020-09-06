@@ -16,17 +16,19 @@ bool CPivStake::InitFromTxIn(const CTxIn& txin)
         return error("%s: unable to initialize CPivStake from zerocoin spend", __func__);
 
     // Find the previous transaction in database
-    uint256 hashBlock;
-    CTransaction txPrev;
-    if (!GetTransaction(txin.prevout.hash, txPrev, hashBlock, true))
+    Coin coin;
+    if (!pcoinsTip->GetCoin(txin.prevout, coin)) {
         return error("%s : INFO: read txPrev failed, tx id prev: %s", __func__, txin.prevout.hash.GetHex());
-    SetPrevout(txPrev.vout[txin.prevout.n], txin.prevout);
-
-    // Find the index of the block of the previous transaction
-    if (mapBlockIndex.count(hashBlock)) {
-        CBlockIndex* pindex = mapBlockIndex.at(hashBlock);
-        if (chainActive.Contains(pindex)) pindexFrom = pindex;
     }
+    // Check spendability
+    if (coin.IsSpent()) {
+        return error("%s : prev output already spent. tx id prev: %s", __func__, txin.prevout.hash.GetHex());
+    }
+
+    // set internal data
+    SetPrevout(coin.out, txin.prevout);
+    pindexFrom = chainActive[coin.nHeight];
+
     // Check that the input is in the active chain
     if (!pindexFrom)
         return error("%s : Failed to find the block index for stake origin", __func__);
