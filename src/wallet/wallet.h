@@ -92,6 +92,7 @@ extern const char * DEFAULT_WALLET_DAT;
 class CAccountingEntry;
 class CCoinControl;
 class COutput;
+class CStakeableOutput;
 class CReserveKey;
 class CScript;
 class CWalletTx;
@@ -1030,6 +1031,15 @@ public:
     std::string ToString() const;
 };
 
+class CStakeableOutput : public COutput
+{
+public:
+    const CBlockIndex* pindex{nullptr};
+
+    CStakeableOutput(const CWalletTx* txIn, int iIn, int nDepthIn, bool fSpendableIn, bool fSolvableIn,
+                     const CBlockIndex*& pindex);
+
+};
 
 /** Private key that includes an expiration date in case it never gets used. */
 class CWalletKey

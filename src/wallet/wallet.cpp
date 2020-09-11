@@ -4488,3 +4488,8 @@ bool CWalletTx::IsFromMe(const isminefilter& filter) const
 {
     return (GetDebit(filter) > 0);
 }
+
+CStakeableOutput::CStakeableOutput(const CWalletTx* txIn, int iIn, int nDepthIn, bool fSpendableIn, bool fSolvableIn,
+                                   const CBlockIndex*& _pindex) : COutput(txIn, iIn, nDepthIn, fSpendableIn, fSolvableIn),
+                                                                pindex(_pindex) {}
+
