@@ -408,7 +408,7 @@ public:
     bool SelectCoinsToSpend(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<std::pair<const CWalletTx*, unsigned int> >& setCoinsRet, CAmount& nValueRet, const CCoinControl* coinControl = nullptr) const;
     bool SelectCoinsMinConf(const CAmount& nTargetValue, int nConfMine, int nConfTheirs, std::vector<COutput> vCoins, std::set<std::pair<const CWalletTx*, unsigned int> >& setCoinsRet, CAmount& nValueRet) const;
     //! >> Available coins (staking)
-    bool StakeableCoins(std::vector<COutput>* pCoins = nullptr);
+    bool StakeableCoins(std::vector<CStakeableOutput>* pCoins = nullptr);
     //! >> Available coins (P2CS)
     void GetAvailableP2CSCoins(std::vector<COutput>& vCoins) const;
 
@@ -590,7 +590,7 @@ public:
                          unsigned int nBits,
                          CMutableTransaction& txNew,
                          int64_t& nTxNewTime,
-                         std::vector<COutput>* availableCoins);
+                         std::vector<CStakeableOutput>* availableCoins);
     bool MultiSend();
     void AutoCombineDust(CConnman* connman);
 

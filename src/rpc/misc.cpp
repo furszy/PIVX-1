@@ -768,7 +768,7 @@ UniValue getstakingstatus(const JSONRPCRequest& request)
         obj.push_back(Pair("haveconnections", (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) > 0)));
         obj.push_back(Pair("mnsync", !masternodeSync.NotCompleted()));
         obj.push_back(Pair("walletunlocked", !pwalletMain->IsLocked()));
-        std::vector<COutput> vCoins;
+        std::vector<CStakeableOutput> vCoins;
         pwalletMain->StakeableCoins(&vCoins);
         obj.push_back(Pair("stakeablecoins", (int)vCoins.size()));
         obj.push_back(Pair("stakingbalance", ValueFromAmount(pwalletMain->GetStakingBalance(fColdStaking))));
