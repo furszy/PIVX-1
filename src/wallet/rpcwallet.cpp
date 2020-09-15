@@ -1853,7 +1853,7 @@ UniValue getreceivedbylabel(const JSONRPCRequest& request)
 
 UniValue getbalance(const JSONRPCRequest& request)
 {
-    if (request.fHelp || (request.params.size() > 3 ))
+    if (request.fHelp || (request.params.size() > 4 ))
         throw std::runtime_error(
             "getbalance ( minconf includeWatchonly includeDelegated )\n"
             "\nReturns the server's total available balance (excluding zerocoins).\n"
@@ -1864,6 +1864,7 @@ UniValue getbalance(const JSONRPCRequest& request)
             "1. minconf          (numeric, optional, default=1) Only include transactions confirmed at least this many times.\n"
             "2. includeWatchonly (bool, optional, default=false) Also include balance in watchonly addresses (see 'importaddress')\n"
             "3. includeDelegated (bool, optional, default=true) Also include balance delegated to cold stakers\n"
+            "4. includeShielded  (bool, optional, default=true) Also include shielded balance\n"
 
             "\nResult:\n"
             "amount              (numeric) The total amount in PIV received for this wallet.\n"
@@ -1882,7 +1883,7 @@ UniValue getbalance(const JSONRPCRequest& request)
     const int nMinDepth = (paramsSize > 0 ? request.params[0].get_int() : 0);
     isminefilter filter = ISMINE_SPENDABLE | (paramsSize > 1 && request.params[1].get_bool() ? ISMINE_WATCH_ONLY : ISMINE_NO);
     filter |= (paramsSize <= 2 || request.params[2].get_bool() ? ISMINE_SPENDABLE_DELEGATED : ISMINE_NO);
-
+    filter |= (paramsSize <= 3 || request.params[3].get_bool() ? ISMINE_SPENDABLE_SHIELDED : ISMINE_NO);
     return ValueFromAmount(pwalletMain->GetAvailableBalance(filter, true, nMinDepth));
 }
 

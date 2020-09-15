@@ -59,6 +59,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
         {"getbalance", 1},
         {"getbalance", 2},
         {"getbalance", 3},
+        {"getbalance", 4},
         {"getshieldedbalance", 1},
         {"getshieldedbalance", 2},
         { "shielded_sendmany", 1},
