@@ -117,7 +117,7 @@ class WalletNullifiersTest (PivxTestFramework):
 
         node3mined = Decimal('6250.0')
         assert_equal(self.nodes[3].getshieldedbalance(), zsendmany2notevalue)
-        assert_equal(self.nodes[3].getbalance(), node3mined)
+        assert_equal(self.nodes[3].getbalance(1, False, True, False), node3mined)
 
         # Add node 1 address and node 2 viewing key to node 3
         myzvkey = self.nodes[2].exportsaplingviewingkey(myzaddr)
@@ -154,10 +154,10 @@ class WalletNullifiersTest (PivxTestFramework):
         # Node 3's balances should be unchanged without explicitly requesting
         # to include watch-only balances
         assert_equal(self.nodes[3].getshieldedbalance(), zsendmany2notevalue)
-        assert_equal(self.nodes[3].getbalance(), node3mined)
+        assert_equal(self.nodes[3].getbalance(1, False, True, False), node3mined)
 
         assert_equal(self.nodes[3].getshieldedbalance("*", 1, True), zsendmany2notevalue + zaddrremaining2)
-        assert_equal(self.nodes[3].getbalance(1, True), node3mined + Decimal('1.0'))
+        assert_equal(self.nodes[3].getbalance(1, True, True, False), node3mined + Decimal('1.0'))
 
         # Check individual balances reflect the above
         assert_equal(self.nodes[3].getreceivedbyaddress(mytaddr1), Decimal('1.0'))
