@@ -70,6 +70,9 @@ public:
  */
 typedef boost::variant<CNoDestination, CKeyID, CScriptID> CTxDestination;
 
+// Regular + shielded addresses variant.
+typedef boost::variant<CTxDestination, libzcash::SaplingPaymentAddress> CWDestination;
+
 /** Check whether a CTxDestination is a CNoDestination. */
 bool IsValidDestination(const CTxDestination& dest);
 

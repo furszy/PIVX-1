@@ -49,6 +49,30 @@ isminetype IsMine(const CKeyStore& keystore, const libzcash::SaplingPaymentAddre
     }
 }
 
+namespace
+{
+    class CWDestinationVisitor : public boost::static_visitor<isminetype>
+    {
+    private:
+        const CKeyStore& keystore;
+    public:
+        CWDestinationVisitor(const CKeyStore& _keystore) : keystore(_keystore) {}
+
+        isminetype operator()(const CTxDestination& dest) const {
+            return ::IsMine(keystore, dest);
+        }
+
+        isminetype operator()(const libzcash::SaplingPaymentAddress& pa) const {
+            return ::IsMine(keystore, pa);
+        }
+    };
+}
+
+isminetype IsMine(const CKeyStore& keystore, const CWDestination& dest)
+{
+    return boost::apply_visitor(CWDestinationVisitor(keystore), dest);
+}
+
 isminetype IsMine(const CKeyStore& keystore, const CScript& scriptPubKey)
 {
     std::vector<valtype> vSolutions;
