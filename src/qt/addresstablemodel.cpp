@@ -133,7 +133,11 @@ public:
                 const CChainParams::Base58Type addrType =
                         AddressBook::IsColdStakingPurpose(addrBookData.purpose) ?
                         CChainParams::STAKING_ADDRESS : CChainParams::PUBKEY_ADDRESS;
-                const CTxDestination& address = it.GetKey();
+
+                auto dest = it.GetCTxDestKey();
+                if (!dest) continue;
+
+                const auto& address = *dest;
 
                 bool fMine = IsMine(*wallet, address);
                 AddressTableEntry::Type addressType = translateTransactionType(
@@ -578,7 +582,9 @@ QString AddressTableModel::getAddressToShow() const
 
     for (auto it = wallet->NewAddressBookIterator(); it.IsValid(); it.Next()) {
         if (it.GetValue().purpose == AddressBook::AddressBookPurpose::RECEIVE) {
-            const auto &address = it.GetKey();
+            auto dest = it.GetCTxDestKey();
+            if (!dest) continue;
+            const auto &address = *dest;
             if (IsValidDestination(address) && IsMine(*wallet, address) && !wallet->IsUsed(address)) {
                 return QString::fromStdString(EncodeDestination(address));
             }

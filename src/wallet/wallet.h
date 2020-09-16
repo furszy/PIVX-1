@@ -249,11 +249,14 @@ struct CRecipient
     {}
 };
 
+// Regular + shielded addresses variant.
+typedef boost::variant<CTxDestination, libzcash::SaplingPaymentAddress> CWDestination;
+
 class CAddressBookIterator
 {
 public:
-    explicit CAddressBookIterator(std::map<CTxDestination, AddressBook::CAddressBookData>& _map) : map(_map), it(_map.begin()), itEnd(_map.end()) {}
-    CTxDestination GetKey() { return it->first; }
+    explicit CAddressBookIterator(std::map<CWDestination, AddressBook::CAddressBookData>& _map) : map(_map), it(_map.begin()), itEnd(_map.end()) {}
+    const CTxDestination* GetCTxDestKey();
     AddressBook::CAddressBookData GetValue() { return it->second; }
 
     bool IsValid() { return it != itEnd; }
@@ -273,9 +276,9 @@ public:
     }
 
 private:
-    std::map<CTxDestination, AddressBook::CAddressBookData>& map;
-    std::map<CTxDestination, AddressBook::CAddressBookData>::iterator it;
-    std::map<CTxDestination, AddressBook::CAddressBookData>::iterator itEnd;
+    std::map<CWDestination, AddressBook::CAddressBookData>& map;
+    std::map<CWDestination, AddressBook::CAddressBookData>::iterator it;
+    std::map<CWDestination, AddressBook::CAddressBookData>::iterator itEnd;
 };
 
 template <class T>
@@ -346,7 +349,7 @@ private:
     CzPIVWallet* zwallet{nullptr};
 
     //! Destination --> label/purpose mapping.
-    std::map<CTxDestination, AddressBook::CAddressBookData> mapAddressBook;
+    std::map<CWDestination, AddressBook::CAddressBookData> mapAddressBook;
 
 public:
 

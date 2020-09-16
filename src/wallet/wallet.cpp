@@ -3319,7 +3319,7 @@ bool CWallet::HasDelegator(const CTxOut& out) const
         return false;
     {
         LOCK(cs_wallet); // mapAddressBook
-        std::map<CTxDestination, AddressBook::CAddressBookData>::const_iterator mi = mapAddressBook.find(delegator);
+        const auto mi = mapAddressBook.find(delegator);
         if (mi == mapAddressBook.end())
             return false;
         return (*mi).second.purpose == AddressBook::AddressBookPurpose::DELEGATOR;
@@ -3488,8 +3488,9 @@ std::set<CTxDestination> CWallet::GetLabelAddresses(const std::string& label) co
 {
     LOCK(cs_wallet);
     std::set<CTxDestination> result;
-    for (const std::pair<CTxDestination, AddressBook::CAddressBookData>& item : mapAddressBook) {
-        const CTxDestination& address = item.first;
+    for (const auto& item : mapAddressBook) {
+        if (item.second.isShielded()) continue;
+        const auto& address = boost::get<CTxDestination>(item.first);
         const std::string& strName = item.second.name;
         if (strName == label)
             result.insert(address);
@@ -4742,6 +4743,12 @@ CAmount CWalletTx::GetShieldedAvailableCredit(bool fUseCache) const
 {
     return GetAvailableCredit(fUseCache, ISMINE_SPENDABLE_SHIELDED);
 }
+
+const CTxDestination* CAddressBookIterator::GetCTxDestKey()
+{
+    return boost::get<CTxDestination>(&it->first);
+}
+
 
 CStakeableOutput::CStakeableOutput(const CWalletTx* txIn, int iIn, int nDepthIn, bool fSpendableIn, bool fSolvableIn,
                                    const CBlockIndex*& _pindex) : COutput(txIn, iIn, nDepthIn, fSpendableIn, fSolvableIn),

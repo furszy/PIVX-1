@@ -283,8 +283,8 @@ UniValue getaddressesbylabel(const JSONRPCRequest& request)
     UniValue ret(UniValue::VOBJ);
     for (auto it = pwalletMain->NewAddressBookIterator(); it.IsValid(); it.Next()) {
         auto addrBook = it.GetValue();
-        if (addrBook.name == label) {
-            ret.pushKV(EncodeDestination(it.GetKey(), AddressBook::IsColdStakingPurpose(addrBook.purpose)), AddressBookDataToJSON(addrBook, false));
+        if (!addrBook.isShielded() && addrBook.name == label) {
+            ret.pushKV(EncodeDestination(*it.GetCTxDestKey(), AddressBook::IsColdStakingPurpose(addrBook.purpose)), AddressBookDataToJSON(addrBook, false));
         }
     }
 
@@ -731,9 +731,11 @@ UniValue ListaddressesForPurpose(const std::string strPurpose)
         for (auto it = pwalletMain->NewAddressBookIterator(); it.IsValid(); it.Next()) {
             auto addrBook = it.GetValue();
             if (addrBook.purpose != strPurpose) continue;
+            auto dest = it.GetCTxDestKey();
+            if (!dest) continue;
             UniValue entry(UniValue::VOBJ);
             entry.pushKV("label", addrBook.name);
-            entry.pushKV("address", EncodeDestination(it.GetKey(), addrType));
+            entry.pushKV("address", EncodeDestination(*dest, addrType));
             ret.push_back(entry);
         }
     }
@@ -2175,7 +2177,10 @@ UniValue ListReceived(const UniValue& params, bool by_label)
 
     for (auto& itAddrBook = itAddr; itAddrBook.IsValid(); itAddrBook.Next()) {
 
-        const auto &address = itAddrBook.GetKey();
+        auto* dest = itAddrBook.GetCTxDestKey();
+        if (!dest) continue;
+
+        const auto &address = *dest;
         const std::string &label = itAddrBook.GetValue().name;
         auto it = mapTally.find(address);
         if (it == mapTally.end() && !fIncludeEmpty) {
