@@ -15,6 +15,8 @@ namespace AddressBook {
         const std::string DELEGATOR{"delegator"};
         const std::string COLD_STAKING{"coldstaking"};
         const std::string COLD_STAKING_SEND{"coldstaking_send"};
+        const std::string SHIELDED_RECEIVE{"shielded_receive"};
+        const std::string SHIELDED_SEND{"shielded_spend"};
     }
 
     bool IsColdStakingPurpose(const std::string& purpose) {
@@ -29,8 +31,13 @@ namespace AddressBook {
     bool CAddressBookData::isSendPurpose() const {
         return purpose == AddressBookPurpose::SEND;
     }
+
     bool CAddressBookData::isReceivePurpose() const {
         return purpose == AddressBookPurpose::RECEIVE;
+    }
+
+    bool CAddressBookData::isShielded() const {
+        return purpose == AddressBookPurpose::SHIELDED_RECEIVE || purpose == AddressBookPurpose::SHIELDED_SEND;
     }
 
 

@@ -18,6 +18,8 @@ namespace AddressBook {
         extern const std::string DELEGATOR;
         extern const std::string COLD_STAKING;
         extern const std::string COLD_STAKING_SEND;
+        extern const std::string SHIELDED_RECEIVE;
+        extern const std::string SHIELDED_SEND;
     }
 
     bool IsColdStakingPurpose(const std::string& purpose);
@@ -39,6 +41,7 @@ namespace AddressBook {
         bool isSendColdStakingPurpose() const;
         bool isSendPurpose() const;
         bool isReceivePurpose() const;
+        bool isShielded() const;
     };
 
 }
