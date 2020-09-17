@@ -342,7 +342,7 @@ public Q_SLOTS:
     /* Current, immature or unconfirmed balance might have changed - emit 'balanceChanged' if so */
     void pollBalanceChanged();
     /* Update address book labels in the database */
-    bool updateAddressBookLabels(const CTxDestination& address, const std::string& strName, const std::string& strPurpose);
+    bool updateAddressBookLabels(const CWDestination& address, const std::string& strName, const std::string& strPurpose);
 };
 
 #endif // PIVX_QT_WALLETMODEL_H
