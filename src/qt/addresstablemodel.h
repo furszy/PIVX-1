@@ -53,6 +53,8 @@ public:
     static const QString Delegable; /**< Specifies cold staking addresses which delegated tokens to this wallet*/
     static const QString ColdStaking; /**< Specifies cold staking own addresses */
     static const QString ColdStakingSend; /**< Specifies send cold staking addresses (simil 'contacts')*/
+    static const QString ShieldedReceive; /**< Specifies shielded send address */
+    static const QString ShieldedSend; /**< Specifies shielded receive address */
 
     /** @name Methods overridden from QAbstractTableModel
         @{*/

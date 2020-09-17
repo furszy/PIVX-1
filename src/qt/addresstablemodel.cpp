@@ -14,6 +14,8 @@
 #include "wallet/wallet.h"
 #include "askpassphrasedialog.h"
 
+#include "sapling/key_io_sapling.h"
+
 #include <algorithm>
 
 #include <QDebug>
@@ -26,6 +28,8 @@ const QString AddressTableModel::Delegator = "D";
 const QString AddressTableModel::Delegable = "E";
 const QString AddressTableModel::ColdStaking = "C";
 const QString AddressTableModel::ColdStakingSend = "T";
+const QString AddressTableModel::ShieldedReceive = "U";
+const QString AddressTableModel::ShieldedSend = "V";
 
 struct AddressTableEntry {
     enum Type {
@@ -36,6 +40,8 @@ struct AddressTableEntry {
         Delegable,
         ColdStaking,
         ColdStakingSend,
+        ShieldedReceive,
+        ShieldedSend,
         Hidden /* QSortFilterProxyModel will filter these out */
     };
 
@@ -82,6 +88,10 @@ static AddressTableEntry::Type translateTransactionType(const QString& strPurpos
         addressType = AddressTableEntry::ColdStaking;
     else if (strPurpose == QString::fromStdString(AddressBook::AddressBookPurpose::COLD_STAKING_SEND))
         addressType = AddressTableEntry::ColdStakingSend;
+    else if (strPurpose == QString::fromStdString(AddressBook::AddressBookPurpose::SHIELDED_RECEIVE))
+        addressType = AddressTableEntry::ShieldedReceive;
+    else if (strPurpose == QString::fromStdString(AddressBook::AddressBookPurpose::SHIELDED_SEND))
+        addressType = AddressTableEntry::ShieldedSend;
     else if (strPurpose == "unknown" || strPurpose == "") // if purpose not set, guess
         addressType = (isMine ? AddressTableEntry::Receiving : AddressTableEntry::Sending);
     return addressType;
@@ -134,25 +144,24 @@ public:
                         AddressBook::IsColdStakingPurpose(addrBookData.purpose) ?
                         CChainParams::STAKING_ADDRESS : CChainParams::PUBKEY_ADDRESS;
 
-                auto dest = it.GetCTxDestKey();
-                if (!dest) continue;
+                const CWDestination& dest = *it.GetDestKey();
+                bool fMine = IsMine(*wallet, dest);
+                QString addressStr = QString::fromStdString(Standard::EncodeDestination(dest, addrType));
+                uint creationTime = 0;
+                if (addrBookData.isReceivePurpose()) {
+                    const auto& address = *boost::get<CTxDestination>(&dest);
+                    creationTime = static_cast<uint>(wallet->GetKeyCreationTime(address));
+                }
 
-                const auto& address = *dest;
-
-                bool fMine = IsMine(*wallet, address);
                 AddressTableEntry::Type addressType = translateTransactionType(
                     QString::fromStdString(addrBookData.purpose), fMine);
                 const std::string& strName = addrBookData.name;
-
-                uint creationTime = 0;
-                if (addrBookData.isReceivePurpose())
-                    creationTime = static_cast<uint>(wallet->GetKeyCreationTime(address));
 
                 updatePurposeCachedCounted(addrBookData.purpose, true);
                 cachedAddressTable.append(
                         AddressTableEntry(addressType,
                                           QString::fromStdString(strName),
-                                          QString::fromStdString(EncodeDestination(address, addrType)),
+                                          addressStr,
                                           creationTime
                         )
                 );
@@ -164,6 +173,7 @@ public:
         std::sort(cachedAddressTable.begin(), cachedAddressTable.end(), AddressTableEntryLessThan());
     }
 
+    // add shielded addresses num if needed..
     void updatePurposeCachedCounted(std::string purpose, bool add)
     {
         int *var = nullptr;
@@ -358,6 +368,10 @@ QVariant AddressTableModel::data(const QModelIndex& index, int role) const
                 return ColdStaking;
             case AddressTableEntry::ColdStakingSend:
                 return ColdStakingSend;
+            case AddressTableEntry::ShieldedReceive:
+                return ShieldedReceive;
+            case AddressTableEntry::ShieldedSend:
+                return ShieldedSend;
             default:
                 break;
         }
