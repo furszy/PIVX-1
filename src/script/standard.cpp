@@ -2,14 +2,13 @@
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2017-2020 The PIVX developers
 // Distributed under the MIT software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+// file COPYING or https://www.opensource.org/licenses/mit-license.php.
 
 #include "script/standard.h"
 
 #include "pubkey.h"
+#include "sapling/key_io_sapling.h"
 #include "script/script.h"
-#include "util.h"
-#include "utilstrencodings.h"
 
 typedef std::vector<unsigned char> valtype;
 
@@ -332,3 +331,15 @@ CScript GetScriptForMultisig(int nRequired, const std::vector<CPubKey>& keys)
 bool IsValidDestination(const CTxDestination& dest) {
     return dest.which() != 0;
 }
+
+namespace Standard {
+
+    std::string EncodeDestination(const CWDestination &address, const CChainParams::Base58Type addrType) {
+        const CTxDestination *dest = boost::get<CTxDestination>(&address);
+        if (!dest) {
+            return KeyIO::EncodePaymentAddress(*boost::get<libzcash::SaplingPaymentAddress>(&address));
+        }
+        return EncodeDestination(*dest, addrType);
+    };
+
+} // End Standard namespace

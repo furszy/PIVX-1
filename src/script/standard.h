@@ -7,6 +7,7 @@
 #ifndef BITCOIN_SCRIPT_STANDARD_H
 #define BITCOIN_SCRIPT_STANDARD_H
 
+#include "chainparams.h"
 #include "script/interpreter.h"
 #include "uint256.h"
 
@@ -87,5 +88,11 @@ CScript GetScriptForDestination(const CTxDestination& dest);
 CScript GetScriptForRawPubKey(const CPubKey& pubKey);
 CScript GetScriptForMultisig(int nRequired, const std::vector<CPubKey>& keys);
 CScript GetScriptForStakeDelegation(const CKeyID& stakingKey, const CKeyID& spendingKey);
+
+namespace Standard {
+
+std::string EncodeDestination(const CWDestination &address, const CChainParams::Base58Type addrType = CChainParams::PUBKEY_ADDRESS);
+
+} // End Standard namespace
 
 #endif // BITCOIN_SCRIPT_STANDARD_H
