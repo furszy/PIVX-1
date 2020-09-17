@@ -256,7 +256,9 @@ class CAddressBookIterator
 {
 public:
     explicit CAddressBookIterator(std::map<CWDestination, AddressBook::CAddressBookData>& _map) : map(_map), it(_map.begin()), itEnd(_map.end()) {}
+    const CWDestination* GetDestKey();
     const CTxDestination* GetCTxDestKey();
+    const libzcash::SaplingPaymentAddress* GetShieldedDestKey();
     AddressBook::CAddressBookData GetValue() { return it->second; }
 
     bool IsValid() { return it != itEnd; }
@@ -713,21 +715,21 @@ public:
     DBErrors LoadWallet(bool& fFirstRunRet);
     DBErrors ZapWalletTx(std::vector<CWalletTx>& vWtx);
 
-    static std::string ParseIntoAddress(const CTxDestination& dest, const std::string& purpose);
+    static std::string ParseIntoAddress(const CWDestination& dest, const std::string& purpose);
 
-    bool SetAddressBook(const CTxDestination& address, const std::string& strName, const std::string& purpose);
-    bool DelAddressBook(const CTxDestination& address, const CChainParams::Base58Type addrType = CChainParams::PUBKEY_ADDRESS);
-    bool HasAddressBook(const CTxDestination& address) const;
+    bool SetAddressBook(const CWDestination& address, const std::string& strName, const std::string& purpose);
+    bool DelAddressBook(const CWDestination& address, const CChainParams::Base58Type addrType = CChainParams::PUBKEY_ADDRESS);
+    bool HasAddressBook(const CWDestination& address) const;
     bool HasDelegator(const CTxOut& out) const;
     int GetAddressBookSize() const { return mapAddressBook.size(); };
 
     CAddressBookIterator NewAddressBookIterator() { return CAddressBookIterator(mapAddressBook); }
-    std::string GetPurposeForAddressBookEntry(const CTxDestination& address) const;
-    std::string GetNameForAddressBookEntry(const CTxDestination& address) const;
-    Optional<AddressBook::CAddressBookData> GetAddressBookEntry(const CTxDestination& address) const;
+    std::string GetPurposeForAddressBookEntry(const CWDestination& address) const;
+    std::string GetNameForAddressBookEntry(const CWDestination& address) const;
+    Optional<AddressBook::CAddressBookData> GetAddressBookEntry(const CWDestination& address) const;
 
-    void LoadAddressBookName(const CTxDestination& dest, const std::string& strName);
-    void LoadAddressBookPurpose(const CTxDestination& dest, const std::string& strPurpose);
+    void LoadAddressBookName(const CWDestination& dest, const std::string& strName);
+    void LoadAddressBookPurpose(const CWDestination& dest, const std::string& strPurpose);
 
     bool UpdatedTransaction(const uint256& hashTx);
 
@@ -772,7 +774,7 @@ public:
      * Address book entry changed.
      * @note called with lock cs_wallet held.
      */
-    boost::signals2::signal<void(CWallet* wallet, const CTxDestination& address, const std::string& label, bool isMine, const std::string& purpose, ChangeType status)> NotifyAddressBookChanged;
+    boost::signals2::signal<void(CWallet* wallet, const CWDestination& address, const std::string& label, bool isMine, const std::string& purpose, ChangeType status)> NotifyAddressBookChanged;
 
     /**
      * Wallet transaction added, removed or updated.

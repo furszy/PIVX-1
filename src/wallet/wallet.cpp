@@ -13,6 +13,7 @@
 #include "masternode-budget.h"
 #include "masternode-payments.h"
 #include "policy/policy.h"
+#include "sapling/key_io_sapling.h"
 #include "script/sign.h"
 #include "spork.h"
 #include "util.h"
@@ -3226,14 +3227,14 @@ DBErrors CWallet::ZapWalletTx(std::vector<CWalletTx>& vWtx)
     return DB_LOAD_OK;
 }
 
-std::string CWallet::ParseIntoAddress(const CTxDestination& dest, const std::string& purpose) {
+std::string CWallet::ParseIntoAddress(const CWDestination& dest, const std::string& purpose) {
     const CChainParams::Base58Type addrType =
             AddressBook::IsColdStakingPurpose(purpose) ?
             CChainParams::STAKING_ADDRESS : CChainParams::PUBKEY_ADDRESS;
-    return EncodeDestination(dest, addrType);
+    return Standard::EncodeDestination(dest, addrType);
 }
 
-bool CWallet::SetAddressBook(const CTxDestination& address, const std::string& strName, const std::string& strPurpose)
+bool CWallet::SetAddressBook(const CWDestination& address, const std::string& strName, const std::string& strPurpose)
 {
     bool fUpdated = HasAddressBook(address);
     {
@@ -3252,9 +3253,9 @@ bool CWallet::SetAddressBook(const CTxDestination& address, const std::string& s
     return CWalletDB(strWalletFile).WriteName(addressStr, strName);
 }
 
-bool CWallet::DelAddressBook(const CTxDestination& address, const CChainParams::Base58Type addrType)
+bool CWallet::DelAddressBook(const CWDestination& address, const CChainParams::Base58Type addrType)
 {
-    std::string strAddress =  EncodeDestination(address, addrType);
+    std::string strAddress = Standard::EncodeDestination(address, addrType);
     std::string purpose = GetPurposeForAddressBookEntry(address);
     {
         LOCK(cs_wallet); // mapAddressBook
@@ -3276,38 +3277,38 @@ bool CWallet::DelAddressBook(const CTxDestination& address, const CChainParams::
     return CWalletDB(strWalletFile).EraseName(strAddress);
 }
 
-std::string CWallet::GetPurposeForAddressBookEntry(const CTxDestination& address) const
+std::string CWallet::GetPurposeForAddressBookEntry(const CWDestination& address) const
 {
     LOCK(cs_wallet);
     auto it = mapAddressBook.find(address);
     return it != mapAddressBook.end() ? it->second.purpose : "";
 }
 
-std::string CWallet::GetNameForAddressBookEntry(const CTxDestination& address) const
+std::string CWallet::GetNameForAddressBookEntry(const CWDestination& address) const
 {
     LOCK(cs_wallet);
     auto it = mapAddressBook.find(address);
     return it != mapAddressBook.end() ? it->second.name : "";
 }
 
-Optional<AddressBook::CAddressBookData> CWallet::GetAddressBookEntry(const CTxDestination& dest) const
+Optional<AddressBook::CAddressBookData> CWallet::GetAddressBookEntry(const CWDestination& dest) const
 {
     LOCK(cs_wallet);
     auto it = mapAddressBook.find(dest);
     return it != mapAddressBook.end() ? Optional<AddressBook::CAddressBookData>(it->second) : nullopt;
 }
 
-void CWallet::LoadAddressBookName(const CTxDestination& dest, const std::string& strName)
+void CWallet::LoadAddressBookName(const CWDestination& dest, const std::string& strName)
 {
     mapAddressBook[dest].name = strName;
 }
 
-void CWallet::LoadAddressBookPurpose(const CTxDestination& dest, const std::string& strPurpose)
+void CWallet::LoadAddressBookPurpose(const CWDestination& dest, const std::string& strPurpose)
 {
     mapAddressBook[dest].purpose = strPurpose;
 }
 
-bool CWallet::HasAddressBook(const CTxDestination& address) const
+bool CWallet::HasAddressBook(const CWDestination& address) const
 {
     return WITH_LOCK(cs_wallet, return mapAddressBook.count(address));
 }
@@ -4749,6 +4750,15 @@ const CTxDestination* CAddressBookIterator::GetCTxDestKey()
     return boost::get<CTxDestination>(&it->first);
 }
 
+const libzcash::SaplingPaymentAddress* CAddressBookIterator::GetShieldedDestKey()
+{
+    return boost::get<libzcash::SaplingPaymentAddress>(&it->first);
+}
+
+const CWDestination* CAddressBookIterator::GetDestKey()
+{
+    return &it->first;
+}
 
 CStakeableOutput::CStakeableOutput(const CWalletTx* txIn, int iIn, int nDepthIn, bool fSpendableIn, bool fSolvableIn,
                                    const CBlockIndex*& _pindex) : COutput(txIn, iIn, nDepthIn, fSpendableIn, fSolvableIn),
