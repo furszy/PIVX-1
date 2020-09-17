@@ -11,6 +11,7 @@
 
 #include "base58.h"
 #include "protocol.h"
+#include "sapling/key_io_sapling.h"
 #include "serialize.h"
 #include "sync.h"
 #include "txdb.h"
@@ -425,13 +426,13 @@ bool ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue, CW
             ssKey >> strAddress;
             std::string strName;
             ssValue >> strName;
-            pwallet->LoadAddressBookName(DecodeDestination(strAddress), strName);
+            pwallet->LoadAddressBookName(Standard::DecodeDestination(strAddress), strName);
         } else if (strType == "purpose") {
             std::string strAddress;
             ssKey >> strAddress;
             std::string strPurpose;
             ssValue >> strPurpose;
-            pwallet->LoadAddressBookPurpose(DecodeDestination(strAddress), strPurpose);
+            pwallet->LoadAddressBookPurpose(Standard::DecodeDestination(strAddress), strPurpose);
         } else if (strType == "tx") {
             uint256 hash;
             ssKey >> hash;
