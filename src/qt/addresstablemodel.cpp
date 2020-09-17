@@ -590,26 +590,38 @@ bool AddressTableModel::isWhitelisted(const std::string& address) const
  * Return an unused address
  * @return
  */
-QString AddressTableModel::getAddressToShow() const
+QString AddressTableModel::getAddressToShow(bool isShielded) const
 {
     LOCK(wallet->cs_wallet);
 
     for (auto it = wallet->NewAddressBookIterator(); it.IsValid(); it.Next()) {
-        if (it.GetValue().purpose == AddressBook::AddressBookPurpose::RECEIVE) {
-            auto dest = it.GetCTxDestKey();
-            if (!dest) continue;
-            const auto &address = *dest;
-            if (IsValidDestination(address) && IsMine(*wallet, address) && !wallet->IsUsed(address)) {
-                return QString::fromStdString(EncodeDestination(address));
+        const auto addrData = it.GetValue();
+
+        if (!isShielded) {
+            if (addrData.purpose == AddressBook::AddressBookPurpose::RECEIVE) {
+                const auto &address = *it.GetCTxDestKey();
+                if (IsValidDestination(address) && IsMine(*wallet, address) && !wallet->IsUsed(address)) {
+                    return QString::fromStdString(EncodeDestination(address));
+                }
+            }
+        } else {
+            // todo: add shielded address support to IsUsed
+            if (addrData.purpose == AddressBook::AddressBookPurpose::SHIELDED_RECEIVE) {
+                const auto &address = *it.GetShieldedDestKey();
+                if (IsValidPaymentAddress(address) && IsMine(*wallet, address)) {
+                    return QString::fromStdString(KeyIO::EncodePaymentAddress(address));
+                }
             }
         }
     }
 
-    // For some reason we don't have any address in our address book, let's create one
     QString addressStr;
-    Destination newAddress;
-    if (walletModel->getNewAddress(newAddress, "Default").result) {
-        addressStr = QString::fromStdString(newAddress.ToString());
+    if (!isShielded) {
+        // For some reason we don't have any address in our address book, let's create one
+        Destination newAddress;
+        if (walletModel->getNewAddress(newAddress, "Default").result) {
+            addressStr = QString::fromStdString(newAddress.ToString());
+        }
     }
     return addressStr;
 }

@@ -100,7 +100,7 @@ public:
     /**
      * Return last unused address
      */
-    QString getAddressToShow() const;
+    QString getAddressToShow(bool shielded = false) const;
 
     EditStatus getEditStatus() const { return editStatus; }
 
