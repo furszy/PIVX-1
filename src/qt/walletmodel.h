@@ -250,6 +250,9 @@ public:
      */
     PairResult getNewStakingAddress(Destination& ret, std::string label = "") const;
 
+    //! Return a new shielded address.
+    PairResult getNewShieldedAddress(QString& shieldedAddrRet, std::string strLabel = "");
+
     bool whitelistAddressFromColdStaking(const QString &addressStr);
     bool blacklistAddressFromColdStaking(const QString &address);
     bool updateAddressBookPurpose(const QString &addressStr, const std::string& purpose);

@@ -15,6 +15,7 @@
 #include "base58.h"
 #include "db.h"
 #include "keystore.h"
+#include "sapling/key_io_sapling.h"
 #include "spork.h"
 #include "sync.h"
 #include "guiinterface.h"
@@ -769,6 +770,13 @@ PairResult WalletModel::getNewStakingAddress(Destination& ret,std::string label)
     PairResult res = wallet->getNewStakingAddress(dest, label);
     if (res.result) ret = Destination(dest, true);
     return res;
+}
+
+PairResult WalletModel::getNewShieldedAddress(QString& shieldedAddrRet, std::string strLabel)
+{
+    shieldedAddrRet = QString::fromStdString(
+            KeyIO::EncodePaymentAddress(wallet->GenerateNewSaplingZKey(strLabel)));
+    return PairResult(true);
 }
 
 bool WalletModel::whitelistAddressFromColdStaking(const QString &addressStr)
