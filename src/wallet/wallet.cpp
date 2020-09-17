@@ -4497,7 +4497,11 @@ int CWallet::GetVersion()
 ///////////////// Sapling Methods //////////////////////////
 ////////////////////////////////////////////////////////////
 
-libzcash::SaplingPaymentAddress CWallet::GenerateNewSaplingZKey() { return m_sspk_man->GenerateNewSaplingZKey(); }
+libzcash::SaplingPaymentAddress CWallet::GenerateNewSaplingZKey(std::string label) {
+    auto address = m_sspk_man->GenerateNewSaplingZKey();
+    SetAddressBook(address, label, AddressBook::AddressBookPurpose::SHIELDED_RECEIVE);
+    return address;
+}
 
 void CWallet::IncrementNoteWitnesses(const CBlockIndex* pindex,
                             const CBlock* pblock,
