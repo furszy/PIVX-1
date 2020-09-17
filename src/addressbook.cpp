@@ -24,6 +24,11 @@ namespace AddressBook {
                || purpose == AddressBookPurpose::COLD_STAKING_SEND;
     }
 
+    bool IsShieldedPurpose(const std::string& purpose) {
+        return purpose == AddressBookPurpose::SHIELDED_RECEIVE
+               || purpose == AddressBookPurpose::SHIELDED_SEND;
+    }
+
     bool CAddressBookData::isSendColdStakingPurpose() const {
         return purpose == AddressBookPurpose::COLD_STAKING_SEND;
     }
@@ -37,7 +42,7 @@ namespace AddressBook {
     }
 
     bool CAddressBookData::isShielded() const {
-        return purpose == AddressBookPurpose::SHIELDED_RECEIVE || purpose == AddressBookPurpose::SHIELDED_SEND;
+        return IsShieldedPurpose(purpose);
     }
 
 

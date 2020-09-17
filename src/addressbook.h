@@ -23,6 +23,7 @@ namespace AddressBook {
     }
 
     bool IsColdStakingPurpose(const std::string& purpose);
+    bool IsShieldedPurpose(const std::string& purpose);
 
 /** Address book data */
     class CAddressBookData {
