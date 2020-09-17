@@ -67,12 +67,15 @@ private:
     AddressTableModel::ColumnIndex sortType = AddressTableModel::Label;
     Qt::SortOrder sortOrder = Qt::AscendingOrder;
 
-    void updateQr(QString address);
+    void updateQr(QString& address);
     void updateLabel();
     void showAddressGenerationDialog(bool isPaymentRequest);
     void sortAddresses();
+    void onTransparentSelected(bool transparentSelected);
 
     bool isShowingDialog = false;
+    // Whether the main section is presenting a shielded address or a regular one
+    bool shieldedMode = false;
 
 };
 
