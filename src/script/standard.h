@@ -93,6 +93,8 @@ namespace Standard {
 
 std::string EncodeDestination(const CWDestination &address, const CChainParams::Base58Type addrType = CChainParams::PUBKEY_ADDRESS);
 
+CWDestination DecodeDestination(const std::string& strAddress);
+
 } // End Standard namespace
 
 #endif // BITCOIN_SCRIPT_STANDARD_H
