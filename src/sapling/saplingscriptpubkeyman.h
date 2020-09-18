@@ -181,6 +181,9 @@ public:
 
     void GetConflicts(const CWalletTx& wtx, std::set<uint256>& result) const;
 
+    // Get the ivk creation time (we are only using the ivk's default address)
+    int64_t GetKeyCreationTime(const libzcash::SaplingIncomingViewingKey& ivk);
+
     // Add full viewing key if it's not already in the wallet
     KeyAddResult AddViewingKeyToWallet(const libzcash::SaplingExtendedFullViewingKey &extfvk) const;
 

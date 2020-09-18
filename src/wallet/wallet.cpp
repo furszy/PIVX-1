@@ -168,6 +168,13 @@ int64_t CWallet::GetKeyCreationTime(const CTxDestination& address)
     return 0;
 }
 
+int64_t CWallet::GetKeyCreationTime(const libzcash::SaplingPaymentAddress& address)
+{
+    libzcash::SaplingIncomingViewingKey ivk;
+    return GetSaplingIncomingViewingKey(address, ivk) ?
+            GetSaplingScriptPubKeyMan()->GetKeyCreationTime(ivk) : 0;
+}
+
 bool CWallet::AddKeyPubKey(const CKey& secret, const CPubKey& pubkey)
 {
     AssertLockHeld(cs_wallet); // mapKeyMetadata

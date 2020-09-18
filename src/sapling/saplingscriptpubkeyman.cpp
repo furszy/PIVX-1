@@ -828,6 +828,12 @@ libzcash::SaplingPaymentAddress SaplingScriptPubKeyMan::GenerateNewSaplingZKey()
     return xsk.DefaultAddress();
 }
 
+int64_t SaplingScriptPubKeyMan::GetKeyCreationTime(const libzcash::SaplingIncomingViewingKey& ivk)
+{
+    auto it = mapSaplingZKeyMetadata.find(ivk);
+    return it != mapSaplingZKeyMetadata.end() ? it->second.nCreateTime : 0;
+}
+
 void SaplingScriptPubKeyMan::GetConflicts(const CWalletTx& wtx, std::set<uint256>& result) const
 {
     AssertLockHeld(wallet->cs_wallet);
