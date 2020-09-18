@@ -345,13 +345,30 @@ namespace Standard {
 
     CWDestination DecodeDestination(const std::string& strAddress)
     {
+        bool isStaking = false;
+        return DecodeDestination(strAddress, isStaking);
+    }
+
+    CWDestination DecodeDestination(const std::string& strAddress, bool& isStaking)
+    {
         CWDestination dest;
-        CTxDestination regDest = ::DecodeDestination(strAddress);
+        CTxDestination regDest = ::DecodeDestination(strAddress, isStaking);
         if (!IsValidDestination(regDest)) {
-            return KeyIO::DecodeSaplingPaymentAddress(strAddress);
+            const auto sapDest = KeyIO::DecodeSaplingPaymentAddress(strAddress);
+            if (sapDest) return *sapDest;
         }
         return regDest;
 
+    }
+
+    bool IsValidDestination(const CWDestination& address)
+    {
+        // Only regular base58 addresses and shielded addresses accepted here for now
+        const libzcash::SaplingPaymentAddress *dest1 = boost::get<libzcash::SaplingPaymentAddress>(&address);
+        if (dest1) return true;
+
+        const CTxDestination *dest = boost::get<CTxDestination>(&address);
+        return dest && ::IsValidDestination(*dest);
     }
 
 } // End Standard namespace
