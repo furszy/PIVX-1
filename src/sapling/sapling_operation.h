@@ -11,6 +11,10 @@
 #include "primitives/transaction.h"
 #include "wallet/wallet.h"
 
+// transaction.h comment: spending taddr output requires CTxIn >= 148 bytes and typical taddr txout is 34 bytes
+#define CTXIN_SPEND_DUST_SIZE   148
+#define CTXOUT_REGULAR_SIZE     34
+
 struct TxValues;
 
 class SendManyRecipient {
@@ -92,5 +96,8 @@ private:
                                      uint256& ovk);
     OperationResult checkTxValues(TxValues& txValues, bool isFromtAddress, bool isFromShielded);
 };
+
+OperationResult CheckTransactionSize(std::vector<SendManyRecipient>& shieldedRecipients,
+                                     bool fromTaddr, int tAddrRecipientsSize);
 
 #endif //PIVX_SAPLING_OPERATION_H

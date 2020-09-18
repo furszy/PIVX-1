@@ -975,6 +975,11 @@ bool WalletModel::isMine(const QString& addressStr)
     return IsMine(*wallet, DecodeDestination(addressStr.toStdString()));
 }
 
+bool WalletModel::IsShieldedDestination(const CWDestination& address)
+{
+    return boost::get<libzcash::SaplingPaymentAddress>(&address);
+}
+
 bool WalletModel::isUsed(CTxDestination address)
 {
     return wallet->IsUsed(address);

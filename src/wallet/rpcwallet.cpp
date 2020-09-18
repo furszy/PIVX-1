@@ -1422,10 +1422,6 @@ UniValue viewshieldedtransaction(const JSONRPCRequest& request)
     return entry;
 }
 
-// transaction.h comment: spending taddr output requires CTxIn >= 148 bytes and typical taddr txout is 34 bytes
-#define CTXIN_SPEND_DUST_SIZE   148
-#define CTXOUT_REGULAR_SIZE     34
-
 UniValue shielded_sendmany(const JSONRPCRequest& request) {
     if (request.fHelp || request.params.size() < 2 || request.params.size() > 4)
         throw std::runtime_error(
@@ -1554,30 +1550,9 @@ UniValue shielded_sendmany(const JSONRPCRequest& request) {
     }
 
     // Now check the transaction
-    CMutableTransaction mtx;
-    mtx.nVersion = CTransaction::TxVersion::SAPLING;
-    unsigned int max_tx_size = MAX_TX_SIZE_AFTER_SAPLING;
-
-    // As a sanity check, estimate and verify that the size of the transaction will be valid.
-    // Depending on the input notes, the actual tx size may turn out to be larger and perhaps invalid.
-    size_t txsize = 0;
-    for (const auto& shieldAddrRecipient : shieldAddrRecipients) {
-        auto res = KeyIO::DecodePaymentAddress(shieldAddrRecipient.address);
-        if (IsValidPaymentAddress(res)) {
-            mtx.sapData->vShieldedOutput.emplace_back();
-        } else {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("invalid recipient shielded address %s", shieldAddrRecipient.address));
-        }
-    }
-    CTransaction tx(mtx);
-    txsize += GetSerializeSize(tx, SER_NETWORK, tx.nVersion);
-    if (!fromSapling) {
-        txsize += CTXIN_SPEND_DUST_SIZE;
-        txsize += CTXOUT_REGULAR_SIZE;      // There will probably be taddr change
-    }
-    txsize += CTXOUT_REGULAR_SIZE * taddrRecipients.size();
-    if (txsize > max_tx_size) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Too many outputs, size of raw transaction would be larger than limit of %d bytes", max_tx_size ));
+    auto opResult = CheckTransactionSize(shieldAddrRecipients, !fromSapling, taddrRecipients.size());
+    if (!opResult) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, opResult.getError());
     }
 
     // Minimum confirmations

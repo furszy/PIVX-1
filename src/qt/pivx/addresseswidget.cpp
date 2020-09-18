@@ -40,6 +40,9 @@ public:
         row->updateState(isLightTheme, isHovered, isSelected);
 
         QString address = index.data(Qt::DisplayRole).toString();
+        if (index.data(AddressTableModel::TypeRole).toString() == AddressTableModel::ShieldedSend) {
+            address = address.left(26) + "..." + address.right(26);
+        }
         QModelIndex sibling = index.sibling(index.row(), AddressTableModel::Label);
         QString label = sibling.data(Qt::DisplayRole).toString();
 
@@ -158,7 +161,9 @@ void AddressesWidget::loadWalletModel()
 {
     if (walletModel) {
         addressTablemodel = walletModel->getAddressTableModel();
-        this->filter = new AddressFilterProxyModel(QStringList({AddressTableModel::Send, AddressTableModel::ColdStakingSend}), this);
+        this->filter = new AddressFilterProxyModel(
+                QStringList({AddressTableModel::Send, AddressTableModel::ColdStakingSend, AddressTableModel::ShieldedSend}),
+                this);
         this->filter->setSourceModel(addressTablemodel);
         this->filter->sort(sortType, sortOrder);
         ui->listAddresses->setModel(this->filter);
@@ -182,9 +187,9 @@ void AddressesWidget::onStoreContactClicked()
         QString address = ui->lineEditAddress->text();
 
         bool isStakingAddress = false;
-        auto pivAdd = DecodeDestination(address.toUtf8().constData(), isStakingAddress);
+        auto pivAdd = Standard::DecodeDestination(address.toUtf8().constData(), isStakingAddress);
 
-        if (!IsValidDestination(pivAdd) || isStakingAddress) {
+        if (!Standard::IsValidDestination(pivAdd) || isStakingAddress) {
             setCssEditLine(ui->lineEditAddress, false, true);
             inform(tr("Invalid Contact Address"));
             return;
@@ -203,8 +208,10 @@ void AddressesWidget::onStoreContactClicked()
             return;
         }
 
+        bool isShielded = walletModel->IsShieldedDestination(pivAdd);
         if (walletModel->updateAddressBookLabels(pivAdd, label.toUtf8().constData(),
-                isStakingAddress ? AddressBook::AddressBookPurpose::COLD_STAKING_SEND : AddressBook::AddressBookPurpose::SEND)
+                         isShielded ? AddressBook::AddressBookPurpose::SHIELDED_SEND :
+                         isStakingAddress ? AddressBook::AddressBookPurpose::COLD_STAKING_SEND : AddressBook::AddressBookPurpose::SEND)
                 ) {
             ui->lineEditAddress->setText("");
             ui->lineEditName->setText("");
@@ -231,7 +238,7 @@ void AddressesWidget::onEditClicked()
     dialog->setData(address, currentLabel);
     if (openDialogWithOpaqueBackground(dialog, window)) {
         if (walletModel->updateAddressBookLabels(
-                DecodeDestination(address.toStdString()), dialog->getLabel().toStdString(), addressTablemodel->purposeForAddress(address.toStdString()))){
+                Standard::DecodeDestination(address.toStdString()), dialog->getLabel().toStdString(), addressTablemodel->purposeForAddress(address.toStdString()))){
             inform(tr("Contact edited"));
         } else {
             inform(tr("Contact edit failed"));
