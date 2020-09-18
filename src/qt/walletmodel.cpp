@@ -756,6 +756,25 @@ int64_t WalletModel::getKeyCreationTime(const CTxDestination& address)
     return 0;
 }
 
+int64_t WalletModel::getKeyCreationTime(const std::string& address)
+{
+    CWDestination dest = Standard::DecodeDestination(address);
+    const CTxDestination* add = boost::get<CTxDestination>(&dest);
+    if (add && IsValidDestination(*add)) {
+        return getKeyCreationTime(*add);
+    } else {
+        return getKeyCreationTime(*boost::get<libzcash::SaplingPaymentAddress>(&dest));
+    }
+}
+
+int64_t WalletModel::getKeyCreationTime(const libzcash::SaplingPaymentAddress& address)
+{
+    if (this->isMine(address)) {
+        return pwalletMain->GetKeyCreationTime(address);
+    }
+    return 0;
+}
+
 PairResult WalletModel::getNewAddress(Destination& ret, std::string label) const
 {
     CTxDestination dest;
@@ -942,7 +961,7 @@ bool WalletModel::saveReceiveRequest(const std::string& sAddress, const int64_t 
         return wallet->AddDestData(dest, key, sRequest);
 }
 
-bool WalletModel::isMine(const CTxDestination& address)
+bool WalletModel::isMine(const CWDestination& address)
 {
     return IsMine(*wallet, address);
 }

@@ -244,6 +244,8 @@ public:
     int64_t getCreationTime() const;
     int64_t getKeyCreationTime(const CPubKey& key);
     int64_t getKeyCreationTime(const CTxDestination& address);
+    int64_t getKeyCreationTime(const std::string& address);
+    int64_t getKeyCreationTime(const libzcash::SaplingPaymentAddress& address);
     PairResult getNewAddress(Destination& ret, std::string label = "") const;
     /**
      * Return a new address used to receive for delegated cold stake purpose.
