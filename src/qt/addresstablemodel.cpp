@@ -547,7 +547,7 @@ bool AddressTableModel::removeRows(int row, int count, const QModelIndex& parent
     const CChainParams::Base58Type addrType = (rec->type == AddressTableEntry::ColdStakingSend) ? CChainParams::STAKING_ADDRESS : CChainParams::PUBKEY_ADDRESS;
     {
         LOCK(wallet->cs_wallet);
-        return wallet->DelAddressBook(DecodeDestination(rec->address.toStdString()), addrType);
+        return wallet->DelAddressBook(Standard::DecodeDestination(rec->address.toStdString()), addrType);
     }
 }
 
@@ -557,7 +557,7 @@ QString AddressTableModel::labelForAddress(const QString& address) const
 {
     // TODO: Check why do we have empty addresses..
     if (!address.isEmpty()) {
-        CTxDestination dest = DecodeDestination(address.toStdString());
+        CWDestination dest = Standard::DecodeDestination(address.toStdString());
         return QString::fromStdString(wallet->GetNameForAddressBookEntry(dest));
     }
     return QString();
@@ -567,7 +567,7 @@ QString AddressTableModel::labelForAddress(const QString& address) const
  */
 std::string AddressTableModel::purposeForAddress(const std::string& address) const
 {
-    return wallet->GetPurposeForAddressBookEntry(DecodeDestination(address));
+    return wallet->GetPurposeForAddressBookEntry(Standard::DecodeDestination(address));
 }
 
 int AddressTableModel::lookupAddress(const QString& address) const
