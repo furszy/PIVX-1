@@ -281,8 +281,12 @@ void WalletModel::updateWatchOnlyFlag(bool fHaveWatchonly)
 
 bool WalletModel::validateAddress(const QString& address)
 {
-    // Only regular base58 addresses accepted here
-    return IsValidDestinationString(address.toStdString(), false);
+    // Only regular base58 addresses and shielded addresses accepted here
+    bool isStaking = false;
+    CWDestination dest = Standard::DecodeDestination(address.toStdString(), isStaking);
+    const auto regDest = boost::get<CTxDestination>(&dest);
+    if (regDest && IsValidDestination(*regDest) && isStaking) return false;
+    return Standard::IsValidDestination(dest);
 }
 
 bool WalletModel::validateAddress(const QString& address, bool fStaking)

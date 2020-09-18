@@ -261,7 +261,7 @@ public:
     std::string getLabelForAddress(const CTxDestination& address);
     bool getKeyId(const CTxDestination& address, CKeyID& keyID);
 
-    bool isMine(const CTxDestination& address);
+    bool isMine(const CWDestination& address);
     bool isMine(const QString& addressStr);
     bool isUsed(CTxDestination address);
     void getOutputs(const std::vector<COutPoint>& vOutpoints, std::vector<COutput>& vOutputs);
