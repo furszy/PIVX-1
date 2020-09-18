@@ -161,12 +161,9 @@ void ReceiveWidget::refreshView(QString refreshAddress)
         }
 
         QString addressToShow = latestAddress;
-        int64_t time = 0;
+        int64_t time = walletModel->getKeyCreationTime(latestAddress.toStdString());
         if (shieldedMode) {
             addressToShow = addressToShow.left(20) + "..." + addressToShow.right(20);
-            // add creation time support for shielded addresses.
-        } else {
-            time = walletModel->getKeyCreationTime(DecodeDestination(latestAddress.toStdString()));
         }
 
         ui->labelAddress->setText(addressToShow);
