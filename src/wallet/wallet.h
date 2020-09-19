@@ -386,8 +386,6 @@ public:
     //! >> Available coins (generic)
     bool AvailableCoins(std::vector<COutput>* pCoins,   // --> populates when != nullptr
                         const CCoinControl* coinControl = nullptr,
-                        bool fIncludeDelegated          = true,
-                        bool fIncludeColdStaking        = false,
                         AvailableCoinsType nCoinType    = ALL_COINS,
                         bool fOnlyConfirmed             = true,
                         bool fUseIX                     = false

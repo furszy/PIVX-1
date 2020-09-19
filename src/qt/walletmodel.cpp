@@ -7,6 +7,7 @@
 #include "walletmodel.h"
 
 #include "addresstablemodel.h"
+#include "coincontrol.h"
 #include "guiconstants.h"
 #include "optionsmodel.h"
 #include "recentrequeststablemodel.h"
@@ -99,7 +100,12 @@ CAmount WalletModel::getBalance(const CCoinControl* coinControl, bool fIncludeDe
     if (coinControl) {
         CAmount nBalance = 0;
         std::vector<COutput> vCoins;
-        wallet->AvailableCoins(&vCoins, coinControl, fIncludeDelegated);
+
+        // Refactor me..
+        CCoinControl _coinControl = *coinControl;
+        _coinControl.fIncludeDelegated = fIncludeDelegated;
+
+        wallet->AvailableCoins(&vCoins, &_coinControl);
         for (const COutput& out : vCoins) {
             bool fSkip = fUnlockedOnly && isLockedCoin(out.tx->GetHash(), out.i);
             if (out.fSpendable && !fSkip)
@@ -851,7 +857,9 @@ void WalletModel::getOutputs(const std::vector<COutPoint>& vOutpoints, std::vect
 bool WalletModel::getMNCollateralCandidate(COutPoint& outPoint)
 {
     std::vector<COutput> vCoins;
-    wallet->AvailableCoins(&vCoins, nullptr, false, false, ONLY_10000);
+    CCoinControl coinControl;
+    coinControl.fIncludeDelegated = false;
+    wallet->AvailableCoins(&vCoins, &coinControl, ONLY_10000);
     for (const COutput& out : vCoins) {
         // skip locked collaterals
         if (!isLockedCoin(out.tx->GetHash(), out.i)) {

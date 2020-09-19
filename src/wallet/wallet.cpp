@@ -2006,8 +2006,6 @@ bool CWallet::GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& 
  */
 bool CWallet::AvailableCoins(std::vector<COutput>* pCoins,      // --> populates when != nullptr
                              const CCoinControl* coinControl,   // Default: nullptr
-                             bool fIncludeDelegated,            // Default: true
-                             bool fIncludeColdStaking,          // Default: false
                              AvailableCoinsType nCoinType,      // Default: ALL_COINS
                              bool fOnlyConfirmed,               // Default: true
                              bool fUseIX                       // Default: false
@@ -2016,7 +2014,8 @@ bool CWallet::AvailableCoins(std::vector<COutput>* pCoins,      // --> populates
     if (pCoins) pCoins->clear();
     const bool fCoinsSelected = (coinControl != nullptr) && coinControl->HasSelected();
     // include delegated coins when coinControl is active
-    if (!fIncludeDelegated && fCoinsSelected)
+    bool fIncludeDelegated = true;
+    if (coinControl && !coinControl->fIncludeDelegated && fCoinsSelected)
         fIncludeDelegated = true;
 
     {
@@ -2063,7 +2062,7 @@ bool CWallet::AvailableCoins(std::vector<COutput>* pCoins,      // --> populates
 
                 // --Skip P2CS outputs
                 // skip cold coins
-                if (mine == ISMINE_COLD && (!fIncludeColdStaking || !HasDelegator(pcoin->vout[i]))) continue;
+                if (mine == ISMINE_COLD && ((coinControl && !coinControl->fIncludeColdStaking) || !HasDelegator(pcoin->vout[i]))) continue;
                 // skip delegated coins
                 if (mine == ISMINE_SPENDABLE_DELEGATED && !fIncludeDelegated) continue;
 
@@ -2071,7 +2070,7 @@ bool CWallet::AvailableCoins(std::vector<COutput>* pCoins,      // --> populates
 
                 bool spendable = ((mine & ISMINE_SPENDABLE) != ISMINE_NO) ||
                         (((mine & ISMINE_WATCH_ONLY) != ISMINE_NO) && (coinControl && coinControl->fAllowWatchOnly && solvable)) ||
-                        ((mine & ((fIncludeColdStaking ? ISMINE_COLD : ISMINE_NO) |
+                        ((mine & (coinControl && (coinControl->fIncludeColdStaking ? ISMINE_COLD : ISMINE_NO) |
                         (fIncludeDelegated ? ISMINE_SPENDABLE_DELEGATED : ISMINE_NO) )) != ISMINE_NO);
 
                 // found valid coin
@@ -2087,10 +2086,10 @@ std::map<CTxDestination , std::vector<COutput> > CWallet::AvailableCoinsByAddres
 {
     std::vector<COutput> vCoins;
     // include cold
+    CCoinControl coinControl;
+    coinControl.fIncludeColdStaking = true;
     AvailableCoins(&vCoins,
-            nullptr,            // coin control
-            true,               // fIncludeDelegated
-            true,               // fIncludeColdStaking
+            &coinControl,        // coin control
             ALL_COINS,          // coin type
             fConfirmed);        // only confirmed
 
@@ -2160,10 +2159,11 @@ bool CWallet::StakeableCoins(std::vector<COutput>* pCoins)
     const bool fIncludeCold = (sporkManager.IsSporkActive(SPORK_17_COLDSTAKING_ENFORCEMENT) &&
                                GetBoolArg("-coldstaking", DEFAULT_COLDSTAKING));
 
+    CCoinControl coinControl;
+    coinControl.fIncludeDelegated = false;
+    coinControl.fIncludeColdStaking = fIncludeCold;
     return AvailableCoins(pCoins,
-            nullptr,            // coin control
-            false,              // fIncludeDelegated
-            fIncludeCold,       // fIncludeColdStaking
+            &coinControl,       // coin control
             STAKEABLE_COINS);  // coin type
 }
 
@@ -2415,10 +2415,15 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend,
         LOCK2(cs_main, cs_wallet);
         {
             std::vector<COutput> vAvailableCoins;
+
+            // Refactor me..
+            CCoinControl _coinControl;
+            if (coinControl) {
+                _coinControl = *coinControl;
+            }
+            _coinControl.fIncludeDelegated = fIncludeDelegated;
             AvailableCoins(&vAvailableCoins,
-                coinControl,
-                fIncludeDelegated,
-                false,                  // fIncludeColdStaking
+                &_coinControl,
                 coin_type,
                 true,                   // fOnlyConfirmed
                 useIX);

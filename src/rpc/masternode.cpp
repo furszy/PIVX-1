@@ -1,9 +1,10 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Copyright (c) 2015-2020 The PIVX developers
 // Distributed under the MIT/X11 software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+// file COPYING or https://www.opensource.org/licenses/mit-license.php.
 
 #include "activemasternode.h"
+#include "coincontrol.h"
 #include "db.h"
 #include "init.h"
 #include "main.h"
@@ -401,7 +402,9 @@ UniValue getmasternodeoutputs (const JSONRPCRequest& request)
 
     // Find possible candidates
     std::vector<COutput> possibleCoins;
-    pwalletMain->AvailableCoins(&possibleCoins, nullptr, false, false, ONLY_10000);
+    CCoinControl coinControl;
+    coinControl.fIncludeDelegated = false;
+    pwalletMain->AvailableCoins(&possibleCoins, &coinControl, ONLY_10000);
 
     UniValue ret(UniValue::VARR);
     for (COutput& out : possibleCoins) {

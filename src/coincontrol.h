@@ -28,6 +28,11 @@ public:
     bool fOverrideFeeRate;
     //! Feerate to use if overrideFeeRate is true
     CFeeRate nFeeRate;
+    //! Flag to decide whether delegations utxo are included in the calculation or not.
+    bool fIncludeDelegated{true};
+    //! Flag to decide whether cold staking utxo are included in the calculation or not
+    //! (always false in spending process for obvious reasons).
+    bool fIncludeColdStaking{false};
 
     CCoinControl()
     {
@@ -46,6 +51,8 @@ public:
         fOverrideFeeRate = false;
         fSplitBlock = false;
         nSplitBlock = 1;
+        fIncludeDelegated = true;
+        fIncludeColdStaking = false;
     }
 
     bool HasSelected() const
