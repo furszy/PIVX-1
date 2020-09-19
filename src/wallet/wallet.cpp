@@ -1910,15 +1910,13 @@ void CWallet::GetAvailableP2CSCoins(std::vector<COutput>& vCoins) const {
 /**
  * Test if the transaction is spendable.
  */
-bool CheckTXAvailability(const CWalletTx* pcoin, bool fOnlyConfirmed, bool fUseIX, int& nDepth)
+bool CheckTXAvailability(const CWalletTx* pcoin, bool fOnlyConfirmed, int& nDepth)
 {
     if (!CheckFinalTx(*pcoin)) return false;
     if (fOnlyConfirmed && !pcoin->IsTrusted()) return false;
     if (pcoin->GetBlocksToMaturity() > 0) return false;
 
     nDepth = pcoin->GetDepthInMainChain(false);
-    // do not use IX for inputs that have less then 6 blockchain confirmations
-    if (fUseIX && nDepth < 6) return false;
 
     // We should not consider coins which aren't at least in our mempool
     // It's possible for these to be conflicted via ancestors which we may never be able to detect
@@ -1971,7 +1969,7 @@ bool CWallet::GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& 
 
     // Check availability
     int nDepth = 0;
-    if (!CheckTXAvailability(&wtx, true, false, nDepth)) {
+    if (!CheckTXAvailability(&wtx, true, nDepth)) {
         strError = "Not available collateral transaction";
         return error("%s: tx %s not available", __func__, strTxHash);
     }
@@ -2007,8 +2005,7 @@ bool CWallet::GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& 
 bool CWallet::AvailableCoins(std::vector<COutput>* pCoins,      // --> populates when != nullptr
                              const CCoinControl* coinControl,   // Default: nullptr
                              AvailableCoinsType nCoinType,      // Default: ALL_COINS
-                             bool fOnlyConfirmed,               // Default: true
-                             bool fUseIX                       // Default: false
+                             bool fOnlyConfirmed               // Default: true
                              ) const
 {
     if (pCoins) pCoins->clear();
@@ -2026,7 +2023,7 @@ bool CWallet::AvailableCoins(std::vector<COutput>* pCoins,      // --> populates
 
             // Check if the tx is selectable
             int nDepth;
-            if (!CheckTXAvailability(pcoin, fOnlyConfirmed, fUseIX, nDepth))
+            if (!CheckTXAvailability(pcoin, fOnlyConfirmed, nDepth))
                 continue;
 
             // Check min depth requirement for stake inputs
@@ -2385,12 +2382,9 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend,
     const CCoinControl* coinControl,
     AvailableCoinsType coin_type,
     bool sign,
-    bool useIX,
     CAmount nFeePay,
     bool fIncludeDelegated)
 {
-    if (useIX && nFeePay < CENT) nFeePay = CENT;
-
     CAmount nValue = 0;
     int nChangePosRequest = nChangePosInOut;
 
@@ -2425,8 +2419,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend,
             AvailableCoins(&vAvailableCoins,
                 &_coinControl,
                 coin_type,
-                true,                   // fOnlyConfirmed
-                useIX);
+                true);                   // fOnlyConfirmed
 
             nFeeRet = 0;
             if (nFeePay > 0) nFeeRet = nFeePay;
@@ -2476,10 +2469,6 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend,
                 if (!SelectCoinsToSpend(vAvailableCoins, nTotalValue, setCoins, nValueIn, coinControl)) {
                     if (coin_type == ALL_COINS) {
                         strFailReason = _("Insufficient funds.");
-                    }
-
-                    if (useIX) {
-                        strFailReason += " " + _("SwiftX requires inputs with at least 6 confirmations, you might need to wait a few minutes and try again.");
                     }
 
                     return false;
@@ -2663,12 +2652,12 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend,
     return true;
 }
 
-bool CWallet::CreateTransaction(CScript scriptPubKey, const CAmount& nValue, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet, std::string& strFailReason, const CCoinControl* coinControl, AvailableCoinsType coin_type, bool useIX, CAmount nFeePay, bool fIncludeDelegated)
+bool CWallet::CreateTransaction(CScript scriptPubKey, const CAmount& nValue, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet, std::string& strFailReason, const CCoinControl* coinControl, AvailableCoinsType coin_type, CAmount nFeePay, bool fIncludeDelegated)
 {
     std::vector<CRecipient> vecSend;
     vecSend.emplace_back(scriptPubKey, nValue, false);
     int nChangePosInOut = -1;
-    return CreateTransaction(vecSend, wtxNew, reservekey, nFeeRet, nChangePosInOut, strFailReason, coinControl, coin_type, true, useIX, nFeePay, fIncludeDelegated);
+    return CreateTransaction(vecSend, wtxNew, reservekey, nFeeRet, nChangePosInOut, strFailReason, coinControl, coin_type, true, nFeePay, fIncludeDelegated);
 }
 
 bool CWallet::CreateCoinStake(

@@ -1097,7 +1097,7 @@ UniValue CreateColdStakeDelegation(const UniValue& params, CWalletTx& wtxNew, CR
 
     // Create the transaction
     CAmount nFeeRequired;
-    if (!pwalletMain->CreateTransaction(scriptPubKey, nValue, wtxNew, reservekey, nFeeRequired, strError, nullptr, ALL_COINS, /*fUseIX*/ false, (CAmount)0, fUseDelegated)) {
+    if (!pwalletMain->CreateTransaction(scriptPubKey, nValue, wtxNew, reservekey, nFeeRequired, strError, nullptr, ALL_COINS, (CAmount)0, fUseDelegated)) {
         if (nValue + nFeeRequired > currBalance)
             strError = strprintf("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!", FormatMoney(nFeeRequired));
         LogPrintf("%s : %s\n", __func__, strError);
@@ -3202,8 +3202,7 @@ UniValue listunspent(const JSONRPCRequest& request)
     pwalletMain->AvailableCoins(&vecOutputs,
                                 &coinControl,    // coin control
                                 ALL_COINS,  // coin type
-                                false,      // only confirmed
-                                false       // use IX
+                                false      // only confirmed
                                 );
     for (const COutput& out : vecOutputs) {
         if (out.nDepth < nMinDepth || out.nDepth > nMaxDepth)

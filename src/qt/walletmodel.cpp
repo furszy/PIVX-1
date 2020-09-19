@@ -418,7 +418,6 @@ WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransact
                                                   coinControl,
                                                   recipients[0].inputType,
                                                   true,
-                                                  recipients[0].useSwiftTX,
                                                   0,
                                                   fIncludeDelegations);
         transaction.setTransactionFee(nFeeRequired);

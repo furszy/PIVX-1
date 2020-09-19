@@ -387,8 +387,7 @@ public:
     bool AvailableCoins(std::vector<COutput>* pCoins,   // --> populates when != nullptr
                         const CCoinControl* coinControl = nullptr,
                         AvailableCoinsType nCoinType    = ALL_COINS,
-                        bool fOnlyConfirmed             = true,
-                        bool fUseIX                     = false
+                        bool fOnlyConfirmed             = true
                         ) const;
     //! >> Available coins (spending)
     bool SelectCoinsToSpend(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<std::pair<const CWalletTx*, unsigned int> >& setCoinsRet, CAmount& nValueRet, const CCoinControl* coinControl = nullptr) const;
@@ -548,10 +547,9 @@ public:
         const CCoinControl* coinControl = NULL,
         AvailableCoinsType coin_type = ALL_COINS,
         bool sign = true,
-        bool useIX = false,
         CAmount nFeePay = 0,
         bool fIncludeDelegated = false);
-    bool CreateTransaction(CScript scriptPubKey, const CAmount& nValue, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet, std::string& strFailReason, const CCoinControl* coinControl = NULL, AvailableCoinsType coin_type = ALL_COINS, bool useIX = false, CAmount nFeePay = 0, bool fIncludeDelegated = false);
+    bool CreateTransaction(CScript scriptPubKey, const CAmount& nValue, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet, std::string& strFailReason, const CCoinControl* coinControl = NULL, AvailableCoinsType coin_type = ALL_COINS, CAmount nFeePay = 0, bool fIncludeDelegated = false);
 
     // enumeration for CommitResult (return status of CommitTransaction)
     enum CommitStatus
