@@ -95,6 +95,7 @@ std::string EncodeDestination(const CWDestination &address, const CChainParams::
 
 CWDestination DecodeDestination(const std::string& strAddress);
 CWDestination DecodeDestination(const std::string& strAddress, bool& isStaking);
+CWDestination DecodeDestination(const std::string& strAddress, bool& isStaking, bool& isShielded);
 
 bool IsValidDestination(const CWDestination& dest);
 

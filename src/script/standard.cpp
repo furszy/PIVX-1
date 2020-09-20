@@ -351,11 +351,21 @@ namespace Standard {
 
     CWDestination DecodeDestination(const std::string& strAddress, bool& isStaking)
     {
+        bool isShielded = false;
+        return DecodeDestination(strAddress, isStaking, isShielded);
+    }
+
+    // agregar isShielded
+    CWDestination DecodeDestination(const std::string& strAddress, bool& isStaking, bool& isShielded)
+    {
         CWDestination dest;
         CTxDestination regDest = ::DecodeDestination(strAddress, isStaking);
         if (!IsValidDestination(regDest)) {
             const auto sapDest = KeyIO::DecodeSaplingPaymentAddress(strAddress);
-            if (sapDest) return *sapDest;
+            if (sapDest) {
+                isShielded = true;
+                return *sapDest;
+            }
         }
         return regDest;
 
