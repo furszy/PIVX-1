@@ -33,6 +33,8 @@ public:
     //! Flag to decide whether cold staking utxo are included in the calculation or not
     //! (always false in spending process for obvious reasons).
     bool fIncludeColdStaking{false};
+    //! Whether should only select trusted coins.
+    bool fOnlyTrusted{true};
 
     CCoinControl()
     {
@@ -53,6 +55,7 @@ public:
         nSplitBlock = 1;
         fIncludeDelegated = true;
         fIncludeColdStaking = false;
+        fOnlyTrusted = true;
     }
 
     bool HasSelected() const

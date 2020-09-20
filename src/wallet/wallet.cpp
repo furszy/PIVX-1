@@ -2004,8 +2004,7 @@ bool CWallet::GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& 
  */
 bool CWallet::AvailableCoins(std::vector<COutput>* pCoins,      // --> populates when != nullptr
                              const CCoinControl* coinControl,   // Default: nullptr
-                             AvailableCoinsType nCoinType,      // Default: ALL_COINS
-                             bool fOnlyConfirmed               // Default: true
+                             AvailableCoinsType nCoinType      // Default: ALL_COINS
                              ) const
 {
     if (pCoins) pCoins->clear();
@@ -2015,6 +2014,7 @@ bool CWallet::AvailableCoins(std::vector<COutput>* pCoins,      // --> populates
     if (coinControl && !coinControl->fIncludeDelegated && fCoinsSelected)
         fIncludeDelegated = true;
 
+    bool fOnlyTrusted = (coinControl && coinControl->fOnlyTrusted) || !coinControl;
     {
         LOCK2(cs_main, cs_wallet);
         for (std::map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it) {
@@ -2023,7 +2023,7 @@ bool CWallet::AvailableCoins(std::vector<COutput>* pCoins,      // --> populates
 
             // Check if the tx is selectable
             int nDepth;
-            if (!CheckTXAvailability(pcoin, fOnlyConfirmed, nDepth))
+            if (!CheckTXAvailability(pcoin, fOnlyTrusted, nDepth))
                 continue;
 
             // Check min depth requirement for stake inputs
@@ -2085,10 +2085,10 @@ std::map<CTxDestination , std::vector<COutput> > CWallet::AvailableCoinsByAddres
     // include cold
     CCoinControl coinControl;
     coinControl.fIncludeColdStaking = true;
+    coinControl.fOnlyTrusted = fConfirmed;
     AvailableCoins(&vCoins,
             &coinControl,        // coin control
-            ALL_COINS,          // coin type
-            fConfirmed);        // only confirmed
+            ALL_COINS);          // coin type
 
     std::map<CTxDestination, std::vector<COutput> > mapCoins;
     for (COutput& out : vCoins) {
@@ -2416,10 +2416,10 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend,
                 _coinControl = *coinControl;
             }
             _coinControl.fIncludeDelegated = fIncludeDelegated;
+            _coinControl.fOnlyTrusted = true;
             AvailableCoins(&vAvailableCoins,
                 &_coinControl,
-                coin_type,
-                true);                   // fOnlyConfirmed
+                coin_type);
 
             nFeeRet = 0;
             if (nFeePay > 0) nFeeRet = nFeePay;

@@ -3194,6 +3194,7 @@ UniValue listunspent(const JSONRPCRequest& request)
 
     CCoinControl coinControl;
     coinControl.fAllowWatchOnly = nWatchonlyConfig == 2;
+    coinControl.fOnlyTrusted = false;
 
     UniValue results(UniValue::VARR);
     std::vector<COutput> vecOutputs;
@@ -3201,9 +3202,8 @@ UniValue listunspent(const JSONRPCRequest& request)
     LOCK2(cs_main, pwalletMain->cs_wallet);
     pwalletMain->AvailableCoins(&vecOutputs,
                                 &coinControl,    // coin control
-                                ALL_COINS,  // coin type
-                                false      // only confirmed
-                                );
+                                ALL_COINS);  // coin type
+
     for (const COutput& out : vecOutputs) {
         if (out.nDepth < nMinDepth || out.nDepth > nMaxDepth)
             continue;
