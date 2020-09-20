@@ -276,7 +276,7 @@ void SettingsSignMessageWidgets::onAddressesClicked()
                 height,
                 this
         );
-        menuContacts->setWalletModel(walletModel, AddressTableModel::Receive);
+        menuContacts->setWalletModel(walletModel, {AddressTableModel::Receive});
         connect(menuContacts, &ContactsDropdown::contactSelected, [this](QString address, QString label){
             setAddress_SM(address);
         });

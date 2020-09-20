@@ -355,7 +355,7 @@ void ColdStakingWidget::onContactsClicked()
         return;
     }
 
-    menuContacts->setWalletModel(walletModel, isContactOwnerSelected ? AddressTableModel::Receive : AddressTableModel::ColdStakingSend);
+    menuContacts->setWalletModel(walletModel, {(isContactOwnerSelected ? AddressTableModel::Receive : AddressTableModel::ColdStakingSend)});
     menuContacts->resizeList(width, height);
     menuContacts->setStyleSheet(styleSheet());
     menuContacts->adjustSize();
