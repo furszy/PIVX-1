@@ -129,6 +129,7 @@ public:
     int recvNum = 0;
     int dellNum = 0;
     int coldSendNum = 0;
+    int shieldedSendNum = 0;
     AddressTableModel* parent;
 
     AddressTablePriv(CWallet* wallet, AddressTableModel* parent) : wallet(wallet), parent(parent) {}
@@ -185,6 +186,8 @@ public:
             var = &coldSendNum;
         } else if (purpose == AddressBook::AddressBookPurpose::DELEGABLE || purpose == AddressBook::AddressBookPurpose::DELEGATOR) {
             var = &dellNum;
+        } else if (purpose == AddressBook::AddressBookPurpose::SHIELDED_SEND) {
+            var = &shieldedSendNum;
         } else {
             return;
         }
@@ -286,6 +289,7 @@ public:
     int sizeRecv() { return recvNum; }
     int sizeDell() { return dellNum; }
     int SizeColdSend() { return coldSendNum; }
+    int sizeShieldedSend() { return shieldedSendNum; }
 
     AddressTableEntry* index(int idx)
     {
@@ -325,6 +329,7 @@ int AddressTableModel::sizeSend() const { return priv->sizeSend(); }
 int AddressTableModel::sizeRecv() const { return priv->sizeRecv(); }
 int AddressTableModel::sizeDell() const { return priv->sizeDell(); }
 int AddressTableModel::sizeColdSend() const { return priv->SizeColdSend(); }
+int AddressTableModel::sizeShieldedSend() const { return priv->sizeShieldedSend(); }
 
 QVariant AddressTableModel::data(const QModelIndex& index, int role) const
 {
