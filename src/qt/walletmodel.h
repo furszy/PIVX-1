@@ -173,6 +173,9 @@ public:
     bool validateAddress(const QString& address);
     // Check address for validity and type (whether cold staking address or not)
     bool validateAddress(const QString& address, bool fStaking);
+    // Check address for validity and type (whether cold staking address or not),
+    // plus return isShielded = true if the parsed address is a valid shielded address.
+    bool validateAddress(const QString& address, bool fStaking, bool& isShielded);
 
     // Return status record for SendCoins, contains error id + information
     struct SendCoinsReturn {

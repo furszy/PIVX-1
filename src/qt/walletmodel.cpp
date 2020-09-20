@@ -294,6 +294,17 @@ bool WalletModel::validateAddress(const QString& address, bool fStaking)
     return IsValidDestinationString(address.toStdString(), fStaking);
 }
 
+bool WalletModel::validateAddress(const QString& address, bool fStaking, bool& isShielded)
+{
+    bool isStaking = false;
+    CWDestination dest = Standard::DecodeDestination(address.toStdString(), isStaking);
+    if (IsShieldedDestination(dest)) {
+        isShielded = true;
+        return true;
+    }
+    return Standard::IsValidDestination(dest) && (isStaking == fStaking);
+}
+
 bool WalletModel::updateAddressBookLabels(const CWDestination& dest, const std::string& strName, const std::string& strPurpose)
 {
     auto optAdd = pwalletMain->GetAddressBookEntry(dest);
