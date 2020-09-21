@@ -348,18 +348,30 @@ void SendWidget::onSendClicked()
         return;
     }
 
-    if (send(recipients)) {
-        updateEntryLabels(recipients);
+    {
+        WalletModelTransaction tx(recipients);
+        if (hasShieldedOutput ? sendShielded(tx) : send(tx)) {
+            updateEntryLabels(recipients);
+        }
     }
     setFocusOnLastEntry();
 }
 
-bool SendWidget::send(QList<SendCoinsRecipient> recipients)
+bool SendWidget::sendShielded(WalletModelTransaction& currentTransaction)
+{
+    auto result = walletModel->PrepareShieldedTransaction(currentTransaction);
+    if (!result) {
+        inform(result.m_error);
+        return false;
+    }
+
+    return sendFinalStep(currentTransaction);
+}
+
+bool SendWidget::send(WalletModelTransaction& currentTransaction)
 {
     // prepare transaction for getting txFee earlier
-    WalletModelTransaction currentTransaction(recipients);
     WalletModel::SendCoinsReturn prepareStatus;
-
     prepareStatus = walletModel->prepareTransaction(currentTransaction, coinControlDialog->coinControl, fDelegationsChecked);
 
     // process prepareStatus and on error generate message shown to user

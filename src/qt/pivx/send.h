@@ -93,7 +93,8 @@ private:
     void resizeMenu();
     QString recipientsToString(QList<SendCoinsRecipient> recipients);
     SendMultiRow* createEntry();
-    bool send(QList<SendCoinsRecipient> recipients);
+    bool sendShielded(WalletModelTransaction& tx);
+    bool send(WalletModelTransaction& tx);
     bool sendFinalStep(WalletModelTransaction& currentTransaction);
     void setFocusOnLastEntry();
     void showHideCheckBoxDelegations();
