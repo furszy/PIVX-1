@@ -95,7 +95,7 @@ void TxDetailDialog::setData(WalletModel *model, const QModelIndex &index)
         ui->textId->setText(hash.left(20) + "..." + hash.right(20));
         ui->textId->setTextInteractionFlags(Qt::TextSelectableByMouse);
         if (tx->vout.size() == 1) {
-            ui->textSendLabel->setText(address);
+            ui->textSendLabel->setText((address.size() < 40) ? address : address.left(20) + "..." + address.right(20));
         } else {
             ui->textSendLabel->setText(QString::number(tx->vout.size()) + " recipients");
         }

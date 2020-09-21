@@ -583,7 +583,8 @@ void SendWidget::onContactsClicked(SendMultiRow* entry)
         menu->hide();
     }
 
-    int contactsSize = walletModel->getAddressTableModel()->sizeSend();
+    int contactsSize = walletModel->getAddressTableModel()->sizeSend() +
+                        walletModel->getAddressTableModel()->sizeShieldedSend();
     if (contactsSize == 0) {
         inform(tr("No contacts available, you can go to the contacts screen and add some there!"));
         return;
@@ -666,9 +667,9 @@ void SendWidget::onContactMultiClicked()
         }
 
         bool isStakingAddr = false;
-        auto pivAdd = DecodeDestination(address.toStdString(), isStakingAddr);
+        auto pivAdd = Standard::DecodeDestination(address.toStdString(), isStakingAddr);
 
-        if (!IsValidDestination(pivAdd) || isStakingAddr) {
+        if (!Standard::IsValidDestination(pivAdd) || isStakingAddr) {
             inform(tr("Invalid address"));
             return;
         }
