@@ -497,8 +497,10 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(WalletModelTransaction& tran
         // Don't touch the address book when we have a payment request
         if (!rcp.paymentRequest.IsInitialized()) {
             bool isStaking = false;
-            CTxDestination address = DecodeDestination(rcp.address.toStdString(), isStaking);
-            std::string purpose = isStaking ? AddressBook::AddressBookPurpose::COLD_STAKING_SEND : AddressBook::AddressBookPurpose::SEND;
+            bool isShielded = false;
+            auto address = Standard::DecodeDestination(rcp.address.toStdString(), isStaking, isShielded);
+            std::string purpose = isShielded ? AddressBook::AddressBookPurpose::SHIELDED_SEND :
+                                  isStaking ? AddressBook::AddressBookPurpose::COLD_STAKING_SEND : AddressBook::AddressBookPurpose::SEND;
             std::string strLabel = rcp.label.toStdString();
             updateAddressBookLabels(address, strLabel, purpose);
         }
