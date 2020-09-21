@@ -193,7 +193,9 @@ SendCoinsRecipient SendMultiRow::getValue()
     // Normal payment
     recipient.address = getAddress();
     recipient.label = ui->lineEditDescription->text();
-    recipient.amount = getAmountValue();;
+    recipient.amount = getAmountValue();
+    auto dest = Standard::DecodeDestination(recipient.address.toStdString());
+    recipient.isShieldedAddr = boost::get<libzcash::SaplingPaymentAddress>(&dest);
     return recipient;
 }
 

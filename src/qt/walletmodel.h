@@ -59,6 +59,9 @@ public:
     bool isP2CS = false;
     QString ownerAddress;
 
+    // Quick flag to not have to check the address type more than once.
+    bool isShieldedAddr{false};
+
     // Amount
     CAmount amount;
     // If from a payment request, this is used for storing the memo

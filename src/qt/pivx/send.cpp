@@ -321,12 +321,15 @@ void SendWidget::onSendClicked()
         return;
 
     QList<SendCoinsRecipient> recipients;
+    bool hasShieldedOutput = false;
 
     for (SendMultiRow* entry : entries) {
         // TODO: Check UTXO splitter here..
         // Validate send..
         if (entry && entry->validate()) {
-            recipients.append(entry->getValue());
+            auto recipient = entry->getValue();
+            if (!hasShieldedOutput) hasShieldedOutput = recipient.isShieldedAddr;
+            recipients.append(recipient);
         } else {
             inform(tr("Invalid entry"));
             return;
