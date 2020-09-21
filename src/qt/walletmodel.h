@@ -191,6 +191,17 @@ public:
         CWallet::CommitResult commitRes;
     };
 
+    // General wrapper for any operation that need to return a bool and an error message (if needed).
+    class OperationResult {
+    public:
+        explicit OperationResult(bool result, const QString error = "") : m_result(result), m_error(error)  {}
+        bool m_result;
+        QString m_error;
+
+        operator bool() const { return m_result; }
+    };
+    OperationResult OperationError(const QString error) { return OperationResult(false, error); }
+
     void setWalletDefaultFee(CAmount fee = DEFAULT_TRANSACTION_FEE);
     bool hasWalletCustomFee();
     bool getWalletCustomFee(CAmount& nFeeRet);
@@ -203,6 +214,9 @@ public:
 
     // Send coins to a list of recipients
     SendCoinsReturn sendCoins(WalletModelTransaction& transaction);
+
+    // Prepare shielded transaction.
+    WalletModel::OperationResult PrepareShieldedTransaction(WalletModelTransaction& modelTransaction);
 
     // Wallet encryption
     bool setWalletEncrypted(bool encrypted, const SecureString& passphrase);
