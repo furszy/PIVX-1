@@ -394,14 +394,11 @@ WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransact
     {
         LOCK2(cs_main, wallet->cs_wallet);
 
-        transaction.newPossibleKeyChange(wallet);
         CAmount nFeeRequired = 0;
         int nChangePosInOut = -1;
         std::string strFailReason;
 
         CWalletTx* newTx = transaction.getTransaction();
-        CReserveKey* keyChange = transaction.getPossibleKeyChange();
-
 
         if (recipients[0].useSwiftTX && total > sporkManager.GetSporkValue(SPORK_5_MAX_VALUE) * COIN) {
             Q_EMIT message(tr("Send Coins"), tr("SwiftX doesn't support sending values that high yet. Transactions are currently limited to %1 %2.").arg(sporkManager.GetSporkValue(SPORK_5_MAX_VALUE)).arg(CURRENCY_UNIT.c_str()),
@@ -411,7 +408,6 @@ WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransact
 
         bool fCreated = wallet->CreateTransaction(vecSend,
                                                   *newTx,
-                                                  *keyChange,
                                                   nFeeRequired,
                                                   nChangePosInOut,
                                                   strFailReason,
@@ -483,8 +479,7 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(WalletModelTransaction& tran
             }
         }
 
-        CReserveKey* keyChange = transaction.getPossibleKeyChange();
-        const CWallet::CommitResult& res = wallet->CommitTransaction(*newTx, *keyChange, g_connman.get(), (recipients[0].useSwiftTX) ? NetMsgType::IX : NetMsgType::TX);
+        const CWallet::CommitResult& res = wallet->CommitTransaction(*newTx, g_connman.get(), (recipients[0].useSwiftTX) ? NetMsgType::IX : NetMsgType::TX);
         if (res.status != CWallet::CommitStatus::OK) {
             return SendCoinsReturn(res);
         }

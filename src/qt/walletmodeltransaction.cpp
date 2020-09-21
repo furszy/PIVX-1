@@ -9,7 +9,6 @@
 
 WalletModelTransaction::WalletModelTransaction(const QList<SendCoinsRecipient>& recipients) : recipients(recipients),
                                                                                               walletTransaction(0),
-                                                                                              keyChange(0),
                                                                                               fee(0)
 {
     walletTransaction = new CWalletTx();
@@ -17,7 +16,6 @@ WalletModelTransaction::WalletModelTransaction(const QList<SendCoinsRecipient>& 
 
 WalletModelTransaction::~WalletModelTransaction()
 {
-    delete keyChange;
     delete walletTransaction;
 }
 
@@ -53,14 +51,4 @@ CAmount WalletModelTransaction::getTotalTransactionAmount()
         totalTransactionAmount += rcp.amount;
     }
     return totalTransactionAmount;
-}
-
-void WalletModelTransaction::newPossibleKeyChange(CWallet* wallet)
-{
-    keyChange = new CReserveKey(wallet);
-}
-
-CReserveKey* WalletModelTransaction::getPossibleKeyChange()
-{
-    return keyChange;
 }

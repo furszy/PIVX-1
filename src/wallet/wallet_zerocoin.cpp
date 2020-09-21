@@ -178,9 +178,8 @@ std::string CWallet::MintZerocoin(CAmount nValue, CWalletTx& wtxNew, std::vector
     }
 
     std::string strError;
-    CReserveKey reservekey(this);
     CMutableTransaction txNew;
-    if (!CreateZerocoinMintTransaction(nValue, txNew, vDMints, &reservekey, strError, coinControl)) {
+    if (!CreateZerocoinMintTransaction(nValue, txNew, vDMints, strError, coinControl)) {
         return strError;
     }
 
@@ -195,7 +194,7 @@ std::string CWallet::MintZerocoin(CAmount nValue, CWalletTx& wtxNew, std::vector
     }
 
     //commit the transaction to the network
-    const CWallet::CommitResult& res = CommitTransaction(wtxNew, reservekey, g_connman.get());
+    const CWallet::CommitResult& res = CommitTransaction(wtxNew, g_connman.get());
     if (res.status != CWallet::CommitStatus::OK) {
         return res.ToString();
     } else {
@@ -270,7 +269,6 @@ CScript GetLargestContributor(std::set<std::pair<const CWalletTx*, unsigned int>
 bool CWallet::CreateZerocoinMintTransaction(const CAmount nValue,
                                             CMutableTransaction& txNew,
                                             std::vector<CDeterministicMint>& vDMints,
-                                            CReserveKey* reservekey,
                                             std::string& strFailReason,
                                             const CCoinControl* coinControl)
 {
@@ -337,8 +335,6 @@ bool CWallet::CreateZerocoinMintTransaction(const CAmount nValue,
         //add to the transaction
         CTxOut outChange(nChange, scriptChange);
         txNew.vout.push_back(outChange);
-    } else if (reservekey) {
-        reservekey->ReturnKey();
     }
 
     // Sign
@@ -381,12 +377,10 @@ bool CWallet::SpendZerocoin(CAmount nAmount, CWalletTx& wtxNew, CZerocoinSpendRe
         return false;
     }
 
-    CReserveKey reserveKey(this);
     std::vector<CDeterministicMint> vNewMints;
     if (!CreateZCPublicSpendTransaction(
             nAmount,
             wtxNew,
-            reserveKey,
             receipt,
             vMintsSelected,
             vNewMints,
@@ -398,7 +392,7 @@ bool CWallet::SpendZerocoin(CAmount nAmount, CWalletTx& wtxNew, CZerocoinSpendRe
 
 
     CWalletDB walletdb(strWalletFile);
-    const CWallet::CommitResult& res = CommitTransaction(wtxNew, reserveKey, g_connman.get());
+    const CWallet::CommitResult& res = CommitTransaction(wtxNew, g_connman.get());
     if (res.status != CWallet::CommitStatus::OK) {
         LogPrintf("%s: failed to commit\n", __func__);
         nStatus = ZPIV_COMMIT_FAILED;
@@ -527,7 +521,6 @@ bool CWallet::MintsToInputVectorPublicSpend(std::map<CBigNum, CZerocoinMint>& ma
 bool CWallet::CreateZCPublicSpendTransaction(
         CAmount nValue,
         CWalletTx& wtxNew,
-        CReserveKey& reserveKey,
         CZerocoinSpendReceipt& receipt,
         std::vector<CZerocoinMint>& vSelectedMints,
         std::vector<CDeterministicMint>& vNewMints,
@@ -657,7 +650,7 @@ bool CWallet::CreateZCPublicSpendTransaction(
 
     // Create change if needed
     nStatus = ZPIV_TRX_CHANGE;
-
+    CReserveKey reserveKey(this);
     CMutableTransaction txNew;
     wtxNew.BindWallet(this);
     {
@@ -752,6 +745,10 @@ bool CWallet::CreateZCPublicSpendTransaction(
             wtxNew.nTimeReceived = GetAdjustedTime();
         }
     }
+
+    // Before we return success, we assume any change key will be used to prevent
+    // accidental re-use.
+    reserveKey.KeepKey();
 
     receipt.SetStatus(_("Transaction Created"), ZPIV_SPEND_OKAY); // Everything okay
 

@@ -2309,7 +2309,7 @@ bool CWallet::SelectCoinsToSpend(const std::vector<COutput>& vAvailableCoins, co
     return res;
 }
 
-bool CWallet::CreateBudgetFeeTX(CWalletTx& tx, const uint256& hash, CReserveKey& keyChange, bool fFinalization)
+bool CWallet::CreateBudgetFeeTX(CWalletTx& tx, const uint256& hash, bool fFinalization)
 {
     CScript scriptChange;
     scriptChange << OP_RETURN << ToByteVector(hash);
@@ -2321,7 +2321,7 @@ bool CWallet::CreateBudgetFeeTX(CWalletTx& tx, const uint256& hash, CReserveKey&
 
     CCoinControl* coinControl = nullptr;
     int nChangePosInOut = -1;
-    bool success = CreateTransaction(vecSend, tx, keyChange, nFeeRet, nChangePosInOut, strFail, coinControl, ALL_COINS, true, false /*useIX*/, (CAmount)0);
+    bool success = CreateTransaction(vecSend, tx, nFeeRet, nChangePosInOut, strFail, coinControl, ALL_COINS, true, false /*useIX*/, (CAmount)0);
     if (!success) {
         LogPrintf("%s: Error - %s\n", __func__, strFail);
         return false;
@@ -2350,9 +2350,8 @@ bool CWallet::FundTransaction(CMutableTransaction& tx, CAmount& nFeeRet, bool ov
     for (const CTxIn& txin : tx.vin)
         coinControl.Select(txin.prevout);
 
-    CReserveKey reservekey(this);
     CWalletTx wtx;
-    if (!CreateTransaction(vecSend, wtx, reservekey, nFeeRet, nChangePosInOut, strFailReason, &coinControl, ALL_COINS, false))
+    if (!CreateTransaction(vecSend, wtx, nFeeRet, nChangePosInOut, strFailReason, &coinControl, ALL_COINS, false))
         return false;
 
     if (nChangePosInOut != -1)
@@ -2375,7 +2374,6 @@ bool CWallet::FundTransaction(CMutableTransaction& tx, CAmount& nFeeRet, bool ov
 
 bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend,
     CWalletTx& wtxNew,
-    CReserveKey& reservekey,
     CAmount& nFeeRet,
     int& nChangePosInOut,
     std::string& strFailReason,
@@ -2386,6 +2384,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend,
     bool fIncludeDelegated)
 {
     CAmount nValue = 0;
+    CReserveKey reservekey(this);
     int nChangePosRequest = nChangePosInOut;
 
     for (const CRecipient& rec : vecSend) {
@@ -2649,15 +2648,20 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend,
             }
         }
     }
+
+    // Before we return success, we assume any change key will be used to prevent
+    // accidental re-use.
+    reservekey.KeepKey();
+
     return true;
 }
 
-bool CWallet::CreateTransaction(CScript scriptPubKey, const CAmount& nValue, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet, std::string& strFailReason, const CCoinControl* coinControl, AvailableCoinsType coin_type, CAmount nFeePay, bool fIncludeDelegated)
+bool CWallet::CreateTransaction(CScript scriptPubKey, const CAmount& nValue, CWalletTx& wtxNew, CAmount& nFeeRet, std::string& strFailReason, const CCoinControl* coinControl, AvailableCoinsType coin_type, CAmount nFeePay, bool fIncludeDelegated)
 {
     std::vector<CRecipient> vecSend;
     vecSend.emplace_back(scriptPubKey, nValue, false);
     int nChangePosInOut = -1;
-    return CreateTransaction(vecSend, wtxNew, reservekey, nFeeRet, nChangePosInOut, strFailReason, coinControl, coin_type, true, nFeePay, fIncludeDelegated);
+    return CreateTransaction(vecSend, wtxNew, nFeeRet, nChangePosInOut, strFailReason, coinControl, coin_type, true, nFeePay, fIncludeDelegated);
 }
 
 bool CWallet::CreateCoinStake(
@@ -2807,16 +2811,13 @@ std::string CWallet::CommitResult::ToString() const
 /**
  * Call after CreateTransaction unless you want to abort
  */
-CWallet::CommitResult CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CConnman* connman, std::string strCommand)
+CWallet::CommitResult CWallet::CommitTransaction(CWalletTx& wtxNew, CConnman* connman, std::string strCommand)
 {
     CommitResult res;
     {
         LOCK2(cs_main, cs_wallet);
         LogPrintf("%s:\n%s", __func__, wtxNew.ToString());
         {
-            // Take key pair from key pool so it won't be used again
-            reservekey.KeepKey();
-
             // Add tx to wallet, because if it has change it's also ours,
             // otherwise just for transaction history.
             AddToWallet(wtxNew);
@@ -2845,8 +2846,6 @@ CWallet::CommitResult CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey&
             // Abandon the transaction
             if (AbandonTransaction(res.hashTx)) {
                 res.status = CWallet::CommitStatus::Abandoned;
-                // Return the change key
-                reservekey.ReturnKey();
             }
 
             LogPrintf("%s: ERROR: %s\n", __func__, res.ToString());
@@ -3525,7 +3524,6 @@ void CWallet::AutoCombineDust(CConnman* connman)
 
         // Create the transaction and commit it to the network
         CWalletTx wtx;
-        CReserveKey keyChange(this); // this change address does not end up being used, because change is returned with coin control switch
         std::string strErr;
         CAmount nFeeRet = 0;
         int nChangePosInOut = -1;
@@ -3533,7 +3531,7 @@ void CWallet::AutoCombineDust(CConnman* connman)
         // 10% safety margin to avoid "Insufficient funds" errors
         vecSend[0].nAmount = nTotalRewardsValue - (nTotalRewardsValue / 10);
 
-        if (!CreateTransaction(vecSend, wtx, keyChange, nFeeRet, nChangePosInOut, strErr, coinControl, ALL_COINS, true, false, CAmount(0))) {
+        if (!CreateTransaction(vecSend, wtx, nFeeRet, nChangePosInOut, strErr, coinControl, ALL_COINS, true, false, CAmount(0))) {
             LogPrintf("AutoCombineDust createtransaction failed, reason: %s\n", strErr);
             continue;
         }
@@ -3542,7 +3540,7 @@ void CWallet::AutoCombineDust(CConnman* connman)
         if (!maxSize && nTotalRewardsValue < nAutoCombineThreshold * COIN && nFeeRet > 0)
             continue;
 
-        const CWallet::CommitResult& res = CommitTransaction(wtx, keyChange, connman);
+        const CWallet::CommitResult& res = CommitTransaction(wtx, connman);
         if (res.status != CWallet::CommitStatus::OK) {
             LogPrintf("AutoCombineDust transaction commit failed\n");
             continue;

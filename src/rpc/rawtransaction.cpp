@@ -981,13 +981,12 @@ UniValue createrawzerocoinspend(const JSONRPCRequest& request)
     // create the spend
     CWalletTx rawTx;
     CZerocoinSpendReceipt receipt;
-    CReserveKey reserveKey(pwalletMain);
     std::vector<CDeterministicMint> vNewMints;
     std::list<std::pair<CTxDestination, CAmount>> outputs;
     if (IsValidDestination(dest)) {
         outputs.push_back(std::pair<CTxDestination, CAmount>(dest, nAmount));
     }
-    if (!pwalletMain->CreateZCPublicSpendTransaction(nAmount, rawTx, reserveKey, receipt, vMintsSelected, vNewMints, outputs, nullptr))
+    if (!pwalletMain->CreateZCPublicSpendTransaction(nAmount, rawTx, receipt, vMintsSelected, vNewMints, outputs, nullptr))
         throw JSONRPCError(RPC_WALLET_ERROR, receipt.GetStatusMessage());
 
     // output the raw transaction

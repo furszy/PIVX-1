@@ -199,15 +199,13 @@ void CBudgetManager::SubmitFinalBudget()
 
     if (!mapCollateralTxids.count(budgetHash)) {
         CWalletTx wtx;
-        // Get our change address
-        CReserveKey keyChange(pwalletMain);
-        if (!pwalletMain->CreateBudgetFeeTX(wtx, budgetHash, keyChange, true)) {
+        if (!pwalletMain->CreateBudgetFeeTX(wtx, budgetHash, true)) {
             LogPrint(BCLog::MNBUDGET,"%s: Can't make collateral transaction\n", __func__);
             return;
         }
 
         // Send the tx to the network. Do NOT use SwiftTx, locking might need too much time to propagate, especially for testnet
-        const CWallet::CommitResult& res = pwalletMain->CommitTransaction(wtx, keyChange, g_connman.get(), "NO-ix");
+        const CWallet::CommitResult& res = pwalletMain->CommitTransaction(wtx, g_connman.get(), "NO-ix");
         if (res.status != CWallet::CommitStatus::OK)
             return;
         tx = (CTransaction)wtx;

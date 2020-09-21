@@ -538,7 +538,6 @@ public:
      */
     bool CreateTransaction(const std::vector<CRecipient>& vecSend,
         CWalletTx& wtxNew,
-        CReserveKey& reservekey,
         CAmount& nFeeRet,
         int& nChangePosInOut,
         std::string& strFailReason,
@@ -547,7 +546,7 @@ public:
         bool sign = true,
         CAmount nFeePay = 0,
         bool fIncludeDelegated = false);
-    bool CreateTransaction(CScript scriptPubKey, const CAmount& nValue, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet, std::string& strFailReason, const CCoinControl* coinControl = NULL, AvailableCoinsType coin_type = ALL_COINS, CAmount nFeePay = 0, bool fIncludeDelegated = false);
+    bool CreateTransaction(CScript scriptPubKey, const CAmount& nValue, CWalletTx& wtxNew, CAmount& nFeeRet, std::string& strFailReason, const CCoinControl* coinControl = NULL, AvailableCoinsType coin_type = ALL_COINS, CAmount nFeePay = 0, bool fIncludeDelegated = false);
 
     // enumeration for CommitResult (return status of CommitTransaction)
     enum CommitStatus
@@ -565,7 +564,7 @@ public:
         // converts CommitResult in human-readable format
         std::string ToString() const;
     };
-    CWallet::CommitResult CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CConnman* connman, std::string strCommand = NetMsgType::TX);
+    CWallet::CommitResult CommitTransaction(CWalletTx& wtxNew, CConnman* connman, std::string strCommand = NetMsgType::TX);
     bool AddAccountingEntry(const CAccountingEntry&, CWalletDB & pwalletdb);
     bool CreateCoinStake(const CKeyStore& keystore,
                          const CBlockIndex* pindexPrev,
@@ -601,7 +600,7 @@ public:
     std::set<CTxDestination> GetLabelAddresses(const std::string& label) const;
     void DeleteLabel(const std::string& label);
 
-    bool CreateBudgetFeeTX(CWalletTx& tx, const uint256& hash, CReserveKey& keyChange, bool fFinalization);
+    bool CreateBudgetFeeTX(CWalletTx& tx, const uint256& hash, bool fFinalization);
 
     bool IsUsed(const CTxDestination address) const;
 
@@ -708,7 +707,6 @@ public:
     bool CreateZerocoinMintTransaction(const CAmount nValue,
             CMutableTransaction& txNew,
             std::vector<CDeterministicMint>& vDMints,
-            CReserveKey* reservekey,
             std::string& strFailReason,
             const CCoinControl* coinControl = NULL);
 
@@ -718,7 +716,6 @@ public:
     bool CreateZCPublicSpendTransaction(
             CAmount nValue,
             CWalletTx& wtxNew,
-            CReserveKey& reserveKey,
             CZerocoinSpendReceipt& receipt,
             std::vector<CZerocoinMint>& vSelectedMints,
             std::vector<CDeterministicMint>& vNewMints,
