@@ -35,10 +35,12 @@ public:
     void newPossibleKeyChange(CWallet* wallet);
     CReserveKey* getPossibleKeyChange();
 
+    void setTransaction(CWalletTx* tx);
+
 private:
     const QList<SendCoinsRecipient> recipients;
-    CWalletTx* walletTransaction;
-    CReserveKey* keyChange;
+    CWalletTx* walletTransaction{nullptr};
+    CReserveKey* keyChange{nullptr};
     CAmount fee;
 };
 
