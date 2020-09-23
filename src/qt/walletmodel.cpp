@@ -542,16 +542,17 @@ WalletModel::OperationResult WalletModel::PrepareShieldedTransaction(WalletModel
     SaplingOperation operation(txBuilder);
     auto operationResult = operation.setShieldedRecipients(shieldedAddrRecipients)
              ->setTransparentRecipients(taddrRecipients)
+             ->setTransparentKeyChange(modelTransaction.getPossibleKeyChange())
+             ->setSelectTransparentCoins(true)
              ->build();
 
-    // load the transaction and key change (if needed)
-    CWalletTx* newTx = modelTransaction.getTransaction();
-    newTx = new CWalletTx(wallet, operation.getFinalTx());
-    Optional<CReserveKey>& optKeyChange = operation.GetTransparentKeyChange();
-    CReserveKey* tKeyChange = modelTransaction.getPossibleKeyChange();
-    if (optKeyChange) tKeyChange = optKeyChange.get_ptr();
+    if (!operationResult) {
+        return OperationError(QString::fromStdString(operationResult.getError()));
+    }
 
-    return operationResult ? OperationResult(true) : OperationError(QString::fromStdString(operationResult.m_error));
+    // load the transaction and key change (if needed)
+    modelTransaction.setTransaction(new CWalletTx(wallet, operation.getFinalTx()));
+    return OperationResult(true);
 }
 
 const CWalletTx* WalletModel::getTx(uint256 id)
