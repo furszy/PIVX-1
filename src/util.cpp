@@ -92,7 +92,7 @@ const char * const PIVX_MASTERNODE_CONF_FILENAME = "masternode.conf";
 
 // PIVX only features
 // Masternode
-bool fMasterNode = false;
+std::atomic<bool> fMasterNode{false};
 std::string strMasterNodePrivKey = "";
 std::string strMasterNodeAddr = "";
 bool fLiteMode = false;

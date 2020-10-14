@@ -40,7 +40,7 @@ extern const char * const DEFAULT_DEBUGLOGFILE;
 
 //PIVX only features
 
-extern bool fMasterNode;
+extern std::atomic<bool> fMasterNode;
 extern bool fLiteMode;
 extern bool fEnableSwiftTX;
 extern int nSwiftTXDepth;
