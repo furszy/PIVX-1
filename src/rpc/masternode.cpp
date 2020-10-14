@@ -18,6 +18,22 @@
 
 #include <boost/tokenizer.hpp>
 
+UniValue initmasternode(const JSONRPCRequest& request)
+{
+    if (request.fHelp || (request.params.empty() || request.params.size() > 2)) {
+        throw std::runtime_error(
+                "initmasternode ( \"masternodePrivKey\" \"masternodeAddr\" )\n"
+                "\nInitialize masternode on runtime if it's not already initialized.\n"
+        );
+    }
+
+    std::string _strMasterNodePrivKey = request.params[0].get_str();
+    std::string _strMasterNodeAddr = request.params.size() > 1 ?
+                        request.params[1].get_str() : GetArg("-masternodeaddr", "");
+    initMasternode(_strMasterNodePrivKey, _strMasterNodeAddr, false);
+    return NullUniValue;
+}
+
 UniValue listmasternodes(const JSONRPCRequest& request)
 {
     std::string strFilter = "";
