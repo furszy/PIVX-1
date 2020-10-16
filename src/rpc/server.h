@@ -274,6 +274,7 @@ extern UniValue getserials(const JSONRPCRequest& request);
 extern void validaterange(const UniValue& params, int& heightStart, int& heightEnd, int minHeightStart=1);
 
 // in rpc/masternode.cpp
+extern UniValue initmasternode(const JSONRPCRequest& request);
 extern UniValue listmasternodes(const JSONRPCRequest& request);
 extern UniValue getmasternodecount(const JSONRPCRequest& request);
 extern UniValue createmasternodebroadcast(const JSONRPCRequest& request);

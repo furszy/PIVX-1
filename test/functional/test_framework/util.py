@@ -290,7 +290,9 @@ def rpc_url(datadir, i, rpchost=None):
 # Node functions
 ################
 
-def initialize_datadir(dirname, n):
+def initialize_datadir(dirname, n, extra_args={}):
+    if extra_args is None:
+        extra_args = {}
     datadir = get_datadir_path(dirname, n)
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
@@ -307,6 +309,9 @@ def initialize_datadir(dirname, n):
         f.write("listenonion=0\n")
         f.write("spendzeroconfchange=1\n")
         f.write("printtoconsole=0\n")
+        for arg in extra_args:
+            f.write(arg+"="+extra_args[arg]+"\n")
+
     return datadir
 
 def rpc_auth_pair(n):
