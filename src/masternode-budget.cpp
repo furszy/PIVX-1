@@ -139,7 +139,7 @@ void CBudgetManager::CheckOrphanVotes()
     LogPrint(BCLog::MNBUDGET,"%s: Done\n", __func__);
 }
 
-void CBudgetManager::SubmitFinalBudget()
+uint256 CBudgetManager::SubmitFinalBudget()
 {
     static int nSubmittedHeight = 0; // height at which final budget was submitted last time
     int nCurrentHeight = GetBestHeight();
@@ -149,7 +149,7 @@ void CBudgetManager::SubmitFinalBudget()
     if (nSubmittedHeight >= nBlockStart){
         LogPrint(BCLog::MNBUDGET,"%s: nSubmittedHeight(=%ld) < nBlockStart(=%ld) condition not fulfilled.\n",
                 __func__, nSubmittedHeight, nBlockStart);
-        return;
+        return UINT256_ZERO;
     }
 
      // Submit final budget during the last 2 days (2880 blocks) before payment for Mainnet, about 9 minutes (9 blocks) for Testnet
@@ -170,7 +170,7 @@ void CBudgetManager::SubmitFinalBudget()
         LogPrint(BCLog::MNBUDGET,"%s: Too early for finalization. Current block is %ld, next Superblock is %ld.\n", __func__, nCurrentHeight, nBlockStart);
         LogPrint(BCLog::MNBUDGET,"%s: First possible block for finalization: %ld. Last possible block for finalization: %ld. "
                 "You have to wait for %ld block(s) until Budget finalization will be possible\n", __func__, nFinalizationStart, nBlockStart, nOffsetToStart);
-        return;
+        return UINT256_ZERO;
     }
 
     std::vector<CBudgetProposal*> vBudgetProposals = GetBudget();
@@ -187,7 +187,7 @@ void CBudgetManager::SubmitFinalBudget()
 
     if (vecTxBudgetPayments.size() < 1) {
         LogPrint(BCLog::MNBUDGET,"%s: Found No Proposals For Period\n", __func__);
-        return;
+        return UINT256_ZERO;
     }
 
     CFinalizedBudgetBroadcast tempBudget(strBudgetName, nBlockStart, vecTxBudgetPayments, UINT256_ZERO);
@@ -195,7 +195,7 @@ void CBudgetManager::SubmitFinalBudget()
     if (HaveSeenFinalizedBudget(budgetHash)) {
         LogPrint(BCLog::MNBUDGET,"%s: Budget already exists - %s\n", __func__, budgetHash.ToString());
         nSubmittedHeight = nCurrentHeight;
-        return;
+        return UINT256_ZERO;
     }
 
     // See if collateral tx exists
@@ -206,20 +206,22 @@ void CBudgetManager::SubmitFinalBudget()
         CReserveKey keyChange(pwalletMain);
         if (!pwalletMain->CreateBudgetFeeTX(wtx, budgetHash, keyChange, true)) {
             LogPrint(BCLog::MNBUDGET,"%s: Can't make collateral transaction\n", __func__);
-            return;
+            return UINT256_ZERO;
         }
         // Send the tx to the network. Do NOT use SwiftTx, locking might need too much time to propagate, especially for testnet
         const CWallet::CommitResult& res = pwalletMain->CommitTransaction(wtx, keyChange, g_connman.get(), "NO-ix");
-        if (res.status == CWallet::CommitStatus::OK)
+        if (res.status == CWallet::CommitStatus::OK) {
             mapCollateralTxids.emplace(budgetHash, wtx.GetHash());
-        return;
+            return budgetHash;
+        }
+        return UINT256_ZERO;
     }
 
     // Collateral tx already exists, see if it's mature enough.
     CFinalizedBudgetBroadcast finalizedBudgetBroadcast(strBudgetName, nBlockStart, vecTxBudgetPayments, mapCollateralTxids.at(budgetHash));
     CFinalizedBudget fb = CFinalizedBudget(finalizedBudgetBroadcast);
     if (!AddFinalizedBudget(fb)) {
-        return;
+        return UINT256_ZERO;
     }
     AddSeenFinalizedBudget(finalizedBudgetBroadcast);
     finalizedBudgetBroadcast.Relay();
@@ -227,6 +229,7 @@ void CBudgetManager::SubmitFinalBudget()
     // Remove collateral tx from map
     mapCollateralTxids.erase(budgetHash);
     LogPrint(BCLog::MNBUDGET,"%s: Done! %s\n", __func__, budgetHash.ToString());
+    return budgetHash;
 }
 
 //
@@ -574,8 +577,10 @@ bool CBudgetManager::GetPayeeAndAmount(int chainHeight, CScript& payeeRet, CAmou
     if (!pfb) return false;
 
     // Check that there are enough votes
-    int nFivePercent = mnodeman.CountEnabled(ActiveProtocol()) / 20;
-    if (nFivePercent == 0 || pfb->GetVoteCount() < nFivePercent)
+    int mnCount = mnodeman.CountEnabled(ActiveProtocol());
+    int nFivePercent = mnCount / 20;
+    if ((nFivePercent == 0 && !(Params().IsRegTestNet() && mnCount > 0) ) ||
+        pfb->GetVoteCount() < nFivePercent)
         return false;
 
     return pfb->GetPayeeAndAmount(chainHeight, payeeRet, nAmountRet);
