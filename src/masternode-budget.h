@@ -276,6 +276,7 @@ public:
 
     // Processing methods
     int ProcessProposalMsg(CBudgetProposal& proposal);
+    int ProcessBudgetFinalizationMsg(CFinalizedBudget& finalbudget);
 
     // functions returning a pointer in the map. Need cs_proposals/cs_budgets locked from the caller
     CBudgetProposal* FindProposal(const uint256& nHash);

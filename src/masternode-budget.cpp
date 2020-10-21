@@ -1024,6 +1024,24 @@ int CBudgetManager::ProcessProposalMsg(CBudgetProposal& proposal)
     return 0;
 }
 
+int CBudgetManager::ProcessBudgetFinalizationMsg(CFinalizedBudget& finalbudget)
+{
+    const uint256& nHash = finalbudget.GetHash();
+    if (HaveFinalizedBudget(nHash)) {
+        masternodeSync.AddedBudgetItem(nHash);
+        return 0; // todo: add misbehaving if needed
+    }
+    if (!AddFinalizedBudget(finalbudget)) {
+        return 0; // todo: add misbehaving if needed
+    }
+    finalbudget.Relay();
+    masternodeSync.AddedBudgetItem(nHash);
+
+    LogPrint(BCLog::MNBUDGET,"fbs (new) %s\n", nHash.ToString());
+    //we might have active votes for this budget that are now valid
+    CheckOrphanVotes();
+}
+
 void CBudgetManager::ProcessMessage(CNode* pfrom, std::string& strCommand, CDataStream& vRecv)
 {
     // lite mode is not supported
@@ -1107,20 +1125,7 @@ void CBudgetManager::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
             // !TODO: we should probably call misbehaving here
             return;
         }
-        const uint256& nHash = finalbudget.GetHash();
-        if (HaveFinalizedBudget(nHash)) {
-            masternodeSync.AddedBudgetItem(nHash);
-            return;
-        }
-        if (!AddFinalizedBudget(finalbudget)) {
-            return;
-        }
-        finalbudget.Relay();
-        masternodeSync.AddedBudgetItem(nHash);
-
-        LogPrint(BCLog::MNBUDGET,"fbs (new) %s\n", nHash.ToString());
-        //we might have active votes for this budget that are now valid
-        CheckOrphanVotes();
+        ProcessBudgetFinalizationMsg(finalbudget);
     }
 
     if (strCommand == NetMsgType::FINALBUDGETVOTE) { //Finalized Budget Vote
