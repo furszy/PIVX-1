@@ -2,16 +2,17 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or https://www.opensource.org/licenses/mit-license.php.
 
-#include "masternode-sync.h"
+#include "tiertwo_networksync.h"
 
 #include "spork.h"  // for sporkManager
+#include "masternode-sync.h"
 #include "masternodeman.h" // for mnodeman
 #include "netmessagemaker.h"
 #include "streams.h"  // for CDataStream
 
 
 // Update in-flight message status if needed
-bool CMasternodeSync::UpdatePeerSyncState(const NodeId& id, const char* msg, const int nextSyncStatus)
+bool TierTwoSyncMan::UpdatePeerSyncState(const NodeId& id, const char* msg, const int nextSyncStatus)
 {
     auto it = peersSyncState.find(id);
     if (it != peersSyncState.end()) {
@@ -26,14 +27,14 @@ bool CMasternodeSync::UpdatePeerSyncState(const NodeId& id, const char* msg, con
 
             // todo: this should only happen if more than N peers have sent the data.
             // move overall tier two sync state to the next one if needed.
-            RequestedMasternodeAssets = nextSyncStatus;
+            syncParent->RequestedMasternodeAssets = nextSyncStatus;
             return true;
         }
     }
     return false;
 }
 
-bool CMasternodeSync::MessageDispatcher(CNode* pfrom, std::string& strCommand, CDataStream& vRecv)
+bool TierTwoSyncMan::MessageDispatcher(CNode* pfrom, std::string& strCommand, CDataStream& vRecv)
 {
     if (strCommand == NetMsgType::GETSPORKS) {
         // send sporks
@@ -59,7 +60,7 @@ bool CMasternodeSync::MessageDispatcher(CNode* pfrom, std::string& strCommand, C
 
     if (strCommand == NetMsgType::SYNCSTATUSCOUNT) {
         // Nothing to do.
-        if (RequestedMasternodeAssets >= MASTERNODE_SYNC_FINISHED) return true;
+        if (syncParent->RequestedMasternodeAssets >= MASTERNODE_SYNC_FINISHED) return true;
 
         // Sync status count
         int nItemID;
@@ -90,13 +91,13 @@ bool CMasternodeSync::MessageDispatcher(CNode* pfrom, std::string& strCommand, C
 }
 
 template <typename... Args>
-void CMasternodeSync::PushMessage(CNode* pnode, const char* msg, Args&&... args)
+void TierTwoSyncMan::PushMessage(CNode* pnode, const char* msg, Args&&... args)
 {
     g_connman->PushMessage(pnode, CNetMsgMaker(pnode->GetSendVersion()).Make(msg, std::forward<Args>(args)...));
 }
 
 template <typename... Args>
-void CMasternodeSync::RequestDataTo(CNode* pnode, const char* msg, bool forceRequest, Args&&... args)
+void TierTwoSyncMan::RequestDataTo(CNode* pnode, const char* msg, bool forceRequest, Args&&... args)
 {
     const auto& it = peersSyncState.find(pnode->id);
     bool exist = it != peersSyncState.end();
@@ -136,19 +137,19 @@ void CMasternodeSync::RequestDataTo(CNode* pnode, const char* msg, bool forceReq
     }
 }
 
-void CMasternodeSync::SyncRegtest(CNode* pnode)
+void TierTwoSyncMan::SyncRegtest(CNode* pnode)
 {
     // Initial sync, verify that the other peer answered to all of the messages successfully
-    if (RequestedMasternodeAssets == MASTERNODE_SYNC_SPORKS) {
+    if (syncParent->RequestedMasternodeAssets == MASTERNODE_SYNC_SPORKS) {
         RequestDataTo(pnode, NetMsgType::GETSPORKS, false);
-    } else if (RequestedMasternodeAssets == MASTERNODE_SYNC_LIST) {
+    } else if (syncParent->RequestedMasternodeAssets == MASTERNODE_SYNC_LIST) {
         RequestDataTo(pnode, NetMsgType::GETMNLIST, false, CTxIn());
-    } else if (RequestedMasternodeAssets == MASTERNODE_SYNC_MNW) {
+    } else if (syncParent->RequestedMasternodeAssets == MASTERNODE_SYNC_MNW) {
         RequestDataTo(pnode, NetMsgType::GETMNWINNERS, false, mnodeman.CountEnabled());
-    } else if (RequestedMasternodeAssets == MASTERNODE_SYNC_BUDGET) {
+    } else if (syncParent->RequestedMasternodeAssets == MASTERNODE_SYNC_BUDGET) {
         // sync masternode votes
         RequestDataTo(pnode, NetMsgType::BUDGETVOTESYNC, false, uint256());
-    } else if (RequestedMasternodeAssets == MASTERNODE_SYNC_FINISHED) {
+    } else if (syncParent->RequestedMasternodeAssets == MASTERNODE_SYNC_FINISHED) {
         LogPrintf("REGTEST SYNC FINISHED!\n");
     }
 }

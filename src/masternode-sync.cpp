@@ -12,6 +12,7 @@
 #include "masternodeman.h"
 #include "netmessagemaker.h"
 #include "spork.h"
+#include "tiertwo_networksync.h"
 #include "util.h"
 #include "addrman.h"
 // clang-format on
@@ -21,6 +22,7 @@ CMasternodeSync masternodeSync;
 
 CMasternodeSync::CMasternodeSync()
 {
+    syncManager = MakeUnique<TierTwoSyncMan>(this);
     Reset();
 }
 
@@ -283,10 +285,9 @@ void CMasternodeSync::Process()
     if (!isRegTestNet && !IsBlockchainSynced() &&
         RequestedMasternodeAssets > MASTERNODE_SYNC_SPORKS) return;
 
-    CMasternodeSync* sync = this;
-
     // New sync architecture, regtest only for now.
     if (isRegTestNet) {
+        TierTwoSyncMan* sync = syncManager.get();
         g_connman->ForEachNode([sync](CNode* pnode){
             return sync->SyncRegtest(pnode);
         });
@@ -294,6 +295,7 @@ void CMasternodeSync::Process()
     }
 
     // Mainnet sync
+    CMasternodeSync* sync = this;
     g_connman->ForEachNodeContinueIf([sync](CNode* pnode){
         return sync->SyncWithNode(pnode);
     });
@@ -414,4 +416,7 @@ bool CMasternodeSync::SyncWithNode(CNode* pnode)
     return true;
 }
 
+bool CMasternodeSync::MessageDispatcher(CNode* pfrom, std::string& strCommand, CDataStream& vRecv) {
+    return syncManager->MessageDispatcher(pfrom, strCommand, vRecv);
+}
 
