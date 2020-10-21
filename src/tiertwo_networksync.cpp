@@ -154,3 +154,25 @@ void TierTwoSyncMan::SyncRegtest(CNode* pnode)
     }
 }
 
+bool TierTwoSyncMan::AlreadyHave(const uint256& hash, int type)
+{
+    return GetSeenItemsVector(type)->contains(hash);
+}
+
+// TODO: Connect me
+bool TierTwoSyncMan::TryAppendItem(const uint256& hash, int type)
+{
+    return GetSeenItemsVector(type)->tryAppendItem(hash);
+}
+
+ProtectedVector* TierTwoSyncMan::GetSeenItemsVector(int type)
+{
+    switch (type) {
+        case MSG_BUDGET_PROPOSAL:
+            return &seenProposalsItems;
+        case MSG_BUDGET_FINALIZED:
+            return &seenBudgetItems;
+        default:
+            throw std::runtime_error("Invalid type");
+    }
+}
