@@ -420,3 +420,12 @@ bool CMasternodeSync::MessageDispatcher(CNode* pfrom, std::string& strCommand, C
     return syncManager->MessageDispatcher(pfrom, strCommand, vRecv);
 }
 
+bool CMasternodeSync::AlreadyHave(const uint256& hash, int type)
+{
+    return syncManager->AlreadyHave(hash, type);
+}
+bool CMasternodeSync::TryAppendItem(const uint256& hash, int type)
+{
+    return syncManager->TryAppendItem(hash, type);
+}
+

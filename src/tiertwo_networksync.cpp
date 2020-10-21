@@ -7,6 +7,7 @@
 #include "spork.h"  // for sporkManager
 #include "masternode-sync.h"
 #include "masternodeman.h" // for mnodeman
+#include "masternode-budget.h"
 #include "netmessagemaker.h"
 #include "streams.h"  // for CDataStream
 
@@ -85,6 +86,41 @@ bool TierTwoSyncMan::MessageDispatcher(CNode* pfrom, std::string& strCommand, CD
                 return true;
             }
         }
+    }
+
+    if (strCommand == NetMsgType::BUDGETPROPOSAL) {
+        // Masternode Proposal
+        CBudgetProposal proposal;
+        if (!proposal.LoadBroadcast(vRecv)) {
+            // !TODO: we should probably call misbehaving here
+            return false;
+        }
+
+        // Check if we already have seen this proposal
+        if (!seenProposalsItems.tryAppendItem(proposal.GetHash())) {
+            // todo: add misbehaving if the peer sent this message several times already..
+            return false;
+        }
+
+        // todo: add misbevahing..
+        budget.ProcessProposalMsg(proposal);
+    }
+
+    if (strCommand == NetMsgType::FINALBUDGET) {
+        CFinalizedBudget finalbudget;
+        if (!finalbudget.LoadBroadcast(vRecv)) {
+            // !TODO: we should probably call misbehaving here
+            return false;
+        }
+
+        // Check if we already have seen this budget finalization
+        if (!seenBudgetItems.tryAppendItem(finalbudget.GetHash())) {
+            // todo: add misbehaving if the peer sent this message several times already..
+            return false;
+        }
+
+        // todo: add misbevahing..
+        budget.ProcessBudgetFinalizationMsg(finalbudget);
     }
 
     return false;

@@ -100,6 +100,8 @@ public:
 
     // Sync message dispatcher
     bool MessageDispatcher(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
+    bool AlreadyHave(const uint256& hash, int type);
+    bool TryAppendItem(const uint256& hash, int type);
 };
 
 #endif

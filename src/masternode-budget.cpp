@@ -1040,6 +1040,7 @@ int CBudgetManager::ProcessBudgetFinalizationMsg(CFinalizedBudget& finalbudget)
     LogPrint(BCLog::MNBUDGET,"fbs (new) %s\n", nHash.ToString());
     //we might have active votes for this budget that are now valid
     CheckOrphanVotes();
+    return 0;
 }
 
 void CBudgetManager::ProcessMessage(CNode* pfrom, std::string& strCommand, CDataStream& vRecv)
