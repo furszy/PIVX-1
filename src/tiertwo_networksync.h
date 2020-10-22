@@ -22,8 +22,8 @@ public:
     // map of message --> last request timestamp, bool hasResponseArrived.
     std::map<const char*, std::pair<int64_t, bool>> mapMsgData;
 
-    void AddSeenMessagesCount() {
-        WITH_LOCK(cs_monitor, monitor.seenMessagesCount++; );
+    int AddSeenMessagesCount() {
+        return WITH_LOCK(cs_monitor, return ++monitor.seenMessagesCount; );
     }
 
     PeerMonitor GetPeerMonitor() { return WITH_LOCK(cs_monitor, return monitor; ); }
@@ -90,6 +90,7 @@ private:
 
     // Check if an update is needed
     void CheckAndUpdateSyncStatus();
+    int AddSeenMessageCount(CNode* pfrom);
 
     ProtectedVector<uint256>* GetSeenItemsVector(int type);
 

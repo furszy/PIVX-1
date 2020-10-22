@@ -36,6 +36,15 @@ bool TierTwoSyncMan::UpdatePeerSyncState(const NodeId& id, const char* msg, cons
     return false;
 }
 
+int TierTwoSyncMan::AddSeenMessageCount(CNode* pfrom)
+{
+    AssertLockNotHeld(cs_peersSyncState);
+    LOCK(cs_peersSyncState);
+    const auto& it = peersSyncState.find(pfrom->GetId());
+    return it != peersSyncState.end() ?
+           it->second.AddSeenMessagesCount() : 0;
+}
+
 bool TierTwoSyncMan::MessageDispatcher(CNode* pfrom, std::string& strCommand, CDataStream& vRecv)
 {
     if (strCommand == NetMsgType::GETSPORKS) {
@@ -99,6 +108,7 @@ bool TierTwoSyncMan::MessageDispatcher(CNode* pfrom, std::string& strCommand, CD
 
         // Check if we already have seen this proposal
         if (!seenProposalsItems.tryAppendItem(proposal.GetHash())) {
+            AddSeenMessageCount(pfrom);
             // todo: add misbehaving if the peer sent this message several times already..
             return false;
         }
@@ -116,6 +126,7 @@ bool TierTwoSyncMan::MessageDispatcher(CNode* pfrom, std::string& strCommand, CD
 
         // Check if we already have seen this budget finalization
         if (!seenBudgetItems.tryAppendItem(finalbudget.GetHash())) {
+            AddSeenMessageCount(pfrom);
             // todo: add misbehaving if the peer sent this message several times already..
             return false;
         }
