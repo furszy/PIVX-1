@@ -201,7 +201,7 @@ bool TierTwoSyncMan::TryAppendItem(const uint256& hash, int type)
     return GetSeenItemsVector(type)->tryAppendItem(hash);
 }
 
-ProtectedVector* TierTwoSyncMan::GetSeenItemsVector(int type)
+ProtectedVector<uint256>* TierTwoSyncMan::GetSeenItemsVector(int type)
 {
     switch (type) {
         case MSG_BUDGET_PROPOSAL:

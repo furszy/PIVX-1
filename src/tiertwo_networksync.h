@@ -16,27 +16,36 @@ struct TierTwoPeerData {
     std::map<const char*, std::pair<int64_t, bool>> mapMsgData;
 };
 
-class ProtectedVector
+template <typename T>
+class ProtectedVector : public std::vector<T>
 {
 private:
-    std::vector<uint256> vector;
     Mutex cs;
 
-    bool has(const uint256& hash) {
-        return std::any_of(vector.begin(), vector.end(), [hash](const uint256& _hash){ return hash == _hash; } );
+    bool has(const T& t) {
+        return std::any_of(this->begin(), this->end(), [t](const T& _t){ return t == _t; } );
     }
 
 public:
     // returns false if the item is already on the vector
-    bool tryAppendItem(const uint256& hash) {
+    bool tryAppendItem(const T& t) {
         LOCK(cs);
-        if (has(hash)) return false;
-        vector.emplace_back(hash);
+        if (has(t)) return false;
+        this->emplace_back(t);
         return true;
     }
-    bool contains(const uint256& hash) {
-        return WITH_LOCK(cs, return has(hash););
+    bool contains(const T& t) {
+        return WITH_LOCK(cs, return has(t););
     }
+
+    template<typename Callable>
+    void ForEachItem(Callable&& func)
+    {
+        LOCK(cs);
+        for (auto it = this->begin(); it != this->end(); ++it) {
+            func(*it);
+        }
+    };
 };
 
 // Class in charge of managing the tier two synchronization.
@@ -62,12 +71,12 @@ private:
     // Check if an update is needed
     void CheckAndUpdateSyncStatus();
 
-    ProtectedVector* GetSeenItemsVector(int type);
+    ProtectedVector<uint256>* GetSeenItemsVector(int type);
 
     // DoS spam filtering protection, guarded by its own internal mutex.
     // For now, it only protects us from seen proposals and budgets.
-    ProtectedVector seenBudgetItems;
-    ProtectedVector seenProposalsItems;
+    ProtectedVector<uint256> seenBudgetItems;
+    ProtectedVector<uint256> seenProposalsItems;
 
 public:
 
