@@ -11,9 +11,26 @@
 
 class CMasternodeSync;
 
-struct TierTwoPeerData {
+struct PeerMonitor {
+    // Number of already seen messages received by the peer
+    int seenMessagesCount{0};
+};
+
+class TierTwoPeerData {
+public:
+    explicit TierTwoPeerData() {};
     // map of message --> last request timestamp, bool hasResponseArrived.
     std::map<const char*, std::pair<int64_t, bool>> mapMsgData;
+
+    void AddSeenMessagesCount() {
+        WITH_LOCK(cs_monitor, monitor.seenMessagesCount++; );
+    }
+
+    PeerMonitor GetPeerMonitor() { return WITH_LOCK(cs_monitor, return monitor; ); }
+private:
+    PeerMonitor monitor;
+    Mutex cs_monitor;
+
 };
 
 template <typename T>
@@ -58,6 +75,7 @@ private:
     // Sync node state
     // map of nodeID --> TierTwoPeerData
     std::map<NodeId, TierTwoPeerData> peersSyncState;
+    Mutex cs_peersSyncState;
     // Dead peers that requires an state cleanup.
     ProtectedVector<NodeId> peersToRemove;
 

@@ -15,10 +15,11 @@
 // Update in-flight message status if needed
 bool TierTwoSyncMan::UpdatePeerSyncState(const NodeId& id, const char* msg, const int nextSyncStatus)
 {
+    LOCK(cs_peersSyncState);
     auto it = peersSyncState.find(id);
     if (it != peersSyncState.end()) {
-        auto peerData = it->second;
-        auto msgMapIt = peerData.mapMsgData.find(msg);
+        auto& peerData = it->second;
+        const auto& msgMapIt = peerData.mapMsgData.find(msg);
         if (msgMapIt != peerData.mapMsgData.end()) {
             // exists, let's update the received status and the sync state.
 
@@ -135,40 +136,51 @@ void TierTwoSyncMan::PushMessage(CNode* pnode, const char* msg, Args&&... args)
 template <typename... Args>
 void TierTwoSyncMan::RequestDataTo(CNode* pnode, const char* msg, bool forceRequest, Args&&... args)
 {
-    const auto& it = peersSyncState.find(pnode->id);
-    bool exist = it != peersSyncState.end();
+    AssertLockNotHeld(cs_peersSyncState);
+    bool exist = WITH_LOCK(cs_peersSyncState, return peersSyncState.count(pnode->id));
     if (!exist || forceRequest) {
-        // Erase it if this is a forced request
-        if (exist) peersSyncState.erase(it);
         // send the message
         PushMessage(pnode, msg, std::forward<Args>(args)...);
 
+        // Update peer sync state
+        LOCK(cs_peersSyncState);
+        // Erase it if this is a forced request. todo: check this again.. should be removing the entire peer state.
+        if (exist) peersSyncState.erase(pnode->id);
+
         // Add data to the tier two peers sync state
-        TierTwoPeerData peerData;
-        peerData.mapMsgData.emplace(msg, std::make_pair(GetTime(), false));
-        peersSyncState.emplace(pnode->id, peerData);
+        const auto& it = peersSyncState.emplace(std::piecewise_construct,
+                               std::forward_as_tuple(pnode->id), std::forward_as_tuple());
+        it.first->second.mapMsgData.emplace(msg, std::make_pair(GetTime(), false));
+        return;
     } else {
-        // Check if we have sent the message or not
-        TierTwoPeerData& peerData = it->second;
-        const auto& msgMapIt = peerData.mapMsgData.find(msg);
+        bool reRequestData = false;
+        {
+            LOCK(cs_peersSyncState);
+            TierTwoPeerData& peerData = peersSyncState.at(pnode->id);
+            const auto& msgMapIt = peerData.mapMsgData.find(msg);
 
-        if (msgMapIt == peerData.mapMsgData.end()) {
-            // message doesn't exist, push it and add it to the map.
-            PushMessage(pnode, msg, std::forward<Args>(args)...);
-            peerData.mapMsgData.emplace(msg, std::make_pair(GetTime(), false));
-        } else {
-            // message sent, next step: need to check if it was already answered or not.
-            // And, if needed, request it again every certain amount of time.
+            // Check if we have sent the message or not
+            if (msgMapIt == peerData.mapMsgData.end()) {
+                // message doesn't exist, push it and add it to the map.
+                PushMessage(pnode, msg, std::forward<Args>(args)...);
+                peerData.mapMsgData.emplace(msg, std::make_pair(GetTime(), false));
+            } else {
+                // message sent, next step: need to check if it was already answered or not.
+                // And, if needed, request it again every certain amount of time.
 
-            // Check if the node answered the message or not
-            if (!msgMapIt->second.second) {
-                int64_t lastRequestTime = msgMapIt->second.first;
-                if (lastRequestTime + 600 < GetTime()) {
-                    // ten minutes passed. Let's ask it again.
-                    RequestDataTo(pnode, msg, true, std::forward<Args>(args)...);
+                // Check if the node answered the message or not
+                if (!msgMapIt->second.second) {
+                    int64_t lastRequestTime = msgMapIt->second.first;
+                    if (lastRequestTime + 600 < GetTime()) {
+                        reRequestData = true;
+                    }
                 }
             }
+        }
 
+        // ten minutes passed. Let's ask it again.
+        if (reRequestData) {
+            RequestDataTo(pnode, msg, true, std::forward<Args>(args)...);
         }
     }
 }
@@ -189,6 +201,7 @@ void TierTwoSyncMan::CleanupPeers()
 {
     auto sync = this;
     peersToRemove.ForEachItem([sync](NodeId id){
+        LOCK(sync->cs_peersSyncState);
         sync->peersSyncState.erase(id);
     });
 }
