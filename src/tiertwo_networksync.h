@@ -58,6 +58,8 @@ private:
     // Sync node state
     // map of nodeID --> TierTwoPeerData
     std::map<NodeId, TierTwoPeerData> peersSyncState;
+    // Dead peers that requires an state cleanup.
+    ProtectedVector<NodeId> peersToRemove;
 
     template <typename... Args>
     void RequestDataTo(CNode* pnode, const char* msg, bool forceRequest, Args&&... args);
@@ -85,7 +87,13 @@ public:
     // Sync message dispatcher
     bool MessageDispatcher(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
 
+    void Process();
+    void CleanupPeers();
     void SyncRegtest(CNode* pnode);
+    void PeerFinalized(NodeId nodeid) { peersToRemove.tryAppendItem(nodeid); };
+    // todo: Connect me..
+    void RegisterNodeSignals(CNodeSignals& nodeSignals);
+    void UnregisterNodeSignals(CNodeSignals& nodeSignals);
 
     // Check if we already have seen the item
     bool AlreadyHave(const uint256& hash, int type);

@@ -287,10 +287,7 @@ void CMasternodeSync::Process()
 
     // New sync architecture, regtest only for now.
     if (isRegTestNet) {
-        TierTwoSyncMan* sync = syncManager.get();
-        g_connman->ForEachNode([sync](CNode* pnode){
-            return sync->SyncRegtest(pnode);
-        });
+        syncManager->Process();
         return;
     }
 

@@ -173,6 +173,26 @@ void TierTwoSyncMan::RequestDataTo(CNode* pnode, const char* msg, bool forceRequ
     }
 }
 
+void TierTwoSyncMan::Process()
+{
+    // First cleanup old peers
+    CleanupPeers();
+
+    // Try to sync
+    auto sync = this;
+    g_connman->ForEachNode([sync](CNode* pnode){
+        return sync->SyncRegtest(pnode);
+    });
+}
+
+void TierTwoSyncMan::CleanupPeers()
+{
+    auto sync = this;
+    peersToRemove.ForEachItem([sync](NodeId id){
+        sync->peersSyncState.erase(id);
+    });
+}
+
 void TierTwoSyncMan::SyncRegtest(CNode* pnode)
 {
     // Initial sync, verify that the other peer answered to all of the messages successfully
@@ -188,6 +208,21 @@ void TierTwoSyncMan::SyncRegtest(CNode* pnode)
     } else if (syncParent->RequestedMasternodeAssets == MASTERNODE_SYNC_FINISHED) {
         LogPrintf("REGTEST SYNC FINISHED!\n");
     }
+}
+
+void FinalizeNode(TierTwoSyncMan* syncMan, NodeId nodeid, bool& fUpdateConnectionTime)
+{
+    syncMan->PeerFinalized(nodeid);
+}
+
+void TierTwoSyncMan::RegisterNodeSignals(CNodeSignals& nodeSignals)
+{
+    nodeSignals.FinalizeNode.connect(boost::bind(FinalizeNode, this, _1, _2));
+}
+
+void TierTwoSyncMan::UnregisterNodeSignals(CNodeSignals& nodeSignals)
+{
+    nodeSignals.FinalizeNode.disconnect(boost::bind(FinalizeNode, this, _1, _2));
 }
 
 bool TierTwoSyncMan::AlreadyHave(const uint256& hash, int type)
@@ -212,3 +247,4 @@ ProtectedVector<uint256>* TierTwoSyncMan::GetSeenItemsVector(int type)
             throw std::runtime_error("Invalid type");
     }
 }
+
