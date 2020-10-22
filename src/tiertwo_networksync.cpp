@@ -11,6 +11,7 @@
 #include "netmessagemaker.h"
 #include "streams.h"  // for CDataStream
 
+#define SEEN_MESSAGE_SPAM_THRESHOLD 10
 
 // Update in-flight message status if needed
 bool TierTwoSyncMan::UpdatePeerSyncState(const NodeId& id, const char* msg, const int nextSyncStatus)
@@ -108,8 +109,10 @@ bool TierTwoSyncMan::MessageDispatcher(CNode* pfrom, std::string& strCommand, CD
 
         // Check if we already have seen this proposal
         if (!seenProposalsItems.tryAppendItem(proposal.GetHash())) {
-            AddSeenMessageCount(pfrom);
-            // todo: add misbehaving if the peer sent this message several times already..
+            int seenMessagesCount = AddSeenMessageCount(pfrom);
+            if (seenMessagesCount > SEEN_MESSAGE_SPAM_THRESHOLD) {
+                // todo: add misbehaving if the peer sent this message several times already..
+            }
             return false;
         }
 
@@ -126,9 +129,10 @@ bool TierTwoSyncMan::MessageDispatcher(CNode* pfrom, std::string& strCommand, CD
 
         // Check if we already have seen this budget finalization
         if (!seenBudgetItems.tryAppendItem(finalbudget.GetHash())) {
-            AddSeenMessageCount(pfrom);
-            // todo: add misbehaving if the peer sent this message several times already..
-            return false;
+            int seenMessagesCount = AddSeenMessageCount(pfrom);
+            if (seenMessagesCount > SEEN_MESSAGE_SPAM_THRESHOLD) {
+                // todo: add misbehaving if the peer sent this message several times already..
+            }
         }
 
         // todo: add misbevahing..
