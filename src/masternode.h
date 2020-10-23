@@ -210,7 +210,7 @@ public:
         READWRITE(nLastScanningErrorBlockHeight);
     }
 
-    int64_t SecondsSincePayment();
+    int64_t SecondsSincePayment(int nChainHeight);
 
     bool UpdateFromNewBroadcast(CMasternodeBroadcast& mnb);
 
@@ -260,7 +260,7 @@ public:
         return strStatus;
     }
 
-    int64_t GetLastPaid();
+    int64_t GetLastPaid(int nChainHeight);
     bool IsValidNetAddr();
 
     /// Is the input associated with collateral public key? (and there is 10000 PIV - checking if valid masternode)

@@ -210,12 +210,12 @@ void CMasternode::Check(bool forceCheck)
     activeState = MASTERNODE_ENABLED; // OK
 }
 
-int64_t CMasternode::SecondsSincePayment()
+int64_t CMasternode::SecondsSincePayment(int nChainHeight)
 {
     CScript pubkeyScript;
     pubkeyScript = GetScriptForDestination(pubKeyCollateralAddress.GetID());
 
-    int64_t sec = (GetAdjustedTime() - GetLastPaid());
+    int64_t sec = (GetAdjustedTime() - GetLastPaid(nChainHeight));
     int64_t month = 60 * 60 * 24 * 30;
     if (sec < month) return sec; //if it's less than 30 days, give seconds
 
@@ -228,10 +228,9 @@ int64_t CMasternode::SecondsSincePayment()
     return month + hash.GetCompact(false);
 }
 
-int64_t CMasternode::GetLastPaid()
+int64_t CMasternode::GetLastPaid(int nChainHeight)
 {
-    const CBlockIndex* BlockReading = GetChainTip();
-    if (BlockReading == nullptr) return false;
+    if (nChainHeight == 0) return 0;
 
     CScript mnpayee;
     mnpayee = GetScriptForDestination(pubKeyCollateralAddress.GetID());
@@ -245,30 +244,20 @@ int64_t CMasternode::GetLastPaid()
     int64_t nOffset = hash.GetCompact(false) % 150;
 
     int nMnCount = mnodeman.CountEnabled() * 1.25;
-    int n = 0;
-    for (unsigned int i = 1; BlockReading && BlockReading->nHeight > 0; i++) {
-        if (n >= nMnCount) {
-            return 0;
-        }
-        n++;
 
-        if (masternodePayments.mapMasternodeBlocks.count(BlockReading->nHeight)) {
+    for (int pos = nChainHeight; pos >= (nChainHeight - nMnCount); --pos) {
+        if (masternodePayments.mapMasternodeBlocks.count(pos)) {
             /*
                 Search for this payee, with at least 2 votes. This will aid in consensus allowing the network
                 to converge on the same payees quickly, then keep the same schedule.
             */
-            if (masternodePayments.mapMasternodeBlocks[BlockReading->nHeight].HasPayeeWithVotes(mnpayee, 2)) {
-                return BlockReading->nTime + nOffset;
+            if (masternodePayments.mapMasternodeBlocks[pos].HasPayeeWithVotes(mnpayee, 2)) {
+                // TODO: try to remove this lock..
+                LOCK(cs_main);
+                return chainActive[nChainHeight]->nTime + nOffset;
             }
         }
-
-        if (BlockReading->pprev == NULL) {
-            assert(BlockReading);
-            break;
-        }
-        BlockReading = BlockReading->pprev;
     }
-
     return 0;
 }
 
