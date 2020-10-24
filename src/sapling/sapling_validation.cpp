@@ -166,7 +166,6 @@ bool CheckTransactionWithoutProofVerification(const CTransaction& tx, CValidatio
 *    being in Initial Block Download mode.
 * 4. The isInitBlockDownload argument is a function parameter to assist with testing.
 *
-* todo: For now, this is NOT connected, only used in unit tests.
 */
 bool ContextualCheckTransaction(
         const CTransaction& tx,
