@@ -10,6 +10,7 @@
 #include "key.h"
 #include "messagesigner.h"
 #include "net.h"
+#include "serialize.h"
 #include "sync.h"
 #include "timedata.h"
 #include "util.h"
@@ -138,7 +139,7 @@ public:
     int nLastScanningErrorBlockHeight;
     CMasternodePing lastPing;
 
-    CMasternode();
+    explicit CMasternode();
     CMasternode(const CMasternode& other);
 
     // override CSignedMessage functions
@@ -208,6 +209,11 @@ public:
         READWRITE(nLastDsq);
         READWRITE(nScanningErrorCount);
         READWRITE(nLastScanningErrorBlockHeight);
+    }
+
+    template <typename Stream>
+    CMasternode(deserialize_type, Stream& s) {
+        Unserialize(s);
     }
 
     int64_t SecondsSincePayment();

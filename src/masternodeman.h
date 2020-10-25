@@ -54,6 +54,9 @@ public:
     ReadResult Read(CMasternodeMan& mnodemanToLoad, bool fDryRun = false);
 };
 
+//
+typedef std::shared_ptr<CMasternode> MasternodeRef;
+
 class CMasternodeMan
 {
 private:
@@ -64,7 +67,7 @@ private:
     mutable RecursiveMutex cs_process_message;
 
     // map to hold all MNs
-    std::vector<CMasternode> vMasternodes;
+    std::vector<MasternodeRef> vMasternodes;
     // who's asked for the Masternode list and the last time
     std::map<CNetAddr, int64_t> mAskedUsForMasternodeList;
     // who we asked for the Masternode list and the last time
@@ -141,7 +144,7 @@ public:
     /// Get the current winner for this block
     CMasternode* GetCurrentMasterNode(int mod = 1, int64_t nBlockHeight = 0, int minProtocol = 0);
 
-    std::vector<CMasternode> GetFullMasternodeVector()
+    std::vector<MasternodeRef> GetFullMasternodeVector()
     {
         Check();
         return vMasternodes;
