@@ -448,19 +448,6 @@ void CMasternodeMan::DsegUpdate(CNode* pnode)
     mWeAskedForMasternodeList[pnode->addr] = askAgain;
 }
 
-CMasternode* CMasternodeMan::Find(const CScript& payee)
-{
-    LOCK(cs);
-    CScript payee2;
-
-    for (auto& mn : vMasternodes) {
-        payee2 = GetScriptForDestination(mn->pubKeyCollateralAddress.GetID());
-        if (payee2 == payee)
-            return mn.get();
-    }
-    return NULL;
-}
-
 CMasternode* CMasternodeMan::Find(const CTxIn& vin)
 {
     LOCK(cs);
