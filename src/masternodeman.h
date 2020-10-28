@@ -66,8 +66,10 @@ private:
     // critical section to protect the inner data structures specifically on messaging
     mutable RecursiveMutex cs_process_message;
 
-    // map to hold all MNs
+    // vector to hold all MNs
     std::vector<MasternodeRef> vMasternodes;
+    // mapping masternodes by collateral vin outpoint.
+    std::map<const COutPoint, MasternodeRef> mMasternodesByVin;
     // who's asked for the Masternode list and the last time
     std::map<CNetAddr, int64_t> mAskedUsForMasternodeList;
     // who we asked for the Masternode list and the last time

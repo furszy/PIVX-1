@@ -217,7 +217,9 @@ bool CMasternodeMan::Add(CMasternode& mn)
     CMasternode* pmn = Find(mn.vin);
     if (pmn == NULL) {
         LogPrint(BCLog::MASTERNODE, "CMasternodeMan: Adding new Masternode %s - %i now\n", mn.vin.prevout.hash.ToString(), size() + 1);
-        vMasternodes.emplace_back(std::make_shared<CMasternode>(mn));
+        MasternodeRef mnRef = std::make_shared<CMasternode>(mn);
+        vMasternodes.emplace_back(mnRef);
+        mMasternodesByVin.emplace(mnRef->vin.prevout, mnRef);
         return true;
     }
 
@@ -288,6 +290,7 @@ void CMasternodeMan::CheckAndRemove(bool forceExpiredRemoval)
                 }
             }
 
+            mMasternodesByVin.erase(mnRef->vin.prevout);
             it = vMasternodes.erase(it);
         } else {
             ++it;
@@ -349,6 +352,7 @@ void CMasternodeMan::CheckAndRemove(bool forceExpiredRemoval)
 void CMasternodeMan::Clear()
 {
     LOCK(cs);
+    mMasternodesByVin.clear();
     vMasternodes.clear();
     mAskedUsForMasternodeList.clear();
     mWeAskedForMasternodeList.clear();
@@ -785,8 +789,10 @@ void CMasternodeMan::Remove(CTxIn vin)
 
     std::vector<MasternodeRef>::iterator it = vMasternodes.begin();
     while (it != vMasternodes.end()) {
-        if ((*it)->vin == vin) {
+        MasternodeRef mnRef = *it;
+        if (mnRef->vin == vin) {
             LogPrint(BCLog::MASTERNODE, "CMasternodeMan: Removing Masternode %s - %i now\n", (*it)->vin.prevout.hash.ToString(), size() - 1);
+            mMasternodesByVin.erase(mnRef->vin.prevout);
             vMasternodes.erase(it);
             break;
         }
