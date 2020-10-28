@@ -464,12 +464,11 @@ CMasternode* CMasternodeMan::Find(const CScript& payee)
 CMasternode* CMasternodeMan::Find(const CTxIn& vin)
 {
     LOCK(cs);
-
-    for (auto& mn : vMasternodes) {
-        if (mn->vin.prevout == vin.prevout)
-            return mn.get();
+    const auto& it = mMasternodesByVin.find(vin.prevout);
+    if (it != mMasternodesByVin.end()) {
+        return it->second.get();
     }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -786,7 +785,6 @@ void CMasternodeMan::ProcessGetMNList(CNode* pfrom, std::string& strCommand, CDa
 void CMasternodeMan::Remove(CTxIn vin)
 {
     LOCK(cs);
-
     std::vector<MasternodeRef>::iterator it = vMasternodes.begin();
     while (it != vMasternodes.end()) {
         MasternodeRef mnRef = *it;
