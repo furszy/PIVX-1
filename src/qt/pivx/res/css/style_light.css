@@ -939,6 +939,11 @@ HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH*/
     font-size:16px;
 }
 
+*[cssClass="text-list-amount-send-small"] {
+    color:#f84444;
+    font-size:15px;
+}
+
 *[cssClass="text-list-amount-unconfirmed"] {
     color:#B6B6B6;
     font-size:16px;
