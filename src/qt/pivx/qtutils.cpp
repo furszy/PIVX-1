@@ -167,6 +167,18 @@ void setSortTxTypeFilter(QComboBox* filter, SortEdit* lineEditType)
     filter->addItem(QObject::tr("Delegations"), TransactionFilterProxy::TYPE(TransactionRecord::P2CSDelegation));
 }
 
+bool isSortTxFilterTypeAccepted(quint32 modes)
+{
+    return modes == TransactionFilterProxy::ALL_TYPES ||
+    modes == (TransactionFilterProxy::TYPE(TransactionRecord::RecvWithAddress) | TransactionFilterProxy::TYPE(TransactionRecord::RecvFromOther)) ||
+    modes == (TransactionFilterProxy::TYPE(TransactionRecord::SendToAddress) | TransactionFilterProxy::TYPE(TransactionRecord::SendToOther)) ||
+    modes == TransactionFilterProxy::TYPE(TransactionRecord::Generated) || modes == TransactionFilterProxy::TYPE(TransactionRecord::StakeMint) ||
+    modes == TransactionFilterProxy::TYPE(TransactionRecord::MNReward) || modes == TransactionFilterProxy::TYPE(TransactionRecord::SendToSelf) ||
+    modes == TransactionFilterProxy::TYPE(TransactionRecord::StakeDelegated) || modes == TransactionFilterProxy::TYPE(TransactionRecord::StakeHot) ||
+    modes == (TransactionFilterProxy::TYPE(TransactionRecord::P2CSDelegationSent) | TransactionFilterProxy::TYPE(TransactionRecord::P2CSDelegationSentOwner)) ||
+    modes == TransactionFilterProxy::TYPE(TransactionRecord::P2CSDelegation);
+}
+
 void setupSettings(QSettings* settings)
 {
     if (!settings->contains("lightTheme")) {

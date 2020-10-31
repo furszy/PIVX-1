@@ -186,7 +186,9 @@ void DashboardWidget::loadWalletModel()
         // Read filter settings
         QSettings settings;
         int filterByType = settings.value("transactionType", TransactionFilterProxy::ALL_TYPES).toInt();
-
+        if (!isSortTxFilterTypeAccepted(filterByType)) {
+            filterByType = TransactionFilterProxy::ALL_TYPES;
+        }
         filter->setTypeFilter(filterByType); // Set filter
         int filterIndex = ui->comboBoxSortType->findData(filterByType); // Find index
         ui->comboBoxSortType->setCurrentIndex(filterIndex); // Set item in ComboBox

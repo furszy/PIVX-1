@@ -50,6 +50,7 @@ QColor getRowColor(bool isLightTheme, bool isHovered, bool isSelected);
 void setFilterAddressBook(QComboBox* filter, SortEdit* lineEdit);
 void setSortTx(QComboBox* filter, SortEdit* lineEdit);
 void setSortTxTypeFilter(QComboBox* filter, SortEdit* lineEdit);
+bool isSortTxFilterTypeAccepted(quint32 modes);
 
 // Settings
 QSettings* getSettings();
