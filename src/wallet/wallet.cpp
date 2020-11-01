@@ -3209,7 +3209,14 @@ CAmount CWallet::GetImmatureWatchOnlyBalance() const
     return nTotal;
 }
 
-void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const CCoinControl *coinControl, bool fIncludeZeroValue, bool fIncludeCoinBase, bool fOnlySpendable, int nMinDepth) const
+void CWallet::AvailableCoins(vector<COutput>& vCoins,
+                             bool fOnlyConfirmed,
+                             const CCoinControl *coinControl,
+                             bool fIncludeZeroValue,
+                             bool fIncludeCoinBase,
+                             bool fOnlySpendable,
+                             int nMinDepth,
+                             std::set<CTxDestination>* onlyFilterByDests) const
 {
     vCoins.clear();
 
@@ -3249,7 +3256,14 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const
                 if (fOnlySpendable && !isSpendable)
                     continue;
 
-                isminetype mine = IsMine(pcoin->vout[i]);
+                // Filter by specific destinations if needed
+                if (onlyFilterByDests && !onlyFilterByDests->empty()) {
+                    CTxDestination address;
+                    if (!ExtractDestination(output.scriptPubKey, address) || !onlyFilterByDests->count(address)) {
+                        continue;
+                    }
+                }
+
                 if (!(IsSpent(wtxid, i)) && mine != ISMINE_NO &&
                     !IsLockedCoin((*it).first, i) && (pcoin->vout[i].nValue > 0 || fIncludeZeroValue) &&
                     (!coinControl || !coinControl->HasSelected() || coinControl->fAllowOtherInputs || coinControl->IsSelected((*it).first, i)))
