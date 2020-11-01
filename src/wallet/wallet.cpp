@@ -3209,7 +3209,7 @@ CAmount CWallet::GetImmatureWatchOnlyBalance() const
     return nTotal;
 }
 
-void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const CCoinControl *coinControl, bool fIncludeZeroValue, bool fIncludeCoinBase, bool fOnlySpendable) const
+void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const CCoinControl *coinControl, bool fIncludeZeroValue, bool fIncludeCoinBase, bool fOnlySpendable, int nMinDepth) const
 {
     vCoins.clear();
 
@@ -3234,6 +3234,9 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const
 
             int nDepth = pcoin->GetDepthInMainChain();
             if (nDepth < 0)
+                continue;
+
+            if (nDepth < nMinDepth)
                 continue;
 
             for (unsigned int i = 0; i < pcoin->vout.size(); i++) {
