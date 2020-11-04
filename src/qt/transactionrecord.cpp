@@ -250,6 +250,7 @@ bool TransactionRecord::decomposeSendToSelfTransaction(const CWalletTx& wtx, con
         // shielded send to self.
         sub.type = TransactionRecord::SendToSelfShieldedAddress;
         nChange += wtx.GetShieldedChange();
+        sub.shieldedCredit = wtx.GetShieldedAvailableCredit();
     }
 
     sub.debit = -(nDebit - nChange);

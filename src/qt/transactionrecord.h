@@ -9,6 +9,7 @@
 
 #include "amount.h"
 #include "script/script.h"
+#include "optional.h"
 #include "uint256.h"
 
 #include <QList>
@@ -159,6 +160,7 @@ public:
     CAmount debit;
     CAmount credit;
     unsigned int size;
+    Optional<CAmount> shieldedCredit{nullopt};
     /**@}*/
 
     /** Subtransaction index, for sort key */

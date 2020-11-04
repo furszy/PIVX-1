@@ -52,7 +52,7 @@ void TxViewHolder::init(QWidget* holder, const QModelIndex &index, bool isHovere
     txRow->setLabel(label);
     QString amountText = BitcoinUnits::formatWithUnit(nDisplayUnit, amountTop, true, BitcoinUnits::separatorAlways);
     if (type == TransactionRecord::SendToSelfShieldedAddress) {
-        qint64 amountBottom = rIndex.data(TransactionTableModel::CreditAmountRole).toLongLong();
+        qint64 amountBottom = rIndex.data(TransactionTableModel::ShieldedCreditAmountRole).toLongLong();
         QString amountBottomText = BitcoinUnits::formatWithUnit(nDisplayUnit, amountBottom, true, BitcoinUnits::separatorAlways);
         txRow->setAmount(amountBottomText, amountText + " fee");
     } else {
