@@ -2066,7 +2066,8 @@ CAmount CWallet::GetLegacyBalance(const isminefilter& filter, int minDepth) cons
 // Sapling
 CAmount CWallet::GetAvailableShieldedBalance(bool fUseCache) const
 {
-    return GetAvailableBalance(ISMINE_SPENDABLE_SHIELDED, fUseCache);;
+    isminefilter filter = ISMINE_SPENDABLE_SHIELDED;
+    return GetAvailableBalance(filter, fUseCache);
 };
 
 CAmount CWallet::GetUnconfirmedShieldedBalance() const
