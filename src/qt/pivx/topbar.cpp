@@ -44,7 +44,7 @@ TopBar::TopBar(PIVXGUI* _mainWindow, QWidget *parent) :
     ui->containerTop->setProperty("cssClass", "container-top");
 #endif
 
-    std::initializer_list<QWidget*> lblTitles = {ui->labelTitle1, ui->labelTitle3, ui->labelTitle4};
+    std::initializer_list<QWidget*> lblTitles = {ui->labelTitle1, ui->labelTitle3, ui->labelTitle4, ui->labelTitle5};
     setCssProperty(lblTitles, "text-title-topbar");
     QFont font;
     font.setWeight(QFont::Light);
@@ -54,7 +54,7 @@ TopBar::TopBar(PIVXGUI* _mainWindow, QWidget *parent) :
     ui->widgetTopAmount->setVisible(false);
     setCssProperty({ui->labelAmountTopPiv}, "amount-small-topbar");
     setCssProperty({ui->labelAmountPiv}, "amount-topbar");
-    setCssProperty({ui->labelPendingPiv, ui->labelImmaturePiv}, "amount-small-topbar");
+    setCssProperty({ui->labelPendingPiv, ui->labelImmaturePiv, ui->labelShieldedPiv}, "amount-small-topbar");
 
     // Progress Sync
     progressBar = new QProgressBar(ui->layoutSync);
@@ -638,6 +638,7 @@ void TopBar::updateBalances(const interfaces::WalletBalances& newBalance)
     ui->labelAmountPiv->setText(totalPiv);
     ui->labelPendingPiv->setText(GUIUtil::formatBalance(newBalance.unconfirmed_balance + newBalance.unconfirmed_shielded_balance, nDisplayUnit));
     ui->labelImmaturePiv->setText(GUIUtil::formatBalance(newBalance.immature_balance, nDisplayUnit));
+    ui->labelShieldedPiv->setText(GUIUtil::formatBalance(newBalance.shielded_balance, nDisplayUnit));
 }
 
 void TopBar::resizeEvent(QResizeEvent *event)
