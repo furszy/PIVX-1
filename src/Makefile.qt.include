@@ -24,6 +24,7 @@ QT_FORMS_UI = \
   qt/pivx/forms/lockunlock.ui \
   qt/pivx/forms/expandablebutton.ui \
   qt/pivx/forms/receivedialog.ui \
+  qt/pivx/forms/balancebubble.ui \
   qt/pivx/forms/topbar.ui \
   qt/pivx/forms/txrow.ui \
   qt/pivx/forms/dashboardwidget.ui \
@@ -228,6 +229,7 @@ BITCOIN_QT_H = \
   qt/pivx/txviewholder.h \
   qt/pivx/qtutils.h \
   qt/pivx/expandablebutton.h \
+  qt/pivx/balancebubble.h \
   qt/pivx/topbar.h \
   qt/pivx/txrow.h \
   qt/pivx/addressholder.h \
@@ -548,6 +550,7 @@ BITCOIN_QT_WALLET_CPP = \
   qt/pivx/txviewholder.cpp \
   qt/pivx/qtutils.cpp \
   qt/pivx/expandablebutton.cpp \
+  qt/pivx/balancebubble.cpp \
   qt/pivx/topbar.cpp \
   qt/pivx/txrow.cpp \
   qt/pivx/addressholder.cpp \
