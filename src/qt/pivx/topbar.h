@@ -12,6 +12,7 @@
 #include <QTimer>
 #include <QProgressBar>
 
+class BalanceBubble;
 class PIVXGUI;
 class WalletModel;
 class ClientModel;
@@ -61,6 +62,7 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
 private Q_SLOTS:
     void onBtnReceiveClicked();
+    void onBtnBalanceInfoClicked();
     void onThemeClicked();
     void onBtnLockClicked();
     void lockDropdownMouseLeave();
@@ -78,6 +80,9 @@ private:
     int nDisplayUnit = -1;
     QTimer* timerStakingIcon = nullptr;
     bool isInitializing = true;
+
+    // info popup
+    BalanceBubble* balanceBubble = nullptr;
 
     void updateTorIcon();
 };

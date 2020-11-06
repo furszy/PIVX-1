@@ -494,10 +494,10 @@ RES_ICONS = \
   qt/pivx/res/img/ic-transaction-cs-contract.svg \
   qt/pivx/res/img/ic-transaction-cs-contract-inactive.svg \
   qt/pivx/res/img/ic-check-box-indeterminate.svg \
+  qt/pivx/res/img/ic-information.svg \
+  qt/pivx/res/img/ic-information-hover.svg \
   qt/pivx/res/img/ani-loading-dark.gif \
   qt/pivx/res/img/ani-loading.gif
-
-
 
 BITCOIN_QT_BASE_CPP = \
   qt/bantablemodel.cpp \

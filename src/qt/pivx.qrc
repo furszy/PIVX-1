@@ -219,5 +219,7 @@
         <file alias="ic-check-cold-staking">pivx/res/img/ic-check-cold-staking.svg</file>
         <file alias="ic-check-cold-staking-off">pivx/res/img/ic-check-cold-staking-off.svg</file>
         <file alias="ic-check-cold-staking-enabled">pivx/res/img/ic-check-cold-staking-enabled.svg</file>
+        <file alias="ic-information">pivx/res/img/ic-information.svg</file>
+        <file alias="ic-information-hover">pivx/res/img/ic-information-hover.svg</file>
     </qresource>
 </RCC>

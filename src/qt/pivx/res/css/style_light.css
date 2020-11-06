@@ -379,7 +379,12 @@ HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH*/
 
 *[cssClass="amount-small-topbar"] {
     color:#FFFFFF;
-    font-size:22px;
+    font-size:21px;
+}
+
+*[cssClass="amount-small-popup"] {
+    color:#FFFFFF;
+    font-size:17px;
 }
 
 *[cssClass="container-qr"] {
@@ -389,6 +394,18 @@ HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH*/
 
 QPushButton[cssClass="btn-qr"] {
     qproperty-icon: url("://ic-arrow-drop-down-white");
+    qproperty-iconSize: 24px 24px;
+    background-color:transparent;
+}
+
+QPushButton[cssClass="btn-info"] {
+    qproperty-icon: url("://ic-information");
+    qproperty-iconSize: 24px 24px;
+    background-color:transparent;
+}
+
+QPushButton[cssClass="btn-info"]:hover {
+    qproperty-icon: url("://ic-information-hover");
     qproperty-iconSize: 24px 24px;
     background-color:transparent;
 }
@@ -2437,6 +2454,12 @@ HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH*/
 *[cssClass="container-dialog"] {
     background-color:#FFFFFF;
     border-radius: 2px;
+}
+
+*[cssClass="container-popup"] {
+    background-color:#0f0b16;
+    border-radius:14px;
+    border:1px solid #b088ff;
 }
 
 *[cssClass="text-title2-dialog"] {

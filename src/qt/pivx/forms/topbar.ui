@@ -312,23 +312,23 @@
           <number>10</number>
          </property>
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_3">
-           <property name="bottomMargin">
-            <number>9</number>
+          <layout class="QVBoxLayout" name="verticalLayout_7">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>30</number>
            </property>
            <item>
-            <layout class="QVBoxLayout" name="verticalLayout_7">
-             <property name="spacing">
-              <number>0</number>
-             </property>
-             <property name="leftMargin">
-              <number>0</number>
-             </property>
-             <property name="rightMargin">
-              <number>30</number>
-             </property>
+            <layout class="QVBoxLayout" name="verticalLayout_2">
              <item>
-              <layout class="QVBoxLayout" name="verticalLayout_2">
+              <layout class="QHBoxLayout" name="horizontalLayoutContainerAvailable">
+               <property name="spacing">
+                <number>5</number>
+               </property>
                <item>
                 <widget class="QLabel" name="labelTitle1">
                  <property name="text">
@@ -337,55 +337,105 @@
                 </widget>
                </item>
                <item>
-                <widget class="QLabel" name="labelAmountPiv">
+                <widget class="QPushButton" name="pushButtonBalanceInfo">
+                 <property name="minimumSize">
+                  <size>
+                   <width>26</width>
+                   <height>26</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>26</width>
+                   <height>26</height>
+                  </size>
+                 </property>
+                 <property name="mouseTracking">
+                  <bool>true</bool>
+                 </property>
+                 <property name="focusPolicy">
+                  <enum>Qt::NoFocus</enum>
+                 </property>
                  <property name="text">
-                  <string notr="true">480.0685 PIV</string>
+                  <string notr="true"/>
+                 </property>
+                 <property name="iconSize">
+                  <size>
+                   <width>24</width>
+                   <height>24</height>
+                  </size>
+                 </property>
+                 <property name="shortcut">
+                  <string notr="true"/>
                  </property>
                 </widget>
                </item>
-              </layout>
-             </item>
-             <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_2">
-               <property name="spacing">
-                <number>0</number>
-               </property>
                <item>
-                <layout class="QVBoxLayout" name="verticalLayout_33">
-                 <item>
-                  <widget class="QLabel" name="labelTitle5">
-                   <property name="text">
-                    <string>Shielded</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLabel" name="labelShieldedPiv">
-                   <property name="text">
-                    <string notr="true">130.43 PIV</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item>
-                <spacer name="horizontalSpacer_33">
+                <spacer name="horizontalSpacer_4">
                  <property name="orientation">
                   <enum>Qt::Horizontal</enum>
                  </property>
                  <property name="sizeType">
-                  <enum>QSizePolicy::Fixed</enum>
+                  <enum>QSizePolicy::MinimumExpanding</enum>
                  </property>
                  <property name="sizeHint" stdset="0">
                   <size>
-                   <width>40</width>
+                   <width>20</width>
                    <height>20</height>
                   </size>
                  </property>
                 </spacer>
                </item>
-               <item>
+              </layout>
+             </item>
+             <item>
+              <widget class="QLabel" name="labelAmountPiv">
+               <property name="text">
+                <string notr="true">480.0685 PIV</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <widget class="QWidget" name="container_imm_pend" native="true">
+             <layout class="QHBoxLayout" name="horizontalLayout_2">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item alignment="Qt::AlignLeft">
+               <widget class="QWidget" name="container_pending" native="true">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <layout class="QVBoxLayout" name="verticalLayout_3">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
                  <item>
                   <widget class="QLabel" name="labelTitle3">
                    <property name="text">
@@ -401,25 +451,45 @@
                   </widget>
                  </item>
                 </layout>
-               </item>
-               <item>
-                <spacer name="horizontalSpacer_3">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
-                 </property>
-                 <property name="sizeType">
-                  <enum>QSizePolicy::Fixed</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>40</width>
-                   <height>20</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-               <item>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_3">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeType">
+                 <enum>QSizePolicy::Fixed</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item alignment="Qt::AlignLeft">
+               <widget class="QWidget" name="container_immature" native="true">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <layout class="QVBoxLayout" name="verticalLayout_4">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
                  <item>
                   <widget class="QLabel" name="labelTitle4">
                    <property name="text">
@@ -435,10 +505,23 @@
                   </widget>
                  </item>
                 </layout>
-               </item>
-              </layout>
-             </item>
-            </layout>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_5">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
            </item>
           </layout>
          </item>
