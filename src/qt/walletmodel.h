@@ -159,8 +159,8 @@ public:
 
     interfaces::WalletBalances GetWalletBalances() { return m_cached_balances; };
 
-    CAmount getBalance(const CCoinControl* coinControl = nullptr, bool fIncludeDelegated = true, bool fUnlockedOnly = false) const;
-    CAmount getUnlockedBalance(const CCoinControl* coinControl = nullptr, bool fIncludeDelegated = true) const;
+    CAmount getBalance(const CCoinControl* coinControl = nullptr, bool fIncludeDelegated = true, bool fUnlockedOnly = false, bool fIncludeShielded = true) const;
+    CAmount getUnlockedBalance(const CCoinControl* coinControl = nullptr, bool fIncludeDelegated = true, bool fIncludeShielded = true) const;
     CAmount getLockedBalance() const;
     bool haveWatchOnly() const;
     CAmount getDelegatedBalance() const;
@@ -216,7 +216,7 @@ public:
     SendCoinsReturn sendCoins(WalletModelTransaction& transaction);
 
     // Prepare shielded transaction.
-    WalletModel::OperationResult PrepareShieldedTransaction(WalletModelTransaction& modelTransaction);
+    WalletModel::OperationResult PrepareShieldedTransaction(WalletModelTransaction& modelTransaction, bool fromTransparent);
 
     // Wallet encryption
     bool setWalletEncrypted(bool encrypted, const SecureString& passphrase);

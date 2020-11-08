@@ -42,8 +42,13 @@ SendWidget::SendWidget(PIVXGUI* parent) :
     setCssProperty(ui->labelTitle, "text-title-screen");
     ui->labelTitle->setFont(fontLight);
 
+    /* Button Group */
+    setCssProperty(ui->pushLeft, "btn-check-left");
+    ui->pushLeft->setChecked(true);
+    setCssProperty(ui->pushRight, "btn-check-right");
+
     /* Subtitle */
-    setCssProperty(ui->labelSubtitle1, "text-subtitle");
+    setCssProperty({ui->labelSubtitle1, ui->labelSubtitle2}, "text-subtitle");
 
     /* Address - Amount*/
     setCssProperty({ui->labelSubtitleAddress, ui->labelSubtitleAmount}, "text-title");
@@ -108,6 +113,8 @@ SendWidget::SendWidget(PIVXGUI* parent) :
     setCustomFeeSelected(false);
 
     // Connect
+    connect(ui->pushLeft, &QPushButton::clicked, [this](){onPIVSelected(true);});
+    connect(ui->pushRight,  &QPushButton::clicked, [this](){onPIVSelected(false);});
     connect(ui->pushButtonSave, &QPushButton::clicked, this, &SendWidget::onSendClicked);
     connect(ui->pushButtonAddRecipient, &QPushButton::clicked, this, &SendWidget::onAddEntryClicked);
     connect(ui->pushButtonClear, &QPushButton::clicked, [this](){clearAll(true);});
@@ -127,25 +134,29 @@ void SendWidget::refreshAmounts()
     }
 
     nDisplayUnit = walletModel->getOptionsModel()->getDisplayUnit();
-
     ui->labelAmountSend->setText(GUIUtil::formatBalance(total, nDisplayUnit, false));
 
+    QString type = "transparent";
     CAmount totalAmount = 0;
     if (coinControlDialog->coinControl->HasSelected()) {
         // Set remaining balance to the sum of the coinControl selected inputs
         totalAmount = walletModel->getBalance(coinControlDialog->coinControl) - total;
         ui->labelTitleTotalRemaining->setText(tr("Total remaining from the selected UTXO"));
     } else {
-        // Wallet's unlocked balance
-        totalAmount = walletModel->getUnlockedBalance(nullptr, fDelegationsChecked) - total;
+        // Wallet's unlocked balance.
+        if (isTransparent) {
+            totalAmount = walletModel->getUnlockedBalance(nullptr, fDelegationsChecked, false) - total;
+        } else {
+            totalAmount = walletModel->GetWalletBalances().shielded_balance - total;
+            type = "shielded";
+        }
         ui->labelTitleTotalRemaining->setText(tr("Unlocked remaining"));
     }
     ui->labelAmountRemaining->setText(
             GUIUtil::formatBalance(
                     totalAmount,
                     nDisplayUnit,
-                    false
-                    )
+                    false) + " " + type
     );
     // show or hide delegations checkbox if need be
     showHideCheckBoxDelegations();
@@ -302,11 +313,11 @@ void SendWidget::setFocusOnLastEntry()
 void SendWidget::showHideCheckBoxDelegations()
 {
     // Show checkbox only when there is any available owned delegation and
-    // coincontrol is not selected.
+    // coincontrol is not selected, and we are trying to spend transparent PIVs.
     const bool isCControl = coinControlDialog->coinControl->HasSelected();
     const bool hasDel = cachedDelegatedBalance > 0;
 
-    const bool showCheckBox = !isCControl && hasDel;
+    const bool showCheckBox = isTransparent && !isCControl && hasDel;
     ui->checkBoxDelegations->setVisible(showCheckBox);
     if (showCheckBox)
         ui->checkBoxDelegations->setToolTip(
@@ -350,21 +361,20 @@ void SendWidget::onSendClicked()
 
     {
         WalletModelTransaction tx(recipients);
-        if (hasShieldedOutput ? sendShielded(tx) : send(tx)) {
+        if (hasShieldedOutput || !isTransparent ? sendShielded(tx, isTransparent) : send(tx)) {
             updateEntryLabels(recipients);
         }
     }
     setFocusOnLastEntry();
 }
 
-bool SendWidget::sendShielded(WalletModelTransaction& currentTransaction)
+bool SendWidget::sendShielded(WalletModelTransaction& currentTransaction, bool fromTransparent)
 {
-    auto result = walletModel->PrepareShieldedTransaction(currentTransaction);
+    auto result = walletModel->PrepareShieldedTransaction(currentTransaction, fromTransparent);
     if (!result) {
         inform(result.m_error);
         return false;
     }
-
     return sendFinalStep(currentTransaction);
 }
 
@@ -541,6 +551,7 @@ void SendWidget::onChangeCustomFeeClicked()
 
 void SendWidget::onCoinControlClicked()
 {
+    // TODO: Implement unspent notes coin control
     if (walletModel->getBalance() > 0) {
         coinControlDialog->refreshDialog();
         setCoinControlPayAmounts();
@@ -574,6 +585,13 @@ void SendWidget::onCheckBoxChanged()
         fDelegationsChecked = checked;
         refreshAmounts();
     }
+}
+
+void SendWidget::onPIVSelected(bool _isTransparent)
+{
+    isTransparent = _isTransparent;
+    refreshAmounts();
+    updateStyle(coinIcon);
 }
 
 void SendWidget::onContactsClicked(SendMultiRow* entry)

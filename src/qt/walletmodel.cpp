@@ -95,7 +95,7 @@ bool WalletModel::upgradeWallet(std::string& upgradeError)
     return wallet->Upgrade(upgradeError, prev_version);
 }
 
-CAmount WalletModel::getBalance(const CCoinControl* coinControl, bool fIncludeDelegated, bool fUnlockedOnly) const
+CAmount WalletModel::getBalance(const CCoinControl* coinControl, bool fIncludeDelegated, bool fUnlockedOnly, bool fIncludeShielded) const
 {
     if (coinControl) {
         CAmount nBalance = 0;
@@ -110,12 +110,12 @@ CAmount WalletModel::getBalance(const CCoinControl* coinControl, bool fIncludeDe
         return nBalance;
     }
 
-    return wallet->GetAvailableBalance(fIncludeDelegated) - (fUnlockedOnly ? wallet->GetLockedCoins() : CAmount(0));
+    return wallet->GetAvailableBalance(fIncludeDelegated, fIncludeShielded) - (fUnlockedOnly ? wallet->GetLockedCoins() : CAmount(0));
 }
 
-CAmount WalletModel::getUnlockedBalance(const CCoinControl* coinControl, bool fIncludeDelegated) const
+CAmount WalletModel::getUnlockedBalance(const CCoinControl* coinControl, bool fIncludeDelegated, bool fIncludeShielded) const
 {
-    return getBalance(coinControl, fIncludeDelegated, true);
+    return getBalance(coinControl, fIncludeDelegated, true, fIncludeShielded);
 }
 
 CAmount WalletModel::getMinColdStakingAmount() const
@@ -513,7 +513,7 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(WalletModelTransaction& tran
     return SendCoinsReturn(OK);
 }
 
-WalletModel::OperationResult WalletModel::PrepareShieldedTransaction(WalletModelTransaction& modelTransaction)
+WalletModel::OperationResult WalletModel::PrepareShieldedTransaction(WalletModelTransaction& modelTransaction, bool fromTransparent)
 {
     // Basic checks first
 
@@ -544,7 +544,8 @@ WalletModel::OperationResult WalletModel::PrepareShieldedTransaction(WalletModel
     auto operationResult = operation.setShieldedRecipients(shieldedAddrRecipients)
              ->setTransparentRecipients(taddrRecipients)
              ->setTransparentKeyChange(modelTransaction.getPossibleKeyChange())
-             ->setSelectTransparentCoins(true)
+             ->setSelectTransparentCoins(fromTransparent)
+             ->setSelectShieldedCoins(!fromTransparent)
              ->build();
 
     if (!operationResult) {

@@ -59,6 +59,7 @@ protected:
     void showEvent(QShowEvent *event) override;
 
 private Q_SLOTS:
+    void onPIVSelected(bool _isTransparent);
     void onSendClicked();
     void onContactsClicked(SendMultiRow* entry);
     void onMenuClicked(SendMultiRow* entry);
@@ -90,10 +91,11 @@ private:
     // Current focus entry
     SendMultiRow* focusedEntry = nullptr;
 
+    bool isTransparent = true;
     void resizeMenu();
     QString recipientsToString(QList<SendCoinsRecipient> recipients);
     SendMultiRow* createEntry();
-    bool sendShielded(WalletModelTransaction& tx);
+    bool sendShielded(WalletModelTransaction& tx, bool fromTransparent);
     bool send(WalletModelTransaction& tx);
     bool sendFinalStep(WalletModelTransaction& currentTransaction);
     void setFocusOnLastEntry();
