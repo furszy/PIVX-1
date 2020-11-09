@@ -1912,10 +1912,12 @@ CAmount CWallet::GetAvailableBalance(bool fIncludeDelegated, bool fIncludeShield
     isminefilter filter;
     if (fIncludeDelegated && fIncludeShielded) {
         filter = ISMINE_SPENDABLE_ALL;
-    } else if (fIncludeDelegated){
+    } else if (fIncludeDelegated) {
         filter = ISMINE_SPENDABLE_TRANSPARENT;
-    } else {
+    } else if (fIncludeShielded) {
         filter = ISMINE_SPENDABLE_NO_DELEGATED;
+    } else {
+        filter = ISMINE_SPENDABLE;
     }
     return GetAvailableBalance(filter, true, 0);
 }
