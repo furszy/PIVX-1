@@ -118,6 +118,17 @@ void TxDetailDialog::setData(WalletModel *model, const QModelIndex &index)
 
 }
 
+QString formatAdressToShow(const QString& address)
+{
+    QString addressToShow;
+    if (address.size() > 60) {
+        addressToShow = address.left(60) + "\n" + address.mid(60);
+    } else {
+        addressToShow = address;
+    }
+    return addressToShow;
+}
+
 void TxDetailDialog::setData(WalletModel *model, WalletModelTransaction &tx)
 {
     this->model = model;
@@ -132,11 +143,14 @@ void TxDetailDialog::setData(WalletModel *model, WalletModelTransaction &tx)
         if (recipient.isP2CS) {
             ui->labelSend->setText(tr("Delegating to"));
         }
+        if (recipient.isShieldedAddr) {
+            ui->labelSend->setText(tr("Shielding to"));
+        }
         if (recipient.label.isEmpty()) { // If there is no label, then do not show the blank space.
-            ui->textSendLabel->setText(recipient.address);
             ui->textSend->setVisible(false);
+            ui->textSendLabel->setText(formatAdressToShow(recipient.address));
         } else {
-            ui->textSend->setText(recipient.address);
+            ui->textSend->setText(formatAdressToShow(recipient.address));
             ui->textSendLabel->setText(recipient.label);
         }
         ui->pushOutputs->setVisible(false);
