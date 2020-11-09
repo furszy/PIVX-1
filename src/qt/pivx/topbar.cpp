@@ -68,7 +68,7 @@ TopBar::TopBar(PIVXGUI* _mainWindow, QWidget *parent) :
     ui->containerTop->setProperty("cssClass", "container-top");
 #endif
 
-    std::initializer_list<QWidget*> lblTitles = {ui->labelTitle1, ui->labelTitle3, ui->labelTitle4};
+    std::initializer_list<QWidget*> lblTitles = {ui->labelTitle1, ui->labelTitle3, ui->labelTitle4, ui->labelTrans, ui->labelShield};
     setCssProperty(lblTitles, "text-title-topbar");
     QFont font;
     font.setWeight(QFont::Light);
@@ -76,7 +76,7 @@ TopBar::TopBar(PIVXGUI* _mainWindow, QWidget *parent) :
 
     // Amount information top
     ui->widgetTopAmount->setVisible(false);
-    setCssProperty({ui->labelAmountTopPiv}, "amount-small-topbar");
+    setCssProperty({ui->labelAmountTopPiv, ui->labelAmountTopShieldedPiv}, "amount-small-topbar");
     setCssProperty({ui->labelAmountPiv}, "amount-topbar");
     setCssProperty({ui->labelPendingPiv, ui->labelImmaturePiv}, "amount-small-topbar");
 
@@ -675,10 +675,13 @@ void TopBar::updateBalances(const interfaces::WalletBalances& newBalance)
 
     // PIV Total
     QString totalPiv = GUIUtil::formatBalance(newBalance.balance, nDisplayUnit);
+    QString totalTransparent = GUIUtil::formatBalance(newBalance.balance - newBalance.shielded_balance);
+    QString totalShielded = GUIUtil::formatBalance(newBalance.shielded_balance);
 
     // PIV
     // Top
-    ui->labelAmountTopPiv->setText(totalPiv);
+    ui->labelAmountTopPiv->setText(totalTransparent);
+    ui->labelAmountTopShieldedPiv->setText(totalShielded);
     // Expanded
     ui->labelAmountPiv->setText(totalPiv);
     ui->labelPendingPiv->setText(GUIUtil::formatBalance(newBalance.unconfirmed_balance + newBalance.unconfirmed_shielded_balance, nDisplayUnit));

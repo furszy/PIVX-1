@@ -93,7 +93,7 @@
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_5">
             <property name="spacing">
-             <number>0</number>
+             <number>5</number>
             </property>
             <property name="leftMargin">
              <number>0</number>
@@ -120,6 +120,89 @@
               </property>
               <property name="text">
                <string notr="true">480.0685 PIV</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="labelTrans">
+              <property name="text">
+               <string>transparent</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_11">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::Fixed</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>15</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item alignment="Qt::AlignVCenter">
+             <widget class="QLabel" name="typeSpacerTop">
+              <property name="minimumSize">
+               <size>
+                <width>1</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>1</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">background-color:white;
+padding:0px;
+border:none;</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_12">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::Fixed</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>15</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item alignment="Qt::AlignTop">
+             <widget class="QLabel" name="labelAmountTopShieldedPiv">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>36</height>
+               </size>
+              </property>
+              <property name="text">
+               <string notr="true">1.000 PIV</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="labelShield">
+              <property name="text">
+               <string>shielded</string>
               </property>
              </widget>
             </item>
