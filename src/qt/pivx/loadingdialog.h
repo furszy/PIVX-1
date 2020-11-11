@@ -64,7 +64,7 @@ class LoadingDialog : public QDialog
     Q_OBJECT
 
 public:
-    explicit LoadingDialog(QWidget *parent = nullptr);
+    explicit LoadingDialog(QWidget *parent = nullptr, QString loadingMsg = "");
     ~LoadingDialog();
 
     void execute(Runnable *runnable, int type, std::unique_ptr<WalletModel::UnlockContext> pctx = nullptr);
