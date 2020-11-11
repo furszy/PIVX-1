@@ -364,17 +364,37 @@ void SendWidget::onSendClicked()
     }
 
     // If tx exists then there is an on-going process being executed, return.
-    if (ptrModelTx) {
+    if (isProcessing || ptrModelTx) {
         inform(tr("On going process being executed, please wait until it's finished to create a new transaction"));
         return;
     }
-    ptrModelTx = std::make_shared<WalletModelTransaction>(WalletModelTransaction(recipients));
+    ptrModelTx = new WalletModelTransaction(recipients);
     ptrModelTx->useV2 = hasShieldedOutput || !isTransparent;
 
+    // First prepare tx
     window->showHide(true);
     LoadingDialog *dialog = new LoadingDialog(window, tr("Preparing transaction"));
     dialog->execute(this, REQUEST_PREPARE_TX, std::move(ptrUnlockedContext));
     openDialogWithOpaqueBackgroundFullScreen(dialog, window);
+
+    // If all went well, ask if want to broadcast it
+    if (processingResult) {
+        if (sendFinalStep()) {
+            updateEntryLabels(ptrModelTx->getRecipients());
+        }
+        setFocusOnLastEntry();
+    } else if (!processingResultError->isEmpty()){
+        inform(*processingResultError);
+    }
+
+    // Process finished, can reset the tx model now. todo: this can get wrapped on a cached struct.
+    delete ptrModelTx;
+    ptrModelTx = nullptr;
+    if (processingResultError) {
+        processingResultError->clear();
+        processingResultError = nullopt;
+    }
+    processingResult = false;
 }
 
 OperationResult SendWidget::prepareShielded(WalletModelTransaction* currentTransaction, bool fromTransparent)
@@ -388,6 +408,7 @@ OperationResult SendWidget::prepareShielded(WalletModelTransaction* currentTrans
 
 OperationResult SendWidget::prepareTransparent(WalletModelTransaction* currentTransaction)
 {
+    if (!walletModel) return errorOut("Error, no wallet model loaded");
     // prepare transaction for getting txFee earlier
     WalletModel::SendCoinsReturn prepareStatus;
     prepareStatus = walletModel->prepareTransaction(currentTransaction, coinControlDialog->coinControl, fDelegationsChecked);
@@ -414,17 +435,17 @@ OperationResult SendWidget::prepareTransparent(WalletModelTransaction* currentTr
     return OperationResult(true);
 }
 
-bool SendWidget::sendFinalStep(WalletModelTransaction& currentTransaction)
+bool SendWidget::sendFinalStep()
 {
     showHideOp(true);
-    const bool fStakeDelegationVoided = currentTransaction.getTransaction()->fStakeDelegationVoided;
+    const bool fStakeDelegationVoided = ptrModelTx->getTransaction()->fStakeDelegationVoided;
     QString warningStr = QString();
     if (fStakeDelegationVoided)
         warningStr = tr("WARNING:\nTransaction spends a cold-stake delegation, voiding it.\n"
                         "These coins will no longer be cold-staked.");
     TxDetailDialog* dialog = new TxDetailDialog(window, true, warningStr);
     dialog->setDisplayUnit(walletModel->getOptionsModel()->getDisplayUnit());
-    dialog->setData(walletModel, currentTransaction);
+    dialog->setData(walletModel, ptrModelTx);
     dialog->adjustSize();
     openDialogWithOpaqueBackgroundY(dialog, window, 3, 5);
 
@@ -453,48 +474,31 @@ bool SendWidget::sendFinalStep(WalletModelTransaction& currentTransaction)
     return true;
 }
 
-void SendWidget::resetSendProcess(QString informError)
-{
-    ptrModelTx.reset();
-    isProcessing = false;
-
-    if (!informError.isEmpty()) {
-        inform(informError);
-    }
-}
-
-void SendWidget::txBroadcasted()
-{
-    // broadcast the tx now and update labels.
-    if (sendFinalStep(*ptrModelTx)) {
-        updateEntryLabels(ptrModelTx->getRecipients());
-    }
-    setFocusOnLastEntry();
-    resetSendProcess(QString());
-}
-
 void SendWidget::run(int type)
 {
+    assert(!processingResult);
     if (type == REQUEST_PREPARE_TX) {
         if (!isProcessing) {
             isProcessing = true;
             OperationResult result(false);
             if ((result = ptrModelTx->useV2 ?
-                        prepareShielded(ptrModelTx.get(), isTransparent) :
-                        prepareTransparent(ptrModelTx.get())
+                        prepareShielded(ptrModelTx, isTransparent) :
+                        prepareTransparent(ptrModelTx)
                         )) {
-                QMetaObject::invokeMethod(this, "txBroadcasted", Qt::QueuedConnection);
+                processingResult = true;
             } else {
-                // error, reset state
-                QMetaObject::invokeMethod(this, "resetSendProcess", Qt::QueuedConnection, Q_ARG(QString, QString::fromStdString(result.getError())));
+                processingResult = false;
+                processingResultError = QString::fromStdString(result.getError());
             }
+            isProcessing = false;
         }
     }
 }
 
 void SendWidget::onError(QString error, int type)
 {
-    QMetaObject::invokeMethod(this, "resetSendProcess", Qt::QueuedConnection, Q_ARG(QString, error));
+    isProcessing = false;
+    processingResultError = error;
 }
 
 QString SendWidget::recipientsToString(QList<SendCoinsRecipient> recipients)

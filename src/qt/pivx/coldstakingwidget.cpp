@@ -496,7 +496,7 @@ void ColdStakingWidget::onSendClicked()
     showHideOp(true);
     TxDetailDialog* dialog = new TxDetailDialog(window);
     dialog->setDisplayUnit(nDisplayUnit);
-    dialog->setData(walletModel, currentTransaction);
+    dialog->setData(walletModel, &currentTransaction);
     dialog->adjustSize();
     openDialogWithOpaqueBackgroundY(dialog, window, 3, 5);
 

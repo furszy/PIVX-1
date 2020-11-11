@@ -404,16 +404,13 @@ WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransact
     {
         LOCK2(cs_main, wallet->cs_wallet);
 
-        transaction->newPossibleKeyChange(wallet);
+        CReserveKey* keyChange = transaction->newPossibleKeyChange(wallet);
         CAmount nFeeRequired = 0;
         int nChangePosInOut = -1;
         std::string strFailReason;
 
-        CWalletTx* newTx = transaction->getTransaction();
-        CReserveKey* keyChange = transaction->getPossibleKeyChange();
-
         bool fCreated = wallet->CreateTransaction(vecSend,
-                                                  *newTx,
+                                                  transaction->getTransaction(),
                                                   *keyChange,
                                                   nFeeRequired,
                                                   nChangePosInOut,

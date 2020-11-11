@@ -77,8 +77,6 @@ private Q_SLOTS:
     void onDeleteClicked();
     void onResetCustomOptions(bool fRefreshAmounts);
     void onResetSettings();
-    void txBroadcasted();
-    void resetSendProcess(QString informError);
 
 private:
     Ui::send *ui;
@@ -95,8 +93,10 @@ private:
     CoinControlDialog *coinControlDialog = nullptr;
 
     // Cached tx
-    std::shared_ptr<WalletModelTransaction> ptrModelTx;
+    WalletModelTransaction* ptrModelTx{nullptr};
     std::atomic<bool> isProcessing{false};
+    Optional<QString> processingResultError{nullopt};
+    std::atomic<bool> processingResult{false};
 
     ContactsDropdown *menuContacts = nullptr;
     TooltipMenu *menu = nullptr;
@@ -109,7 +109,7 @@ private:
     SendMultiRow* createEntry();
     OperationResult prepareShielded(WalletModelTransaction* tx, bool fromTransparent);
     OperationResult prepareTransparent(WalletModelTransaction* tx);
-    bool sendFinalStep(WalletModelTransaction& currentTransaction);
+    bool sendFinalStep();
     void setFocusOnLastEntry();
     void showHideCheckBoxDelegations();
     void updateEntryLabels(QList<SendCoinsRecipient> recipients);

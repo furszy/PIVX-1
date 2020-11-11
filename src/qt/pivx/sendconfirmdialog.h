@@ -31,7 +31,7 @@ public:
     bool isConfirm() { return this->confirm;}
     WalletModel::SendCoinsReturn getStatus() { return this->sendStatus;}
 
-    void setData(WalletModel *model, WalletModelTransaction& tx);
+    void setData(WalletModel *model, WalletModelTransaction* tx);
     void setData(WalletModel *model, const QModelIndex &index);
     void setDisplayUnit(int unit){this->nDisplayUnit = unit;};
 
@@ -49,7 +49,7 @@ private:
     bool confirm = false;
     WalletModel *model = nullptr;
     WalletModel::SendCoinsReturn sendStatus;
-    WalletModelTransaction *tx = nullptr;
+    WalletModelTransaction* tx;
     uint256 txHash;
 
     bool inputsLoaded = false;

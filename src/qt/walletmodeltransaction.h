@@ -32,7 +32,7 @@ public:
 
     CAmount getTotalTransactionAmount();
 
-    void newPossibleKeyChange(CWallet* wallet);
+    CReserveKey* newPossibleKeyChange(CWallet* wallet);
     CReserveKey* getPossibleKeyChange();
 
     void setTransaction(CWalletTx* tx);

@@ -129,17 +129,17 @@ QString formatAdressToShow(const QString& address)
     return addressToShow;
 }
 
-void TxDetailDialog::setData(WalletModel *model, WalletModelTransaction &tx)
+void TxDetailDialog::setData(WalletModel *model, WalletModelTransaction* _tx)
 {
     this->model = model;
-    this->tx = &tx;
-    CAmount txFee = tx.getTransactionFee();
-    CAmount totalAmount = tx.getTotalTransactionAmount() + txFee;
+    this->tx = _tx;
+    CAmount txFee = tx->getTransactionFee();
+    CAmount totalAmount = tx->getTotalTransactionAmount() + txFee;
 
     ui->textAmount->setText(BitcoinUnits::formatWithUnit(nDisplayUnit, totalAmount, false, BitcoinUnits::separatorAlways) + " (Fee included)");
-    int nRecipients = tx.getRecipients().size();
+    int nRecipients = tx->getRecipients().size();
     if (nRecipients == 1) {
-        const SendCoinsRecipient& recipient = tx.getRecipients().at(0);
+        const SendCoinsRecipient& recipient = tx->getRecipients().at(0);
         if (recipient.isP2CS) {
             ui->labelSend->setText(tr("Delegating to"));
         }
@@ -158,7 +158,7 @@ void TxDetailDialog::setData(WalletModel *model, WalletModelTransaction &tx)
         ui->textSendLabel->setText(QString::number(nRecipients) + " recipients");
         ui->textSend->setVisible(false);
     }
-    ui->textInputs->setText(QString::number(tx.getTransaction()->vin.size()));
+    ui->textInputs->setText(QString::number(tx->getTransaction()->vin.size()));
     ui->textFee->setText(BitcoinUnits::formatWithUnit(nDisplayUnit, txFee, false, BitcoinUnits::separatorAlways));
 }
 
