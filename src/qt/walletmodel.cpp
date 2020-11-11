@@ -318,10 +318,10 @@ bool WalletModel::updateAddressBookLabels(const CWDestination& dest, const std::
     return false;
 }
 
-WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransaction& transaction, const CCoinControl* coinControl, bool fIncludeDelegations)
+WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransaction* transaction, const CCoinControl* coinControl, bool fIncludeDelegations)
 {
     CAmount total = 0;
-    QList<SendCoinsRecipient> recipients = transaction.getRecipients();
+    QList<SendCoinsRecipient> recipients = transaction->getRecipients();
     std::vector<CRecipient> vecSend;
 
     if (recipients.empty()) {
@@ -404,13 +404,13 @@ WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransact
     {
         LOCK2(cs_main, wallet->cs_wallet);
 
-        transaction.newPossibleKeyChange(wallet);
+        transaction->newPossibleKeyChange(wallet);
         CAmount nFeeRequired = 0;
         int nChangePosInOut = -1;
         std::string strFailReason;
 
-        CWalletTx* newTx = transaction.getTransaction();
-        CReserveKey* keyChange = transaction.getPossibleKeyChange();
+        CWalletTx* newTx = transaction->getTransaction();
+        CReserveKey* keyChange = transaction->getPossibleKeyChange();
 
         bool fCreated = wallet->CreateTransaction(vecSend,
                                                   *newTx,
@@ -423,7 +423,7 @@ WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransact
                                                   true,
                                                   0,
                                                   fIncludeDelegations);
-        transaction.setTransactionFee(nFeeRequired);
+        transaction->setTransactionFee(nFeeRequired);
 
         if (!fCreated) {
             if ((total + nFeeRequired) > nSpendableBalance) {
@@ -439,7 +439,7 @@ WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransact
         }
 
         // reject insane fee
-        if (nFeeRequired > ::minRelayTxFee.GetFee(transaction.getTransactionSize()) * 10000)
+        if (nFeeRequired > ::minRelayTxFee.GetFee(transaction->getTransactionSize()) * 10000)
             return InsaneFee;
     }
 
@@ -513,7 +513,7 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(WalletModelTransaction& tran
     return SendCoinsReturn(OK);
 }
 
-WalletModel::OperationResult WalletModel::PrepareShieldedTransaction(WalletModelTransaction& modelTransaction, bool fromTransparent)
+WalletModel::OperationResult WalletModel::PrepareShieldedTransaction(WalletModelTransaction* modelTransaction, bool fromTransparent)
 {
     // Basic checks first
 
@@ -526,7 +526,7 @@ WalletModel::OperationResult WalletModel::PrepareShieldedTransaction(WalletModel
     // Load shieldedAddrRecipients. This can be cleaned in the future..
     std::vector<SendManyRecipient> taddrRecipients;
     std::vector<SendManyRecipient> shieldedAddrRecipients;
-    for (const auto& recipient : modelTransaction.getRecipients()) {
+    for (const auto& recipient : modelTransaction->getRecipients()) {
         if (recipient.isShieldedAddr) {
             shieldedAddrRecipients.emplace_back(recipient.address.toStdString(), recipient.amount, "");
         } else {
@@ -543,7 +543,7 @@ WalletModel::OperationResult WalletModel::PrepareShieldedTransaction(WalletModel
     SaplingOperation operation(txBuilder);
     auto operationResult = operation.setShieldedRecipients(shieldedAddrRecipients)
              ->setTransparentRecipients(taddrRecipients)
-             ->setTransparentKeyChange(modelTransaction.getPossibleKeyChange())
+             ->setTransparentKeyChange(modelTransaction->getPossibleKeyChange())
              ->setSelectTransparentCoins(fromTransparent)
              ->setSelectShieldedCoins(!fromTransparent)
              ->build();
@@ -553,7 +553,7 @@ WalletModel::OperationResult WalletModel::PrepareShieldedTransaction(WalletModel
     }
 
     // load the transaction and key change (if needed)
-    modelTransaction.setTransaction(new CWalletTx(wallet, operation.getFinalTx()));
+    modelTransaction->setTransaction(new CWalletTx(wallet, operation.getFinalTx()));
     return OperationResult(true);
 }
 

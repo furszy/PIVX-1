@@ -37,6 +37,9 @@ public:
 
     void setTransaction(CWalletTx* tx);
 
+    // Whether should create a +v2 tx or go simple and create a v1.
+    bool useV2{false};
+
 private:
     const QList<SendCoinsRecipient> recipients;
     CWalletTx* walletTransaction{nullptr};

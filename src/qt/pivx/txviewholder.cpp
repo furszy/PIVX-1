@@ -54,7 +54,7 @@ void TxViewHolder::init(QWidget* holder, const QModelIndex &index, bool isHovere
     if (type == TransactionRecord::SendToSelfShieldedAddress) {
         qint64 amountBottom = rIndex.data(TransactionTableModel::ShieldedCreditAmountRole).toLongLong();
         QString amountBottomText = BitcoinUnits::formatWithUnit(nDisplayUnit, amountBottom, true, BitcoinUnits::separatorAlways);
-        txRow->setAmount(amountBottomText, amountText + " fee");
+        txRow->setAmount(amountBottomText + " shielded", amountText + " fee");
     } else {
         txRow->setAmount(amountText, "");
     }

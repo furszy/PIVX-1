@@ -16,10 +16,13 @@
 #include "coincontroldialog.h"
 #include "qt/pivx/tooltipmenu.h"
 
+#include <atomic>
+
 static const int MAX_SEND_POPUP_ENTRIES = 8;
 
 class PIVXGUI;
 class ClientModel;
+class OperationResult;
 class WalletModel;
 class WalletModelTransaction;
 
@@ -58,6 +61,9 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
     void showEvent(QShowEvent *event) override;
 
+    void run(int type) override;
+    void onError(QString error, int type) override;
+
 private Q_SLOTS:
     void onPIVSelected(bool _isTransparent);
     void onSendClicked();
@@ -71,6 +77,8 @@ private Q_SLOTS:
     void onDeleteClicked();
     void onResetCustomOptions(bool fRefreshAmounts);
     void onResetSettings();
+    void txBroadcasted();
+    void resetSendProcess(QString informError);
 
 private:
     Ui::send *ui;
@@ -86,6 +94,10 @@ private:
     QList<SendMultiRow*> entries;
     CoinControlDialog *coinControlDialog = nullptr;
 
+    // Cached tx
+    std::shared_ptr<WalletModelTransaction> ptrModelTx;
+    std::atomic<bool> isProcessing{false};
+
     ContactsDropdown *menuContacts = nullptr;
     TooltipMenu *menu = nullptr;
     // Current focus entry
@@ -95,8 +107,8 @@ private:
     void resizeMenu();
     QString recipientsToString(QList<SendCoinsRecipient> recipients);
     SendMultiRow* createEntry();
-    bool sendShielded(WalletModelTransaction& tx, bool fromTransparent);
-    bool send(WalletModelTransaction& tx);
+    OperationResult prepareShielded(WalletModelTransaction* tx, bool fromTransparent);
+    OperationResult prepareTransparent(WalletModelTransaction* tx);
     bool sendFinalStep(WalletModelTransaction& currentTransaction);
     void setFocusOnLastEntry();
     void showHideCheckBoxDelegations();

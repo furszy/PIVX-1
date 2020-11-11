@@ -477,7 +477,7 @@ void ColdStakingWidget::onSendClicked()
 
     // Prepare transaction for getting txFee earlier (exlude delegated coins)
     WalletModelTransaction currentTransaction(recipients);
-    WalletModel::SendCoinsReturn prepareStatus = walletModel->prepareTransaction(currentTransaction, coinControlDialog->coinControl, false);
+    WalletModel::SendCoinsReturn prepareStatus = walletModel->prepareTransaction(&currentTransaction, coinControlDialog->coinControl, false);
 
     // process prepareStatus and on error generate message shown to user
     GuiTransactionsUtils::ProcessSendCoinsReturnAndInform(
