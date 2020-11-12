@@ -1072,6 +1072,8 @@ public:
     void Serialize(S &s) const {
         // Serialize nVersion
         ::Serialize(s, txTo.nVersion);
+        // Serialize nType
+        ::Serialize(s, txTo.nType);
         // Serialize vin
         unsigned int nInputs = fAnyoneCanPay ? 1 : txTo.vin.size();
         ::WriteCompactSize(s, nInputs);
@@ -1215,6 +1217,8 @@ uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsig
         CBLAKE2bWriter ss(SER_GETHASH, 0, personalization);
         // Version
         ss << txTo.nVersion;
+        // Type
+        ss << txTo.nType;
         // Input prevouts/nSequence (none/all, depending on flags)
         ss << hashPrevouts;
         ss << hashSequence;
@@ -1238,6 +1242,11 @@ uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsig
             ss << static_cast<const CScriptBase&>(scriptCode);
             ss << amount;
             ss << txTo.vin[nIn].nSequence;
+        }
+
+        // Extra payload for special transactions
+        if (txTo.IsSpecialTx()) {
+            ss << *(txTo.extraPayload);
         }
 
         // Locktime
