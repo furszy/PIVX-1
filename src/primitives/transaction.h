@@ -224,20 +224,27 @@ private:
     void UpdateHash() const;
 
 public:
-    enum TxVersion {
+    /** Transaction Versions */
+    enum TxVersion: int16_t {
         LEGACY      = 1,
         SAPLING     = 2,
         TOOHIGH
     };
 
-    static const int32_t CURRENT_VERSION = static_cast<int32_t>(TxVersion::LEGACY);
+    /** Transaction types */
+    enum TxType: int16_t {
+        NORMAL = 0,
+    };
+
+    static const int16_t CURRENT_VERSION = TxVersion::LEGACY;
 
     // The local variables are made const to prevent unintended modification
     // without updating the cached hash value. However, CTransaction is not
     // actually immutable; deserialization and assignment are implemented,
     // and bypass the constness. This is safe, as they update the entire
     // structure, including the hash.
-    const int32_t nVersion;
+    const int16_t nVersion;
+    const int16_t nType;
     std::vector<CTxIn> vin;
     std::vector<CTxOut> vout;
     const uint32_t nLockTime;
@@ -256,7 +263,8 @@ public:
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(*const_cast<int32_t*>(&nVersion));
+        READWRITE(*const_cast<int16_t*>(&nVersion));
+        READWRITE(*const_cast<int16_t*>(&nType));
         READWRITE(*const_cast<std::vector<CTxIn>*>(&vin));
         READWRITE(*const_cast<std::vector<CTxOut>*>(&vout));
         READWRITE(*const_cast<uint32_t*>(&nLockTime));
@@ -361,7 +369,8 @@ public:
 /** A mutable version of CTransaction. */
 struct CMutableTransaction
 {
-    int32_t nVersion;
+    int16_t nVersion;
+    int16_t nType;
     std::vector<CTxIn> vin;
     std::vector<CTxOut> vout;
     uint32_t nLockTime;
@@ -375,6 +384,7 @@ struct CMutableTransaction
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(nVersion);
+        READWRITE(nType);
         READWRITE(vin);
         READWRITE(vout);
         READWRITE(nLockTime);
