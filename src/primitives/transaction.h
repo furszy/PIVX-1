@@ -403,8 +403,6 @@ struct CMutableTransaction
      * fly, as opposed to GetHash() in CTransaction, which uses a cached result.
      */
     uint256 GetHash() const;
-
-    std::string ToString() const;
 };
 
 typedef std::shared_ptr<const CTransaction> CTransactionRef;

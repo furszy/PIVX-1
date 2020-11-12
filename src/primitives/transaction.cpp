@@ -125,21 +125,6 @@ uint256 CMutableTransaction::GetHash() const
     return SerializeHash(*this);
 }
 
-std::string CMutableTransaction::ToString() const
-{
-    std::string str;
-    str += strprintf("CMutableTransaction(ver=%d, vin.size=%u, vout.size=%u, nLockTime=%u)\n",
-        nVersion,
-        vin.size(),
-        vout.size(),
-        nLockTime);
-    for (unsigned int i = 0; i < vin.size(); i++)
-        str += "    " + vin[i].ToString() + "\n";
-    for (unsigned int i = 0; i < vout.size(); i++)
-        str += "    " + vout[i].ToString() + "\n";
-    return str;
-}
-
 void CTransaction::UpdateHash() const
 {
     *const_cast<uint256*>(&hash) = SerializeHash(*this);
@@ -334,30 +319,22 @@ unsigned int CTransaction::GetTotalSize() const
 
 std::string CTransaction::ToString() const
 {
-    std::string str;
+    std::ostringstream ss;
+    ss << "CTransaction(hash=" << GetHash().ToString().substr(0, 10)
+       << ", ver=" << nVersion
+       << ", type=" << nType
+       << ", vin.size=" << vin.size()
+       << ", vout.size=" << vout.size()
+       << ", nLockTime=" << nLockTime;
     if (IsShieldedTx()) {
-        str += strprintf("CTransaction(hash=%s, ver=%d, type=%d, vin.size=%u, vout.size=%u, nLockTime=%u, valueBalance=%u, vShieldedSpend.size=%u, vShieldedOutput.size=%u)\n",
-                         GetHash().ToString().substr(0,10),
-                         nVersion,
-                         nType,
-                         vin.size(),
-                         vout.size(),
-                         nLockTime,
-                         sapData->valueBalance,
-                         sapData->vShieldedSpend.size(),
-                         sapData->vShieldedOutput.size());
-    } else {
-            str += strprintf("CTransaction(hash=%s, ver=%d, type=%d, vin.size=%u, vout.size=%u, nLockTime=%u)\n",
-                             GetHash().ToString().substr(0, 10),
-                             nVersion,
-                             nType,
-                             vin.size(),
-                             vout.size(),
-                             nLockTime);
+        ss << ", valueBalance=" << sapData->valueBalance
+           << ", vShieldedSpend.size=" << sapData->vShieldedSpend.size()
+           << ", vShieldedOutput.size=" << sapData->vShieldedOutput.size();
     }
+    ss << ")\n";
     for (unsigned int i = 0; i < vin.size(); i++)
-        str += "    " + vin[i].ToString() + "\n";
+        ss << "    " << vin[i].ToString() << "\n";
     for (unsigned int i = 0; i < vout.size(); i++)
-        str += "    " + vout[i].ToString() + "\n";
-    return str;
+        ss << "    " << vout[i].ToString() << "\n";
+    return ss.str();
 }
