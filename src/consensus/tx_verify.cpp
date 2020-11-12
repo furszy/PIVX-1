@@ -8,6 +8,7 @@
 #include "consensus/zerocoin_verify.h"
 #include "sapling/sapling_validation.h"
 #include "script/interpreter.h"
+#include "tiertwo/specialtx_validation.h"
 #include "../validation.h"
 
 bool IsFinalTx(const CTransaction& tx, int nBlockHeight, int64_t nBlockTime)
@@ -85,6 +86,11 @@ bool CheckTransaction(const CTransaction& tx, bool fZerocoinActive, bool fReject
     // Dispatch to Sapling validator
     CAmount nValueOut = 0;
     if (!SaplingValidation::CheckTransaction(tx, state, nValueOut, fSaplingActive)) {
+        return false;
+    }
+
+    // Dispatch to SpecialTx validator
+    if (!CheckSpecialTx(tx, state, fSaplingActive)) {
         return false;
     }
 

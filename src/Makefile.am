@@ -238,6 +238,7 @@ BITCOIN_CORE_H = \
   rpc/protocol.h \
   rpc/register.h \
   rpc/server.h \
+  tiertwo/specialtx_validation.h \
   scheduler.h \
   script/interpreter.h \
   script/keyorigin.h \
@@ -339,6 +340,7 @@ libbitcoin_server_a_SOURCES = \
   rpc/net.cpp \
   rpc/rawtransaction.cpp \
   rpc/server.cpp \
+  tiertwo/specialtx_validation.cpp \
   script/sigcache.cpp \
   script/ismine.cpp \
   sporkdb.cpp \

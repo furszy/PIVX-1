@@ -214,6 +214,7 @@ set(SERVER_SOURCES
         ./src/rpc/net.cpp
         ./src/rpc/rawtransaction.cpp
         ./src/rpc/server.cpp
+        ./src/tiertwo/specialtx_validation.cpp
         ./src/script/sigcache.cpp
         ./src/script/ismine.cpp
         ./src/sporkdb.cpp
