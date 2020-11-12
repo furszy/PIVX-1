@@ -155,6 +155,14 @@ void ScriptPubKeyToUniv(const CScript& scriptPubKey,
     out.pushKV("addresses", a);
 }
 
+static void SpecialTxToJSON(const CTransaction& tx, UniValue& entry)
+{
+    if (tx.IsSpecialTx()) {
+        entry.pushKV("extraPayloadSize", (int)tx.extraPayload->size());
+        entry.pushKV("extraPayload", HexStr(*(tx.extraPayload)));
+    }
+}
+
 void TxToUniv(const CTransaction& tx, const uint256& hashBlock, UniValue& entry)
 {
     entry.pushKV("txid", tx.GetHash().GetHex());
@@ -200,6 +208,9 @@ void TxToUniv(const CTransaction& tx, const uint256& hashBlock, UniValue& entry)
 
     // Sapling
     TxSaplingToJSON(tx, entry);
+
+    // Special Txes
+    SpecialTxToJSON(tx, entry);
 
     if (!hashBlock.IsNull())
         entry.pushKV("blockhash", hashBlock.GetHex());

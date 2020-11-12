@@ -331,6 +331,9 @@ std::string CTransaction::ToString() const
            << ", vShieldedSpend.size=" << sapData->vShieldedSpend.size()
            << ", vShieldedOutput.size=" << sapData->vShieldedOutput.size();
     }
+    if (IsSpecialTx()) {
+        ss << ", extraPayload.size=" << extraPayload->size();
+    }
     ss << ")\n";
     for (unsigned int i = 0; i < vin.size(); i++)
         ss << "    " << vin[i].ToString() << "\n";

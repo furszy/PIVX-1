@@ -249,6 +249,7 @@ public:
     std::vector<CTxOut> vout;
     const uint32_t nLockTime;
     Optional<SaplingTxData> sapData{SaplingTxData()}; // Future: Don't initialize it by default
+    Optional<std::vector<uint8_t> > extraPayload;     // only available for special transaction types
 
     /** Construct a CTransaction that qualifies as IsNull() */
     CTransaction();
@@ -271,6 +272,8 @@ public:
 
         if (g_IsSaplingActive && isSaplingVersion()) {
             READWRITE(*const_cast<Optional<SaplingTxData>*>(&sapData));
+            if (nType != TxType::NORMAL)
+                READWRITE(*const_cast<Optional<std::vector<uint8_t> >*>(&extraPayload));
         }
 
         if (ser_action.ForRead())
@@ -305,6 +308,16 @@ public:
     bool IsShieldedTx() const
     {
         return isSaplingVersion() && hasSaplingData();
+    }
+
+    bool hasExtraPayload() const
+    {
+        return extraPayload != nullopt && !extraPayload->empty();
+    }
+
+    bool IsSpecialTx() const
+    {
+        return isSaplingVersion() && nType != TxType::NORMAL && hasExtraPayload();
     }
 
     /*
