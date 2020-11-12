@@ -14,6 +14,7 @@
 #include "consensus/tx_verify.h"
 #include "consensus/validation.h"
 #include "crypter.h"
+#include "destination_io.h"
 #include "kernel.h"
 #include "key.h"
 #include "keystore.h"

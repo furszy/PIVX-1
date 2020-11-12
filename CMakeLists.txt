@@ -449,6 +449,7 @@ set(SAPLING_SOURCES
         ./src/bech32.cpp
         ./src/sapling/sapling_util.cpp
         ./src/sapling/key_io_sapling.cpp
+        ./src/destination_io.cpp
         ./src/sapling/sapling_core_write.cpp
         ./src/sapling/prf.cpp
         ./src/sapling/noteencryption.cpp

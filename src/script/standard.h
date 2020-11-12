@@ -71,9 +71,6 @@ public:
  */
 typedef boost::variant<CNoDestination, CKeyID, CScriptID> CTxDestination;
 
-// Regular + shielded addresses variant.
-typedef boost::variant<CTxDestination, libzcash::SaplingPaymentAddress> CWDestination;
-
 /** Check whether a CTxDestination is a CNoDestination. */
 bool IsValidDestination(const CTxDestination& dest);
 
@@ -88,17 +85,5 @@ CScript GetScriptForDestination(const CTxDestination& dest);
 CScript GetScriptForRawPubKey(const CPubKey& pubKey);
 CScript GetScriptForMultisig(int nRequired, const std::vector<CPubKey>& keys);
 CScript GetScriptForStakeDelegation(const CKeyID& stakingKey, const CKeyID& spendingKey);
-
-namespace Standard {
-
-std::string EncodeDestination(const CWDestination &address, const CChainParams::Base58Type addrType = CChainParams::PUBKEY_ADDRESS);
-
-CWDestination DecodeDestination(const std::string& strAddress);
-CWDestination DecodeDestination(const std::string& strAddress, bool& isStaking);
-CWDestination DecodeDestination(const std::string& strAddress, bool& isStaking, bool& isShielded);
-
-bool IsValidDestination(const CWDestination& dest);
-
-} // End Standard namespace
 
 #endif // BITCOIN_SCRIPT_STANDARD_H

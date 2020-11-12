@@ -7,6 +7,7 @@
 #ifndef BITCOIN_SCRIPT_ISMINE_H
 #define BITCOIN_SCRIPT_ISMINE_H
 
+#include "destination_io.h"
 #include "key.h"
 #include "script/standard.h"
 #include <bitset>
