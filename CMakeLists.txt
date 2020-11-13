@@ -214,7 +214,6 @@ set(SERVER_SOURCES
         ./src/rpc/net.cpp
         ./src/rpc/rawtransaction.cpp
         ./src/rpc/server.cpp
-        ./src/tiertwo/specialtx_validation.cpp
         ./src/script/sigcache.cpp
         ./src/script/ismine.cpp
         ./src/sporkdb.cpp
@@ -374,6 +373,7 @@ set(COMMON_SOURCES
         ./src/coins.cpp
         ./src/key_io.cpp
         ./src/compressor.cpp
+        ./src/tiertwo/specialtx_validation.cpp
         ./src/consensus/merkle.cpp
         ./src/consensus/tx_verify.cpp
         ./src/consensus/zerocoin_verify.cpp
