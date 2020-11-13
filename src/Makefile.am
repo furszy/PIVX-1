@@ -128,7 +128,6 @@ LIBSAPLING_H = \
   sapling/sapling.h \
   bech32.h \
   sapling/key_io_sapling.h \
-  destination_io.h \
   sapling/sapling_core_write.h \
   sapling/sapling_util.h \
   sapling/prf.h \
@@ -283,6 +282,7 @@ BITCOIN_CORE_H = \
   wallet/hdchain.h \
   wallet/rpcwallet.h \
   wallet/scriptpubkeyman.h \
+  destination_io.h \
   wallet/wallet.h \
   wallet/walletdb.h \
   zpivchain.h \
