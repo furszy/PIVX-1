@@ -20,7 +20,6 @@
 #include "wallet/wallet.h"
 #endif // ENABLE_WALLET
 
-#include <boost/bind.hpp>
 #include <boost/signals2/signal.hpp>
 #include <boost/thread.hpp>
 
@@ -58,12 +57,12 @@ void RPCServer::OnStopped(std::function<void ()> slot)
 
 void RPCServer::OnPreCommand(std::function<void (const CRPCCommand&)> slot)
 {
-    g_rpcSignals.PreCommand.connect(boost::bind(slot, boost::placeholders::_1));
+    g_rpcSignals.PreCommand.connect(std::bind(slot, std::placeholders::_1));
 }
 
 void RPCServer::OnPostCommand(std::function<void (const CRPCCommand&)> slot)
 {
-    g_rpcSignals.PostCommand.connect(boost::bind(slot, boost::placeholders::_1));
+    g_rpcSignals.PostCommand.connect(std::bind(slot, std::placeholders::_1));
 }
 
 void RPCTypeCheck(const UniValue& params,
