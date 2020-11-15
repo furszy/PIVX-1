@@ -6,6 +6,7 @@
 #define PIVX_TEST_TEST_PIVX_H
 
 #include "fs.h"
+#include "scheduler.h"
 #include "txdb.h"
 
 #include <boost/thread.hpp>
@@ -48,6 +49,7 @@ struct TestingSetup: public BasicTestingSetup {
     fs::path pathTemp;
     boost::thread_group threadGroup;
     CConnman* connman;
+    CScheduler scheduler;
     ECCVerifyHandle globalVerifyHandle;
 
     TestingSetup();

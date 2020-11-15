@@ -5,6 +5,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "validationinterface.h"
+#include "scheduler.h"
 
 #include <boost/signals2/signal.hpp>
 
@@ -31,12 +32,23 @@ struct MainSignalsInstance {
 
     /** Notifies listeners of a change to the tip of the active block chain. */
     boost::signals2::signal<void (const CBlockIndex *, const CBlock *, Optional<SaplingMerkleTree>)> ChainTip;
+
+    CScheduler *m_scheduler = nullptr;
 };
 
 static CMainSignals g_signals;
 
 CMainSignals::CMainSignals() {
     m_internals.reset(new MainSignalsInstance());
+}
+
+void CMainSignals::RegisterBackgroundSignalScheduler(CScheduler& scheduler) {
+    assert(!m_internals->m_scheduler);
+    m_internals->m_scheduler = &scheduler;
+}
+
+void CMainSignals::UnregisterBackgroundSignalScheduler() {
+    m_internals->m_scheduler = nullptr;
 }
 
 CMainSignals& GetMainSignals()
