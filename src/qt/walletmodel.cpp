@@ -856,25 +856,12 @@ bool WalletModel::isSpent(const COutPoint& outpoint) const
 // AvailableCoins + LockedCoins grouped by wallet address (put change in one group with wallet address)
 void WalletModel::listCoins(std::map<QString, std::vector<COutput> >& mapCoins) const
 {
+    CWallet::AvailableCoinsFilter filter;
+    filter.fIncludeLocked = true;
     std::vector<COutput> vCoins;
-    wallet->AvailableCoins(&vCoins);
+    wallet->AvailableCoins(&vCoins, nullptr, filter);
 
-    LOCK2(cs_main, wallet->cs_wallet); // ListLockedCoins, mapWallet
-    std::vector<COutPoint> vLockedCoins;
-    wallet->ListLockedCoins(vLockedCoins);
-
-    // add locked coins
-    for (const COutPoint& outpoint : vLockedCoins) {
-        if (!wallet->mapWallet.count(outpoint.hash)) continue;
-        bool fConflicted;
-        int nDepth = wallet->mapWallet[outpoint.hash].GetDepthAndMempool(fConflicted);
-        if (nDepth < 0 || fConflicted) continue;
-        COutput out(&wallet->mapWallet[outpoint.hash], outpoint.n, nDepth, true, true);
-        if (outpoint.n < out.tx->vout.size() &&
-                (wallet->IsMine(out.tx->vout[outpoint.n]) & ISMINE_SPENDABLE_ALL) != ISMINE_NO)
-            vCoins.push_back(out);
-    }
-
+    LOCK(wallet->cs_wallet);
     for (const COutput& out : vCoins) {
         COutput cout = out;
 
