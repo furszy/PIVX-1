@@ -2168,7 +2168,8 @@ CWallet::OutputAvailabilityResult CWallet::CheckOutputAvailability(
         const CCoinControl* coinControl,
         const bool fCoinsSelected,
         const bool fIncludeColdStaking,
-        const bool fIncludeDelegated) const
+        const bool fIncludeDelegated,
+        const bool fIncludeLocked) const
 {
     OutputAvailabilityResult res;
 
@@ -2190,7 +2191,7 @@ CWallet::OutputAvailabilityResult CWallet::CheckOutputAvailability(
     if (mine == ISMINE_WATCH_ONLY && coinControl && !coinControl->fAllowWatchOnly) return res;
 
     // Skip locked utxo
-    if (IsLockedCoin(wtxid, outIndex) && nCoinType != ONLY_10000) return res;
+    if (!fIncludeLocked && IsLockedCoin(wtxid, outIndex) && nCoinType != ONLY_10000) return res;
 
     // Check if we should include zero value utxo
     if (output.nValue <= 0) return res;
@@ -2264,7 +2265,8 @@ bool CWallet::AvailableCoins(std::vector<COutput>* pCoins,      // --> populates
                         coinControl,
                         fCoinsSelected,
                         coinsFilter.fIncludeColdStaking,
-                        coinsFilter.fIncludeDelegated);
+                        coinsFilter.fIncludeDelegated,
+                        coinsFilter.fIncludeLocked);
 
                 if (!res.available) continue;
                 if (coinsFilter.fOnlySpendable && !res.spendable) continue;
@@ -2376,7 +2378,8 @@ bool CWallet::StakeableCoins(std::vector<CStakeableOutput>* pCoins)
                     nullptr, // coin control
                     false,   // fIncludeDelegated
                     fIncludeColdStaking,
-                    false);
+                    false,
+                    false);   // fIncludeLocked
 
             if (!res.available) continue;
 

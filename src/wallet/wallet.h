@@ -340,7 +340,8 @@ private:
                                                      const CCoinControl* coinControl,
                                                      const bool fCoinsSelected,
                                                      const bool fIncludeColdStaking,
-                                                     const bool fIncludeDelegated) const;
+                                                     const bool fIncludeDelegated,
+                                                     const bool fIncludeLocked) const;
 
     // Zerocoin wallet
     CzPIVWallet* zwallet{nullptr};
@@ -450,14 +451,16 @@ public:
                              bool _fOnlyConfirmed,
                              bool _fOnlySpendable,
                              std::set<CTxDestination>* _onlyFilteredDest,
-                             int _minDepth) :
+                             int _minDepth,
+                             bool _fIncludeLocked = false) :
                 fIncludeDelegated(_fIncludeDelegated),
                 fIncludeColdStaking(_fIncludeColdStaking),
                 nCoinType(_nCoinType),
                 fOnlyConfirmed(_fOnlyConfirmed),
                 fOnlySpendable(_fOnlySpendable),
                 onlyFilteredDest(_onlyFilteredDest),
-                minDepth(_minDepth) {}
+                minDepth(_minDepth),
+                fIncludeLocked(_fIncludeLocked) {}
 
         bool fIncludeDelegated{true};
         bool fIncludeColdStaking{false};
@@ -466,6 +469,7 @@ public:
         bool fOnlySpendable{false};
         std::set<CTxDestination>* onlyFilteredDest{nullptr};
         int minDepth{0};
+        bool fIncludeLocked{false};
     };
 
     //! >> Available coins (generic)
