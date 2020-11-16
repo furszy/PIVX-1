@@ -489,8 +489,11 @@ UniValue getmasternodeoutputs (const JSONRPCRequest& request)
             HelpExampleCli("getmasternodeoutputs", "") + HelpExampleRpc("getmasternodeoutputs", ""));
 
     // Find possible candidates
+    CWallet::AvailableCoinsFilter coinsFilter;
+    coinsFilter.fIncludeDelegated = false;
+    coinsFilter.nCoinType = ONLY_10000;
     std::vector<COutput> possibleCoins;
-    pwalletMain->AvailableCoins(&possibleCoins, nullptr, false, false, ONLY_10000);
+    pwalletMain->AvailableCoins(&possibleCoins, nullptr, coinsFilter);
 
     UniValue ret(UniValue::VARR);
     for (COutput& out : possibleCoins) {

@@ -2219,20 +2219,13 @@ CWallet::OutputAvailabilityResult CWallet::CheckOutputAvailability(
  */
 bool CWallet::AvailableCoins(std::vector<COutput>* pCoins,      // --> populates when != nullptr
                              const CCoinControl* coinControl,   // Default: nullptr
-                             bool fIncludeDelegated,            // Default: true
-                             bool fIncludeColdStaking,          // Default: false
-                             AvailableCoinsType nCoinType,      // Default: ALL_COINS
-                             bool fOnlyConfirmed,               // Default: true
-                             bool fOnlySpendable,               // Default: false
-                             std::set<CTxDestination>* onlyFilteredDest,  // Default: nullptr
-                             int minDepth                       // Default: 0
-                             ) const
+                             AvailableCoinsFilter coinsFilter) const
 {
     if (pCoins) pCoins->clear();
     const bool fCoinsSelected = (coinControl != nullptr) && coinControl->HasSelected();
     // include delegated coins when coinControl is active
-    if (!fIncludeDelegated && fCoinsSelected)
-        fIncludeDelegated = true;
+    if (!coinsFilter.fIncludeDelegated && fCoinsSelected)
+        coinsFilter.fIncludeDelegated = true;
 
     {
         LOCK2(cs_main, cs_wallet);
@@ -2242,22 +2235,22 @@ bool CWallet::AvailableCoins(std::vector<COutput>* pCoins,      // --> populates
 
             // Check if the tx is selectable
             int nDepth;
-            if (!CheckTXAvailability(pcoin, fOnlyConfirmed, nDepth))
+            if (!CheckTXAvailability(pcoin, coinsFilter.fOnlyConfirmed, nDepth))
                 continue;
 
             // Check min depth requirement for stake inputs
-            if (nCoinType == STAKEABLE_COINS && nDepth < Params().GetConsensus().nStakeMinDepth) continue;
+            if (coinsFilter.nCoinType == STAKEABLE_COINS && nDepth < Params().GetConsensus().nStakeMinDepth) continue;
 
             // Check min depth filtering requirements
-            if (nDepth < minDepth) continue;
+            if (nDepth < coinsFilter.minDepth) continue;
 
             for (unsigned int i = 0; i < pcoin->vout.size(); i++) {
                 const auto& output = pcoin->vout[i];
 
                 // Filter by specific destinations if needed
-                if (onlyFilteredDest && !onlyFilteredDest->empty()) {
+                if (coinsFilter.onlyFilteredDest && !coinsFilter.onlyFilteredDest->empty()) {
                     CTxDestination address;
-                    if (!ExtractDestination(output.scriptPubKey, address) || !onlyFilteredDest->count(address)) {
+                    if (!ExtractDestination(output.scriptPubKey, address) || !coinsFilter.onlyFilteredDest->count(address)) {
                         continue;
                     }
                 }
@@ -2267,14 +2260,14 @@ bool CWallet::AvailableCoins(std::vector<COutput>* pCoins,      // --> populates
                         output,
                         i,
                         wtxid,
-                        nCoinType,
+                        coinsFilter.nCoinType,
                         coinControl,
                         fCoinsSelected,
-                        fIncludeColdStaking,
-                        fIncludeDelegated);
+                        coinsFilter.fIncludeColdStaking,
+                        coinsFilter.fIncludeDelegated);
 
                 if (!res.available) continue;
-                if (fOnlySpendable && !res.spendable) continue;
+                if (coinsFilter.fOnlySpendable && !res.spendable) continue;
 
                 // found valid coin
                 if (!pCoins) return true;
@@ -2287,14 +2280,12 @@ bool CWallet::AvailableCoins(std::vector<COutput>* pCoins,      // --> populates
 
 std::map<CTxDestination , std::vector<COutput> > CWallet::AvailableCoinsByAddress(bool fConfirmed, CAmount maxCoinValue)
 {
+    CWallet::AvailableCoinsFilter coinFilter;
+    coinFilter.fIncludeColdStaking = true;
+    coinFilter.fOnlyConfirmed = fConfirmed;
     std::vector<COutput> vCoins;
     // include cold
-    AvailableCoins(&vCoins,
-            nullptr,            // coin control
-            true,               // fIncludeDelegated
-            true,               // fIncludeColdStaking
-            ALL_COINS,          // coin type
-            fConfirmed);        // only confirmed
+    AvailableCoins(&vCoins, nullptr, coinFilter);
 
     std::map<CTxDestination, std::vector<COutput> > mapCoins;
     for (COutput& out : vCoins) {
@@ -2638,16 +2629,15 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend,
     CMutableTransaction txNew;
     CScript scriptChange;
 
+    CWallet::AvailableCoinsFilter coinFilter;
+    coinFilter.fIncludeDelegated = fIncludeDelegated;
+    coinFilter.nCoinType = coin_type;
+
     {
         LOCK2(cs_main, cs_wallet);
         {
             std::vector<COutput> vAvailableCoins;
-            AvailableCoins(&vAvailableCoins,
-                coinControl,
-                fIncludeDelegated,
-                false,                  // fIncludeColdStaking
-                coin_type,
-                true);                  // fOnlyConfirmed
+            AvailableCoins(&vAvailableCoins, coinControl, coinFilter);
 
             nFeeRet = 0;
             if (nFeePay > 0) nFeeRet = nFeePay;

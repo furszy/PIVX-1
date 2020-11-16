@@ -441,16 +441,37 @@ public:
     //! check whether we are allowed to upgrade (or already support) to the named feature
     bool CanSupportFeature(enum WalletFeature wf);
 
+    struct AvailableCoinsFilter {
+        public:
+        AvailableCoinsFilter() {}
+        AvailableCoinsFilter(bool _fIncludeDelegated,
+                             bool _fIncludeColdStaking,
+                             AvailableCoinsType _nCoinType,
+                             bool _fOnlyConfirmed,
+                             bool _fOnlySpendable,
+                             std::set<CTxDestination>* _onlyFilteredDest,
+                             int _minDepth) :
+                fIncludeDelegated(_fIncludeDelegated),
+                fIncludeColdStaking(_fIncludeColdStaking),
+                nCoinType(_nCoinType),
+                fOnlyConfirmed(_fOnlyConfirmed),
+                fOnlySpendable(_fOnlySpendable),
+                onlyFilteredDest(_onlyFilteredDest),
+                minDepth(_minDepth) {}
+
+        bool fIncludeDelegated{true};
+        bool fIncludeColdStaking{false};
+        AvailableCoinsType nCoinType{ALL_COINS};
+        bool fOnlyConfirmed{true};
+        bool fOnlySpendable{false};
+        std::set<CTxDestination>* onlyFilteredDest{nullptr};
+        int minDepth{0};
+    };
+
     //! >> Available coins (generic)
     bool AvailableCoins(std::vector<COutput>* pCoins,   // --> populates when != nullptr
                         const CCoinControl* coinControl = nullptr,
-                        bool fIncludeDelegated          = true,
-                        bool fIncludeColdStaking        = false,
-                        AvailableCoinsType nCoinType    = ALL_COINS,
-                        bool fOnlyConfirmed             = true,
-                        bool fOnlySpendable             = false,
-                        std::set<CTxDestination>*       = nullptr,
-                        int minDepth                    = 0
+                        AvailableCoinsFilter coinsFilter = AvailableCoinsFilter()
                         ) const;
     //! >> Available coins (spending)
     bool SelectCoinsToSpend(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<std::pair<const CWalletTx*, unsigned int> >& setCoinsRet, CAmount& nValueRet, const CCoinControl* coinControl = nullptr) const;

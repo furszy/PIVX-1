@@ -97,8 +97,10 @@ CAmount WalletModel::getBalance(const CCoinControl* coinControl, bool fIncludeDe
 {
     if (coinControl) {
         CAmount nBalance = 0;
+        CWallet::AvailableCoinsFilter coinsFilter;
+        coinsFilter.fIncludeDelegated = fIncludeDelegated;
         std::vector<COutput> vCoins;
-        wallet->AvailableCoins(&vCoins, coinControl, fIncludeDelegated);
+        wallet->AvailableCoins(&vCoins, coinControl, coinsFilter);
         for (const COutput& out : vCoins) {
             bool fSkip = fUnlockedOnly && isLockedCoin(out.tx->GetHash(), out.i);
             if (out.fSpendable && !fSkip)
@@ -830,8 +832,11 @@ void WalletModel::getOutputs(const std::vector<COutPoint>& vOutpoints, std::vect
 // returns a COutPoint of 10000 PIV if found
 bool WalletModel::getMNCollateralCandidate(COutPoint& outPoint)
 {
+    CWallet::AvailableCoinsFilter coinsFilter;
+    coinsFilter.fIncludeDelegated = false;
+    coinsFilter.nCoinType = ONLY_10000;
     std::vector<COutput> vCoins;
-    wallet->AvailableCoins(&vCoins, nullptr, false, false, ONLY_10000);
+    wallet->AvailableCoins(&vCoins, nullptr, coinsFilter);
     for (const COutput& out : vCoins) {
         // skip locked collaterals
         if (!isLockedCoin(out.tx->GetHash(), out.i)) {

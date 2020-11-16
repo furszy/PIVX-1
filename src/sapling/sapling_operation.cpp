@@ -210,16 +210,14 @@ OperationResult SaplingOperation::loadUtxos(TxValues& txValues)
 {
     std::set<CTxDestination> destinations;
     if (fromAddress.isFromTAddress()) destinations.insert(fromAddress.fromTaddr);
-    if (!pwalletMain->AvailableCoins(
-            &transInputs,
-            nullptr,
-            false,
-            false,
-            ALL_COINS,
-            true,
-            true,
-            &destinations,
-            mindepth)) {
+    CWallet::AvailableCoinsFilter coinsFilter(false,
+                                              false,
+                                              ALL_COINS,
+                                              true,
+                                              true,
+                                              &destinations,
+                                              mindepth);
+    if (!pwalletMain->AvailableCoins(&transInputs, nullptr, coinsFilter)) {
         return errorOut("Insufficient funds, no available UTXO to spend");
     }
 

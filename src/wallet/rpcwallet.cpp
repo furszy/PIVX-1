@@ -3268,13 +3268,9 @@ UniValue listunspent(const JSONRPCRequest& request)
     std::vector<COutput> vecOutputs;
     assert(pwalletMain != NULL);
     LOCK2(cs_main, pwalletMain->cs_wallet);
-    pwalletMain->AvailableCoins(&vecOutputs,
-                                &coinControl,    // coin control
-                                true,       // include delegated
-                                false,      // include cold staking
-                                ALL_COINS,  // coin type
-                                false       // only confirmed
-                                );
+    CWallet::AvailableCoinsFilter coinFilter;
+    coinFilter.fOnlyConfirmed = false;
+    pwalletMain->AvailableCoins(&vecOutputs, &coinControl, coinFilter);
     for (const COutput& out : vecOutputs) {
         if (out.nDepth < nMinDepth || out.nDepth > nMaxDepth)
             continue;
