@@ -795,9 +795,7 @@ void CoinControlDialog::updateView()
         }
 
         CAmount nSum = 0;
-        double dPrioritySum = 0;
         int nChildren = 0;
-        int nInputSum = 0;
         for(const COutput& out: coins.second) {
 
             // Basic values used in the entire process
@@ -809,7 +807,6 @@ void CoinControlDialog::updateView()
             const bool isP2CS = out.tx->vout[outIndex].scriptPubKey.IsPayToColdStaking();
 
             ++nSelectableInputs;
-            int nInputSize = 0;
             nSum += nValue;
             nChildren++;
 
@@ -847,11 +844,6 @@ void CoinControlDialog::updateView()
                     itemOutput->setText(COLUMN_ADDRESS, sAddress);
                 else
                     itemOutput->setToolTip(COLUMN_ADDRESS, sAddress);
-
-                CPubKey pubkey;
-                CKeyID* keyid = boost::get<CKeyID>(&outputAddress);
-                if (keyid && model->getPubKey(*keyid, pubkey) && !pubkey.IsCompressed())
-                    nInputSize = 29; // 29 = 180 - 151 (public key is 180 bytes, priority free area is 151 bytes)
             }
 
             // label
@@ -880,10 +872,6 @@ void CoinControlDialog::updateView()
             // confirmations
             itemOutput->setText(COLUMN_CONFIRMATIONS, QString::number(nDepth));
             itemOutput->setData(COLUMN_CONFIRMATIONS, Qt::UserRole, QVariant((qlonglong) nDepth));
-
-            // priority
-            dPrioritySum += (double)nValue * (nDepth + 1);
-            nInputSum += nInputSize;
 
             // transaction hash
             itemOutput->setText(COLUMN_TXHASH, QString::fromStdString(txhash.GetHex()));
@@ -918,7 +906,6 @@ void CoinControlDialog::updateView()
 
         // amount
         if (treeMode) {
-            dPrioritySum = dPrioritySum / (nInputSum + 78);
             itemWalletAddress->setText(COLUMN_CHECKBOX, "(" + QString::number(nChildren) + ")");
             itemWalletAddress->setText(COLUMN_AMOUNT, BitcoinUnits::format(nDisplayUnit, nSum));
             itemWalletAddress->setToolTip(COLUMN_AMOUNT, BitcoinUnits::format(nDisplayUnit, nSum));
