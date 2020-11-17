@@ -854,7 +854,7 @@ bool WalletModel::isSpent(const COutPoint& outpoint) const
 }
 
 // AvailableCoins + LockedCoins grouped by wallet address (put change in one group with wallet address)
-void WalletModel::listCoins(std::map<QString, std::vector<COutput> >& mapCoins) const
+void WalletModel::listCoins(std::map<ListCoinsKey, std::vector<COutput> >& mapCoins) const
 {
     CWallet::AvailableCoinsFilter filter;
     filter.fIncludeLocked = true;
@@ -862,10 +862,31 @@ void WalletModel::listCoins(std::map<QString, std::vector<COutput> >& mapCoins) 
     wallet->AvailableCoins(&vCoins, nullptr, filter);
 
     for (const COutput& out : vCoins) {
-        CTxDestination address;
-        if (!out.fSpendable || !ExtractDestination(out.tx->vout[out.i].scriptPubKey, address))
-            continue;
-        mapCoins[QString::fromStdString(EncodeDestination(address))].emplace_back(out);
+        if (!out.fSpendable) continue;
+
+        const CScript& scriptPubKey = out.tx->vout[out.i].scriptPubKey;
+        const bool isP2CS = scriptPubKey.IsPayToColdStaking();
+
+        CTxDestination outputAddress;
+        CTxDestination outputAddressStaker;
+        if (isP2CS) {
+            txnouttype type; std::vector<CTxDestination> addresses; int nRequired;
+            if(!ExtractDestinations(scriptPubKey, type, addresses, nRequired)
+                        && addresses.size() == 2) continue;
+            outputAddressStaker = addresses[0];
+            outputAddress = addresses[1];
+        } else {
+            if (!ExtractDestination(scriptPubKey, outputAddress))
+                continue;
+        }
+
+        QString address = QString::fromStdString(EncodeDestination(outputAddress));
+        Optional<QString> stakerAddr = IsValidDestination(outputAddressStaker) ?
+            Optional<QString>(QString::fromStdString(EncodeDestination(outputAddressStaker, CChainParams::STAKING_ADDRESS))) :
+            nullopt;
+
+        ListCoinsKey key{address, stakerAddr};
+        mapCoins[key].emplace_back(out);
     }
 }
 

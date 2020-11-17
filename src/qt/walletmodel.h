@@ -262,7 +262,25 @@ public:
     void getOutputs(const std::vector<COutPoint>& vOutpoints, std::vector<COutput>& vOutputs);
     bool getMNCollateralCandidate(COutPoint& outPoint);
     bool isSpent(const COutPoint& outpoint) const;
-    void listCoins(std::map<QString, std::vector<COutput> >& mapCoins) const;
+
+    class ListCoinsKey {
+    public:
+        QString address;
+        Optional<QString> stakerAddres; // used only for P2CS utxo
+
+        bool operator==(const ListCoinsKey& key2) const {
+            if (this->address != key2.address) return false;
+            if ((!this->stakerAddres && key2.stakerAddres) ||
+                    (this->stakerAddres && !key2.stakerAddres)) return false;
+            return *this->stakerAddres == *key2.stakerAddres;
+        }
+
+        bool operator<(const ListCoinsKey& key2) const {
+            return this->address < key2.address;
+        }
+    };
+
+    void listCoins(std::map<ListCoinsKey, std::vector<COutput> >& mapCoins) const;
 
     bool isLockedCoin(uint256 hash, unsigned int n) const;
     void lockCoin(COutPoint& output);

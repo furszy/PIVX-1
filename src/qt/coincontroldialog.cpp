@@ -764,16 +764,15 @@ void CoinControlDialog::updateView()
     QFlags<Qt::ItemFlag> flgTristate = Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsUserCheckable | Qt::ItemIsTristate;
 
     int nDisplayUnit = model->getOptionsModel()->getDisplayUnit();
-//    double mempoolEstimatePriority = mempool.estimateSmartPriority(nTxConfirmTarget);
-
     nSelectableInputs = 0;
-    std::map<QString, std::vector<COutput>> mapCoins;
+    std::map<WalletModel::ListCoinsKey, std::vector<COutput>> mapCoins;
     model->listCoins(mapCoins);
 
-    for (std::pair<QString, std::vector<COutput>> coins : mapCoins) {
+    for (const auto& coins : mapCoins) {
         CCoinControlWidgetItem* itemWalletAddress = new CCoinControlWidgetItem();
         itemWalletAddress->setCheckState(COLUMN_CHECKBOX, Qt::Unchecked);
-        QString sWalletAddress = coins.first;
+        WalletModel::ListCoinsKey keys = coins.first;
+        QString sWalletAddress = keys.address;
         QString sWalletLabel = model->getAddressTableModel()->labelForAddress(sWalletAddress);
         if (sWalletLabel.isEmpty())
             sWalletLabel = tr("(no label)");
