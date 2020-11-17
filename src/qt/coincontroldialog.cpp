@@ -211,7 +211,6 @@ void CoinControlDialog::setModel(WalletModel* model)
         updateView();
         updateLabelLocked();
         updateLabels();
-        updateDialogLabels();
     }
 }
 
@@ -230,7 +229,6 @@ void CoinControlDialog::buttonSelectAllClicked()
     if (!fSelectAll)
         coinControl->UnSelectAll(); // just to be sure
     updateLabels();
-    updateDialogLabels();
 }
 
 // Toggle lock state
@@ -261,7 +259,6 @@ void CoinControlDialog::buttonToggleLockClicked()
         }
         ui->treeWidget->setEnabled(true);
         updateLabels();
-        updateDialogLabels();
     } else {
         QMessageBox msgBox;
         msgBox.setObjectName("lockMessageBox");
@@ -465,7 +462,6 @@ void CoinControlDialog::viewItemChanged(QTreeWidgetItem* item, int column)
         // selection changed -> update labels
         if (ui->treeWidget->isEnabled()){ // do not update on every click for (un)select all
             updateLabels();
-            updateDialogLabels();
         }
     }
 
@@ -487,38 +483,6 @@ void CoinControlDialog::updateLabelLocked()
         ui->labelLocked->setVisible(true);
     } else
         ui->labelLocked->setVisible(false);
-}
-
-void CoinControlDialog::updateDialogLabels()
-{
-
-    if (this->parentWidget() == nullptr) {
-        updateLabels();
-        return;
-    }
-
-    std::vector<COutPoint> vCoinControl;
-    std::vector<COutput> vOutputs;
-    coinControl->ListSelected(vCoinControl);
-    model->getOutputs(vCoinControl, vOutputs);
-
-    CAmount nAmount = 0;
-    unsigned int nQuantity = 0;
-    for (const COutput& out : vOutputs) {
-        // unselect already spent, very unlikely scenario, this could happen
-        // when selected are spent elsewhere, like rpc or another computer
-        COutPoint outpt(out.tx->GetHash(), out.i);
-        if(model->isSpent(outpt)) {
-            coinControl->UnSelect(outpt);
-            continue;
-        }
-
-        // Quantity
-        nQuantity++;
-
-        // Amount
-        nAmount += out.tx->vout[out.i].nValue;
-    }
 }
 
 void CoinControlDialog::updateLabels()
@@ -837,7 +801,6 @@ void CoinControlDialog::refreshDialog()
     updateView();
     updateLabelLocked();
     updateLabels();
-    updateDialogLabels();
 }
 
 void CoinControlDialog::inform(const QString& text)

@@ -46,7 +46,6 @@ public:
     ~CoinControlDialog() override;
 
     void setModel(WalletModel* model);
-    void updateDialogLabels();
     void updateLabels();
     void updateView();
     void refreshDialog();
