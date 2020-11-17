@@ -509,7 +509,6 @@ void CoinControlDialog::updateLabels()
     unsigned int nBytes = 0;
     unsigned int nBytesInputs = 0;
     unsigned int nQuantity = 0;
-    int nQuantityUncompressed = 0;
 
     std::vector<COutPoint> vCoinControl;
     std::vector<COutput> vOutputs;
@@ -528,24 +527,10 @@ void CoinControlDialog::updateLabels()
 
         // Quantity
         nQuantity++;
-
         // Amount
         nAmount += out.tx->vout[out.i].nValue;
-
         // Bytes
-        CTxDestination address;
-        if (ExtractDestination(out.tx->vout[out.i].scriptPubKey, address)) {
-            CPubKey pubkey;
-            CKeyID* keyid = boost::get<CKeyID>(&address);
-            if (keyid && model->getPubKey(*keyid, pubkey)) {
-                nBytesInputs += (pubkey.IsCompressed() ? 148 : 180);
-                if (!pubkey.IsCompressed())
-                    nQuantityUncompressed++;
-            } else
-                nBytesInputs += 148; // in all error cases, simply assume 148 here
-        } else
-            nBytesInputs += 148;
-
+        nBytesInputs += 148;
         // Additional byte for P2CS
         if (out.tx->vout[out.i].scriptPubKey.IsPayToColdStaking())
             nBytesInputs++;
