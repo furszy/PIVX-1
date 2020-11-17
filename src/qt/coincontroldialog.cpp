@@ -771,8 +771,9 @@ void CoinControlDialog::updateView()
     for (const auto& coins : mapCoins) {
         CCoinControlWidgetItem* itemWalletAddress = new CCoinControlWidgetItem();
         itemWalletAddress->setCheckState(COLUMN_CHECKBOX, Qt::Unchecked);
-        WalletModel::ListCoinsKey keys = coins.first;
-        QString sWalletAddress = keys.address;
+        const WalletModel::ListCoinsKey& keys = coins.first;
+        const QString& sWalletAddress = keys.address;
+        const Optional<QString>& stakerAddress = keys.stakerAddres;
         QString sWalletLabel = model->getAddressTableModel()->labelForAddress(sWalletAddress);
         if (sWalletLabel.isEmpty())
             sWalletLabel = tr("(no label)");
@@ -803,27 +804,10 @@ void CoinControlDialog::updateView()
             const CAmount nValue = out.tx->vout[out.i].nValue;
             const int64_t nTime = out.tx->GetTxTime();
             const int nDepth = out.nDepth;
-            const bool isP2CS = out.tx->vout[outIndex].scriptPubKey.IsPayToColdStaking();
 
             ++nSelectableInputs;
             nSum += nValue;
             nChildren++;
-
-            // address
-            CTxDestination outputAddress;
-            CTxDestination outputAddressStaker;
-            bool haveDest = false;
-            if (isP2CS) {
-                txnouttype type; std::vector<CTxDestination> addresses; int nRequired;
-                haveDest = (ExtractDestinations(out.tx->vout[outIndex].scriptPubKey, type, addresses, nRequired)
-                            && addresses.size() == 2);
-                if (haveDest) {
-                    outputAddressStaker = addresses[0];
-                    outputAddress = addresses[1];
-                }
-            } else {
-                haveDest = ExtractDestination(out.tx->vout[outIndex].scriptPubKey, outputAddress);
-            }
 
             //
             CCoinControlWidgetItem* itemOutput;
@@ -834,16 +818,12 @@ void CoinControlDialog::updateView()
             itemOutput->setFlags(flgCheckbox);
             itemOutput->setCheckState(COLUMN_CHECKBOX, Qt::Unchecked);
 
-            QString sAddress = "";
-            if (haveDest) {
-                sAddress = QString::fromStdString(EncodeDestination(outputAddress));
-
-                // if listMode or change => show PIVX address. In tree mode, address is not shown again for direct wallet address outputs
-                if (!treeMode || (!(sAddress == sWalletAddress)))
-                    itemOutput->setText(COLUMN_ADDRESS, sAddress);
-                else
-                    itemOutput->setToolTip(COLUMN_ADDRESS, sAddress);
-            }
+            const QString& sAddress = sWalletAddress;
+            // if listMode or change => show PIVX address. In tree mode, address is not shown again for direct wallet address outputs
+            if (!treeMode)
+                itemOutput->setText(COLUMN_ADDRESS, sAddress);
+            else
+                itemOutput->setToolTip(COLUMN_ADDRESS, sAddress);
 
             // label
             if (!(sAddress == sWalletAddress)) // change
@@ -892,14 +872,11 @@ void CoinControlDialog::updateView()
                 itemOutput->setCheckState(COLUMN_CHECKBOX, Qt::Checked);
 
             // outputs delegated (for cold staking)
-            if (isP2CS) {
+            if (stakerAddress) {
                 itemOutput->setData(COLUMN_CHECKBOX, Qt::UserRole, QString("Delegated"));
                 if (!isLockedCoin)
                     itemOutput->setIcon(COLUMN_CHECKBOX, QIcon("://ic-check-cold-staking-off"));
-                if (haveDest) {
-                    sAddress = QString::fromStdString(EncodeDestination(outputAddressStaker, CChainParams::STAKING_ADDRESS));
-                    itemOutput->setToolTip(COLUMN_CHECKBOX, tr("delegated to %1 for cold staking").arg(sAddress));
-                }
+                itemOutput->setToolTip(COLUMN_CHECKBOX, tr("delegated to %1 for cold staking").arg(*stakerAddress));
             }
         }
 
