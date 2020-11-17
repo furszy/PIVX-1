@@ -805,11 +805,37 @@ void CoinControlDialog::updateView()
         int nChildren = 0;
         int nInputSum = 0;
         for(const COutput& out: coins.second) {
+
+            // Basic values used in the entire process
+            const uint256& txhash = out.tx->GetHash();
+            const uint32_t outIndex = out.i;
+            const CAmount nValue = out.tx->vout[out.i].nValue;
+            const int64_t nTime = out.tx->GetTxTime();
+            const int nDepth = out.nDepth;
+            const bool isP2CS = out.tx->vout[outIndex].scriptPubKey.IsPayToColdStaking();
+
             ++nSelectableInputs;
             int nInputSize = 0;
-            nSum += out.tx->vout[out.i].nValue;
+            nSum += nValue;
             nChildren++;
 
+            // address
+            CTxDestination outputAddress;
+            CTxDestination outputAddressStaker;
+            bool haveDest = false;
+            if (isP2CS) {
+                txnouttype type; std::vector<CTxDestination> addresses; int nRequired;
+                haveDest = (ExtractDestinations(out.tx->vout[outIndex].scriptPubKey, type, addresses, nRequired)
+                            && addresses.size() == 2);
+                if (haveDest) {
+                    outputAddressStaker = addresses[0];
+                    outputAddress = addresses[1];
+                }
+            } else {
+                haveDest = ExtractDestination(out.tx->vout[outIndex].scriptPubKey, outputAddress);
+            }
+
+            //
             CCoinControlWidgetItem* itemOutput;
             if (treeMode)
                 itemOutput = new CCoinControlWidgetItem(itemWalletAddress);
@@ -818,23 +844,7 @@ void CoinControlDialog::updateView()
             itemOutput->setFlags(flgCheckbox);
             itemOutput->setCheckState(COLUMN_CHECKBOX, Qt::Unchecked);
 
-            // address
-            const bool isP2CS = out.tx->vout[out.i].scriptPubKey.IsPayToColdStaking();
-            CTxDestination outputAddress;
-            CTxDestination outputAddressStaker;
             QString sAddress = "";
-            bool haveDest = false;
-            if (isP2CS) {
-                txnouttype type; std::vector<CTxDestination> addresses; int nRequired;
-                haveDest = (ExtractDestinations(out.tx->vout[out.i].scriptPubKey, type, addresses, nRequired)
-                            && addresses.size() == 2);
-                if (haveDest) {
-                    outputAddressStaker = addresses[0];
-                    outputAddress = addresses[1];
-                }
-            } else {
-                haveDest = ExtractDestination(out.tx->vout[out.i].scriptPubKey, outputAddress);
-            }
             if (haveDest) {
                 sAddress = QString::fromStdString(EncodeDestination(outputAddress));
 
@@ -864,42 +874,40 @@ void CoinControlDialog::updateView()
             }
 
             // amount
-            itemOutput->setText(COLUMN_AMOUNT, BitcoinUnits::format(nDisplayUnit, out.tx->vout[out.i].nValue));
-            itemOutput->setToolTip(COLUMN_AMOUNT, BitcoinUnits::format(nDisplayUnit, out.tx->vout[out.i].nValue));
-            itemOutput->setData(COLUMN_AMOUNT, Qt::UserRole, QVariant((qlonglong) out.tx->vout[out.i].nValue));
+            itemOutput->setText(COLUMN_AMOUNT, BitcoinUnits::format(nDisplayUnit, nValue));
+            itemOutput->setToolTip(COLUMN_AMOUNT, BitcoinUnits::format(nDisplayUnit, nValue));
+            itemOutput->setData(COLUMN_AMOUNT, Qt::UserRole, QVariant((qlonglong) nValue));
 
             // date
-            itemOutput->setText(COLUMN_DATE, GUIUtil::dateTimeStr(out.tx->GetTxTime()));
-            itemOutput->setToolTip(COLUMN_DATE, GUIUtil::dateTimeStr(out.tx->GetTxTime()));
-            itemOutput->setData(COLUMN_DATE, Qt::UserRole, QVariant((qlonglong) out.tx->GetTxTime()));
+            itemOutput->setText(COLUMN_DATE, GUIUtil::dateTimeStr(nTime));
+            itemOutput->setToolTip(COLUMN_DATE, GUIUtil::dateTimeStr(nTime));
+            itemOutput->setData(COLUMN_DATE, Qt::UserRole, QVariant((qlonglong) nTime));
 
             // confirmations
-            itemOutput->setText(COLUMN_CONFIRMATIONS, QString::number(out.nDepth));
-            itemOutput->setData(COLUMN_CONFIRMATIONS, Qt::UserRole, QVariant((qlonglong) out.nDepth));
+            itemOutput->setText(COLUMN_CONFIRMATIONS, QString::number(nDepth));
+            itemOutput->setData(COLUMN_CONFIRMATIONS, Qt::UserRole, QVariant((qlonglong) nDepth));
 
             // priority
-            dPrioritySum += (double)out.tx->vout[out.i].nValue * (out.nDepth + 1);
+            dPrioritySum += (double)nValue * (nDepth + 1);
             nInputSum += nInputSize;
 
             // transaction hash
-            uint256 txhash = out.tx->GetHash();
             itemOutput->setText(COLUMN_TXHASH, QString::fromStdString(txhash.GetHex()));
 
             // vout index
-            itemOutput->setText(COLUMN_VOUT_INDEX, QString::number(out.i));
+            itemOutput->setText(COLUMN_VOUT_INDEX, QString::number(outIndex));
 
             // disable locked coins
-            const bool isLockedCoin = model->isLockedCoin(txhash, out.i);
+            const bool isLockedCoin = model->isLockedCoin(txhash, outIndex);
             if (isLockedCoin) {
                 --nSelectableInputs;
-                COutPoint outpt(txhash, out.i);
-                coinControl->UnSelect(outpt); // just to be sure
+                coinControl->UnSelect({txhash, outIndex}); // just to be sure
                 itemOutput->setDisabled(true);
                 itemOutput->setIcon(COLUMN_CHECKBOX, QIcon(":/icons/lock_closed"));
             }
 
             // set checkbox
-            if (coinControl->IsSelected(COutPoint(txhash, out.i)))
+            if (coinControl->IsSelected(COutPoint(txhash, outIndex)))
                 itemOutput->setCheckState(COLUMN_CHECKBOX, Qt::Checked);
 
             // outputs delegated (for cold staking)
