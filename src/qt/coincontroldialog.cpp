@@ -818,23 +818,17 @@ void CoinControlDialog::updateView()
             itemOutput->setFlags(flgCheckbox);
             itemOutput->setCheckState(COLUMN_CHECKBOX, Qt::Unchecked);
 
-            const QString& sAddress = sWalletAddress;
             // if listMode or change => show PIVX address. In tree mode, address is not shown again for direct wallet address outputs
-            if (!treeMode)
-                itemOutput->setText(COLUMN_ADDRESS, sAddress);
-            else
-                itemOutput->setToolTip(COLUMN_ADDRESS, sAddress);
+            if (!treeMode) {
+                itemOutput->setText(COLUMN_ADDRESS, sWalletAddress);
+            }else {
+                itemOutput->setToolTip(COLUMN_ADDRESS, sWalletAddress);
+            }
 
             // label
-            if (!(sAddress == sWalletAddress)) // change
-            {
-                // tooltip from where the change comes from
-                itemOutput->setToolTip(COLUMN_LABEL, tr("change from %1 (%2)").arg(sWalletLabel).arg(sWalletAddress));
-                itemOutput->setText(COLUMN_LABEL, tr("(change)"));
-            } else if (!treeMode) {
-                QString sLabel = model->getAddressTableModel()->labelForAddress(sAddress);
-                if (sLabel.isEmpty())
-                    sLabel = tr("(no label)");
+            if (!treeMode) {
+                QString sLabel = model->getAddressTableModel()->labelForAddress(sWalletAddress);
+                if (sLabel.isEmpty()) sLabel = tr("(no label)");
                 itemOutput->setText(COLUMN_LABEL, sLabel);
             }
 
