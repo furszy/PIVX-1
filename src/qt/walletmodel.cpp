@@ -820,12 +820,12 @@ void WalletModel::getOutputs(const std::vector<COutPoint>& vOutpoints, std::vect
 {
     LOCK2(cs_main, wallet->cs_wallet);
     for (const COutPoint& outpoint : vOutpoints) {
-        if (!wallet->mapWallet.count(outpoint.hash)) continue;
+        const auto* tx = wallet->GetWalletTx(outpoint.hash);
+        if (!tx) continue;
         bool fConflicted;
-        const int nDepth = wallet->mapWallet[outpoint.hash].GetDepthAndMempool(fConflicted);
+        const int nDepth = tx->GetDepthAndMempool(fConflicted);
         if (nDepth < 0 || fConflicted) continue;
-        COutput out(&wallet->mapWallet[outpoint.hash], outpoint.n, nDepth, true, true);
-        vOutputs.push_back(out);
+        vOutputs.emplace_back(tx, outpoint.n, nDepth, true, true);
     }
 }
 

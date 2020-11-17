@@ -478,34 +478,6 @@ void CoinControlDialog::viewItemChanged(QTreeWidgetItem* item, int column)
     }
 }
 
-// return human readable label for priority number
-QString CoinControlDialog::getPriorityLabel(double dPriority, double mempoolEstimatePriority)
-{
-    double dPriorityMedium = mempoolEstimatePriority;
-
-    if (dPriorityMedium <= 0)
-        dPriorityMedium = AllowFreeThreshold(); // not enough data, back to hard-coded
-
-    if (dPriority / 1000000 > dPriorityMedium)
-        return tr("highest");
-    else if (dPriority / 100000 > dPriorityMedium)
-        return tr("higher");
-    else if (dPriority / 10000 > dPriorityMedium)
-        return tr("high");
-    else if (dPriority / 1000 > dPriorityMedium)
-        return tr("medium-high");
-    else if (dPriority > dPriorityMedium)
-        return tr("medium");
-    else if (dPriority * 10 > dPriorityMedium)
-        return tr("low-medium");
-    else if (dPriority * 100 > dPriorityMedium)
-        return tr("low");
-    else if (dPriority * 1000 > dPriorityMedium)
-        return tr("lower");
-    else
-        return tr("lowest");
-}
-
 // shows count of locked unspent outputs
 void CoinControlDialog::updateLabelLocked()
 {
@@ -536,8 +508,7 @@ void CoinControlDialog::updateDialogLabels()
     for (const COutput& out : vOutputs) {
         // unselect already spent, very unlikely scenario, this could happen
         // when selected are spent elsewhere, like rpc or another computer
-        uint256 txhash = out.tx->GetHash();
-        COutPoint outpt(txhash, out.i);
+        COutPoint outpt(out.tx->GetHash(), out.i);
         if(model->isSpent(outpt)) {
             coinControl->UnSelect(outpt);
             continue;
@@ -568,18 +539,14 @@ void CoinControlDialog::updateLabels()
         }
     }
 
-    QString sPriorityLabel = tr("none");
     CAmount nAmount = 0;
     CAmount nPayFee = 0;
     CAmount nAfterFee = 0;
     CAmount nChange = 0;
     unsigned int nBytes = 0;
     unsigned int nBytesInputs = 0;
-    double dPriority = 0;
-    double dPriorityInputs = 0;
     unsigned int nQuantity = 0;
     int nQuantityUncompressed = 0;
-    bool fAllowFree = false;
 
     std::vector<COutPoint> vCoinControl;
     std::vector<COutput> vOutputs;
@@ -601,9 +568,6 @@ void CoinControlDialog::updateLabels()
 
         // Amount
         nAmount += out.tx->vout[out.i].nValue;
-
-        // Priority
-        dPriorityInputs += (double)out.tx->vout[out.i].nValue * (out.nDepth + 1);
 
         // Bytes
         CTxDestination address;
@@ -640,23 +604,8 @@ void CoinControlDialog::updateLabels()
         // nVersion, nLockTime and vin/vout len sizes
         nBytes += 10;
 
-        // Priority
-        double mempoolEstimatePriority = mempool.estimateSmartPriority(nTxConfirmTarget);
-        dPriority = dPriorityInputs / (nBytes - nBytesInputs + (nQuantityUncompressed * 29)); // 29 = 180 - 151 (uncompressed public keys are over the limit. max 151 bytes of the input are ignored for priority)
-        sPriorityLabel = CoinControlDialog::getPriorityLabel(dPriority, mempoolEstimatePriority);
-
         // Fee
         nPayFee = CWallet::GetMinimumFee(nBytes, nTxConfirmTarget, mempool);
-
-        // Allow free? (require at least hard-coded threshold and default to that if no estimate)
-        double dPriorityNeeded = std::max(mempoolEstimatePriority, AllowFreeThreshold());
-        if (dPriorityNeeded <= 0)
-            dPriorityNeeded = AllowFreeThreshold(); // not enough data, back to hard-coded
-        fAllowFree = (dPriority >= dPriorityNeeded);
-
-        if (fSendFreeTransactions)
-            if (fAllowFree && nBytes <= MAX_FREE_TRANSACTION_CREATE_SIZE)
-                nPayFee = 0;
 
         if (nPayAmount > 0) {
             nChange = nAmount - nPayFee - nPayAmount;
@@ -714,10 +663,6 @@ void CoinControlDialog::updateLabels()
     toolTip1 += tr("This means a fee of at least %1 per kB is required.").arg(BitcoinUnits::formatWithUnit(nDisplayUnit, CWallet::GetRequiredFee(1000))) + "<br /><br />";
     toolTip1 += tr("Can vary +/- 1 byte per input.");
 
-    QString toolTip2 = tr("Transactions with higher priority are more likely to get included into a block.") + "<br /><br />";
-    toolTip2 += tr("This label turns red, if the priority is smaller than \"medium\".") + "<br /><br />";
-    toolTip2 += tr("This means a fee of at least %1 per kB is required.").arg(BitcoinUnits::formatWithUnit(nDisplayUnit, CWallet::GetRequiredFee(1000)));
-
     QString toolTip3 = tr("This label turns red, if any recipient receives an amount smaller than %1.").arg(BitcoinUnits::formatWithUnit(nDisplayUnit, ::minRelayTxFee.GetFee(546)));
 
     // how many satoshis the estimated fee can vary per byte we guess wrong
@@ -751,12 +696,7 @@ void CoinControlDialog::updateView()
         return;
 
     bool treeMode = ui->radioTreeMode->isChecked();
-
-    if(treeMode){
-        ui->treeWidget->setRootIsDecorated(true);
-    }else{
-        ui->treeWidget->setRootIsDecorated(false);
-    }
+    ui->treeWidget->setRootIsDecorated(treeMode);
 
     ui->treeWidget->clear();
     ui->treeWidget->setEnabled(false); // performance, otherwise updateLabels would be called for every checked checkbox

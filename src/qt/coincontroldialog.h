@@ -19,8 +19,6 @@
 #include <QTreeWidgetItem>
 
 class WalletModel;
-
-class MultisigDialog;
 class CCoinControl;
 class CTxMemPool;
 
@@ -36,7 +34,7 @@ public:
     explicit CCoinControlWidgetItem(int type = Type) : QTreeWidgetItem(type) {}
     explicit CCoinControlWidgetItem(QTreeWidgetItem *parent, int type = Type) : QTreeWidgetItem(parent, type) {}
 
-    bool operator<(const QTreeWidgetItem &other) const;
+    bool operator<(const QTreeWidgetItem &other) const override;
 };
 
 class CoinControlDialog : public QDialog
@@ -45,7 +43,7 @@ class CoinControlDialog : public QDialog
 
 public:
     explicit CoinControlDialog(QWidget* parent = nullptr, bool _forDelegation = false);
-    ~CoinControlDialog();
+    ~CoinControlDialog() override;
 
     void setModel(WalletModel* model);
     void updateDialogLabels();
@@ -54,8 +52,6 @@ public:
     void refreshDialog();
     void clearPayAmounts();
     void addPayAmount(const CAmount& amount);
-
-    static QString getPriorityLabel(double dPriority, double mempoolEstimatePriority);
 
     CCoinControl* coinControl;
 
