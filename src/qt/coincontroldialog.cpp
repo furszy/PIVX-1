@@ -827,9 +827,7 @@ void CoinControlDialog::updateView()
 
             // label
             if (!treeMode) {
-                QString sLabel = model->getAddressTableModel()->labelForAddress(sWalletAddress);
-                if (sLabel.isEmpty()) sLabel = tr("(no label)");
-                itemOutput->setText(COLUMN_LABEL, sLabel);
+                itemOutput->setText(COLUMN_LABEL, sWalletLabel);
             }
 
             // amount
