@@ -908,10 +908,10 @@ void WalletModel::unlockCoin(COutPoint& output)
     wallet->UnlockCoin(output);
 }
 
-void WalletModel::listLockedCoins(std::vector<COutPoint>& vOutpts)
+std::set<COutPoint> WalletModel::listLockedCoins()
 {
-    LOCK2(cs_main, wallet->cs_wallet);
-    wallet->ListLockedCoins(vOutpts);
+    LOCK(wallet->cs_wallet);
+    return wallet->ListLockedCoins();
 }
 
 void WalletModel::loadReceiveRequests(std::vector<std::string>& vReceiveRequests)

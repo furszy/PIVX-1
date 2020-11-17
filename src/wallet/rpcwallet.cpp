@@ -3464,12 +3464,10 @@ UniValue listlockunspent(const JSONRPCRequest& request)
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
-    std::vector<COutPoint> vOutpts;
-    pwalletMain->ListLockedCoins(vOutpts);
-
+    std::set<COutPoint> vOutpts = pwalletMain->ListLockedCoins();
     UniValue ret(UniValue::VARR);
 
-    for (COutPoint& outpt : vOutpts) {
+    for (const COutPoint& outpt : vOutpts) {
         UniValue o(UniValue::VOBJ);
 
         o.pushKV("txid", outpt.hash.GetHex());
