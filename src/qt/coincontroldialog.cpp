@@ -630,6 +630,82 @@ void CoinControlDialog::updateLabels()
         label->setVisible(nChange < 0);
 }
 
+void CoinControlDialog::loadAvailableCoin(bool treeMode,
+                                          CCoinControlWidgetItem* itemWalletAddress,
+                                          QFlags<Qt::ItemFlag> flgCheckbox,
+                                          QFlags<Qt::ItemFlag> flgTristate,
+                                          int nDisplayUnit,
+                                          const QString& sWalletAddress,
+                                          const Optional<QString>& stakerAddress,
+                                          const QString& sWalletLabel,
+                                          const uint256& txhash,
+                                          const uint32_t outIndex,
+                                          const CAmount nValue,
+                                          const int64_t nTime,
+                                          const int nDepth)
+{
+    CCoinControlWidgetItem* itemOutput;
+    if (treeMode)
+        itemOutput = new CCoinControlWidgetItem(itemWalletAddress);
+    else
+        itemOutput = new CCoinControlWidgetItem(ui->treeWidget);
+    itemOutput->setFlags(flgCheckbox);
+    itemOutput->setCheckState(COLUMN_CHECKBOX, Qt::Unchecked);
+
+    // if listMode or change => show PIVX address. In tree mode, address is not shown again for direct wallet address outputs
+    if (!treeMode) {
+        itemOutput->setText(COLUMN_ADDRESS, sWalletAddress);
+    }else {
+        itemOutput->setToolTip(COLUMN_ADDRESS, sWalletAddress);
+    }
+
+    // label
+    if (!treeMode) {
+        itemOutput->setText(COLUMN_LABEL, sWalletLabel);
+    }
+
+    // amount
+    itemOutput->setText(COLUMN_AMOUNT, BitcoinUnits::format(nDisplayUnit, nValue));
+    itemOutput->setToolTip(COLUMN_AMOUNT, BitcoinUnits::format(nDisplayUnit, nValue));
+    itemOutput->setData(COLUMN_AMOUNT, Qt::UserRole, QVariant((qlonglong) nValue));
+
+    // date
+    itemOutput->setText(COLUMN_DATE, GUIUtil::dateTimeStr(nTime));
+    itemOutput->setToolTip(COLUMN_DATE, GUIUtil::dateTimeStr(nTime));
+    itemOutput->setData(COLUMN_DATE, Qt::UserRole, QVariant((qlonglong) nTime));
+
+    // confirmations
+    itemOutput->setText(COLUMN_CONFIRMATIONS, QString::number(nDepth));
+    itemOutput->setData(COLUMN_CONFIRMATIONS, Qt::UserRole, QVariant((qlonglong) nDepth));
+
+    // transaction hash
+    itemOutput->setText(COLUMN_TXHASH, QString::fromStdString(txhash.GetHex()));
+
+    // vout index
+    itemOutput->setText(COLUMN_VOUT_INDEX, QString::number(outIndex));
+
+    // disable locked coins
+    const bool isLockedCoin = model->isLockedCoin(txhash, outIndex);
+    if (isLockedCoin) {
+        --nSelectableInputs;
+        coinControl->UnSelect({txhash, outIndex}); // just to be sure
+        itemOutput->setDisabled(true);
+        itemOutput->setIcon(COLUMN_CHECKBOX, QIcon(":/icons/lock_closed"));
+    }
+
+    // set checkbox
+    if (coinControl->IsSelected(COutPoint(txhash, outIndex)))
+        itemOutput->setCheckState(COLUMN_CHECKBOX, Qt::Checked);
+
+    // outputs delegated (for cold staking)
+    if (stakerAddress) {
+        itemOutput->setData(COLUMN_CHECKBOX, Qt::UserRole, QString("Delegated"));
+        if (!isLockedCoin)
+            itemOutput->setIcon(COLUMN_CHECKBOX, QIcon("://ic-check-cold-staking-off"));
+        itemOutput->setToolTip(COLUMN_CHECKBOX, tr("delegated to %1 for cold staking").arg(*stakerAddress));
+    }
+}
+
 void CoinControlDialog::updateView()
 {
     if (!model || !model->getOptionsModel() || !model->getAddressTableModel())
@@ -689,67 +765,9 @@ void CoinControlDialog::updateView()
             nSum += nValue;
             nChildren++;
 
-            //
-            CCoinControlWidgetItem* itemOutput;
-            if (treeMode)
-                itemOutput = new CCoinControlWidgetItem(itemWalletAddress);
-            else
-                itemOutput = new CCoinControlWidgetItem(ui->treeWidget);
-            itemOutput->setFlags(flgCheckbox);
-            itemOutput->setCheckState(COLUMN_CHECKBOX, Qt::Unchecked);
-
-            // if listMode or change => show PIVX address. In tree mode, address is not shown again for direct wallet address outputs
-            if (!treeMode) {
-                itemOutput->setText(COLUMN_ADDRESS, sWalletAddress);
-            }else {
-                itemOutput->setToolTip(COLUMN_ADDRESS, sWalletAddress);
-            }
-
-            // label
-            if (!treeMode) {
-                itemOutput->setText(COLUMN_LABEL, sWalletLabel);
-            }
-
-            // amount
-            itemOutput->setText(COLUMN_AMOUNT, BitcoinUnits::format(nDisplayUnit, nValue));
-            itemOutput->setToolTip(COLUMN_AMOUNT, BitcoinUnits::format(nDisplayUnit, nValue));
-            itemOutput->setData(COLUMN_AMOUNT, Qt::UserRole, QVariant((qlonglong) nValue));
-
-            // date
-            itemOutput->setText(COLUMN_DATE, GUIUtil::dateTimeStr(nTime));
-            itemOutput->setToolTip(COLUMN_DATE, GUIUtil::dateTimeStr(nTime));
-            itemOutput->setData(COLUMN_DATE, Qt::UserRole, QVariant((qlonglong) nTime));
-
-            // confirmations
-            itemOutput->setText(COLUMN_CONFIRMATIONS, QString::number(nDepth));
-            itemOutput->setData(COLUMN_CONFIRMATIONS, Qt::UserRole, QVariant((qlonglong) nDepth));
-
-            // transaction hash
-            itemOutput->setText(COLUMN_TXHASH, QString::fromStdString(txhash.GetHex()));
-
-            // vout index
-            itemOutput->setText(COLUMN_VOUT_INDEX, QString::number(outIndex));
-
-            // disable locked coins
-            const bool isLockedCoin = model->isLockedCoin(txhash, outIndex);
-            if (isLockedCoin) {
-                --nSelectableInputs;
-                coinControl->UnSelect({txhash, outIndex}); // just to be sure
-                itemOutput->setDisabled(true);
-                itemOutput->setIcon(COLUMN_CHECKBOX, QIcon(":/icons/lock_closed"));
-            }
-
-            // set checkbox
-            if (coinControl->IsSelected(COutPoint(txhash, outIndex)))
-                itemOutput->setCheckState(COLUMN_CHECKBOX, Qt::Checked);
-
-            // outputs delegated (for cold staking)
-            if (stakerAddress) {
-                itemOutput->setData(COLUMN_CHECKBOX, Qt::UserRole, QString("Delegated"));
-                if (!isLockedCoin)
-                    itemOutput->setIcon(COLUMN_CHECKBOX, QIcon("://ic-check-cold-staking-off"));
-                itemOutput->setToolTip(COLUMN_CHECKBOX, tr("delegated to %1 for cold staking").arg(*stakerAddress));
-            }
+            loadAvailableCoin(treeMode, itemWalletAddress, flgCheckbox, flgTristate,
+                            nDisplayUnit, sWalletAddress, stakerAddress, sWalletLabel,
+                            txhash, outIndex, nValue, nTime, nDepth);
         }
 
         // amount

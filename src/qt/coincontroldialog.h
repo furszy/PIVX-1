@@ -8,6 +8,8 @@
 
 #include "amount.h"
 #include "qt/pivx/snackbar.h"
+#include "optional.h"
+#include "uint256.h"
 
 #include <QAbstractButton>
 #include <QAction>
@@ -73,6 +75,21 @@ private:
     void updatePushButtonSelectAll(bool checked);
     void sortView(int, Qt::SortOrder);
     void inform(const QString& text);
+
+    // Load a row with coin's data
+    void loadAvailableCoin(bool treeMode,
+                           CCoinControlWidgetItem* itemWalletAddress,
+                           QFlags<Qt::ItemFlag> flgCheckbox,
+                           QFlags<Qt::ItemFlag> flgTristate,
+                           int nDisplayUnit,
+                           const QString& sWalletAddress,
+                           const Optional<QString>& stakerAddress,
+                           const QString& sWalletLabel,
+                           const uint256& txhash,
+                           const uint32_t outIndex,
+                           const CAmount nValue,
+                           const int64_t nTime,
+                           const int nDepth);
 
     enum {
         COLUMN_CHECKBOX,
