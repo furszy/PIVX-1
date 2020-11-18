@@ -854,7 +854,7 @@ bool WalletModel::isSpent(const COutPoint& outpoint) const
 }
 
 // AvailableCoins + LockedCoins grouped by wallet address (put change in one group with wallet address)
-void WalletModel::listCoins(std::map<ListCoinsKey, std::vector<COutput> >& mapCoins) const
+void WalletModel::listCoins(std::map<ListCoinsKey, std::vector<ListCoinsValue>>& mapCoins) const
 {
     CWallet::AvailableCoinsFilter filter;
     filter.fIncludeLocked = true;
@@ -886,7 +886,14 @@ void WalletModel::listCoins(std::map<ListCoinsKey, std::vector<COutput> >& mapCo
             nullopt;
 
         ListCoinsKey key{address, stakerAddr};
-        mapCoins[key].emplace_back(out);
+        ListCoinsValue value{
+                out.tx->GetHash(),
+                out.i,
+                out.tx->vout[out.i].nValue,
+                out.tx->GetTxTime(),
+                out.nDepth
+        };
+        mapCoins[key].emplace_back(value);
     }
 }
 

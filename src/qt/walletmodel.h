@@ -280,7 +280,16 @@ public:
         }
     };
 
-    void listCoins(std::map<ListCoinsKey, std::vector<COutput> >& mapCoins) const;
+    class ListCoinsValue {
+    public:
+        const uint256& txhash;
+        int outIndex;
+        CAmount nValue;
+        int64_t nTime;
+        int nDepth;
+    };
+
+    void listCoins(std::map<ListCoinsKey, std::vector<ListCoinsValue>>& mapCoins) const;
 
     bool isLockedCoin(uint256 hash, unsigned int n) const;
     void lockCoin(COutPoint& output);

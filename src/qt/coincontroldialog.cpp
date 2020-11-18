@@ -721,7 +721,7 @@ void CoinControlDialog::updateView()
 
     int nDisplayUnit = model->getOptionsModel()->getDisplayUnit();
     nSelectableInputs = 0;
-    std::map<WalletModel::ListCoinsKey, std::vector<COutput>> mapCoins;
+    std::map<WalletModel::ListCoinsKey, std::vector<WalletModel::ListCoinsValue>> mapCoins;
     model->listCoins(mapCoins);
 
     for (const auto& coins : mapCoins) {
@@ -752,22 +752,14 @@ void CoinControlDialog::updateView()
 
         CAmount nSum = 0;
         int nChildren = 0;
-        for(const COutput& out: coins.second) {
-
-            // Basic values used in the entire process
-            const uint256& txhash = out.tx->GetHash();
-            const uint32_t outIndex = out.i;
-            const CAmount nValue = out.tx->vout[out.i].nValue;
-            const int64_t nTime = out.tx->GetTxTime();
-            const int nDepth = out.nDepth;
-
+        for (const WalletModel::ListCoinsValue& out: coins.second) {
             ++nSelectableInputs;
-            nSum += nValue;
+            nSum += out.nValue;
             nChildren++;
 
             loadAvailableCoin(treeMode, itemWalletAddress, flgCheckbox, flgTristate,
                             nDisplayUnit, sWalletAddress, stakerAddress, sWalletLabel,
-                            txhash, outIndex, nValue, nTime, nDepth);
+                              out.txhash, out.outIndex, out.nValue, out.nTime, out.nDepth);
         }
 
         // amount
