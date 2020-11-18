@@ -249,7 +249,7 @@ public:
     std::vector<CTxOut> vout;
     const uint32_t nLockTime;
     Optional<SaplingTxData> sapData{SaplingTxData()}; // Future: Don't initialize it by default
-    Optional<std::vector<uint8_t> > extraPayload;     // only available for special transaction types
+    Optional<std::vector<uint8_t>> extraPayload{nullopt};     // only available for special transaction types
 
     /** Construct a CTransaction that qualifies as IsNull() */
     CTransaction();
@@ -388,6 +388,7 @@ struct CMutableTransaction
     std::vector<CTxOut> vout;
     uint32_t nLockTime;
     Optional<SaplingTxData> sapData{SaplingTxData()}; // Future: Don't initialize it by default
+    Optional<std::vector<uint8_t>> extraPayload{nullopt};
 
     CMutableTransaction();
     CMutableTransaction(const CTransaction& tx);
@@ -404,6 +405,8 @@ struct CMutableTransaction
 
         if (g_IsSaplingActive && nVersion >= CTransaction::TxVersion::SAPLING) {
             READWRITE(*const_cast<Optional<SaplingTxData>*>(&sapData));
+            if (nType != CTransaction::TxType::NORMAL)
+                READWRITE(*const_cast<Optional<std::vector<uint8_t> >*>(&extraPayload));
         }
     }
 
