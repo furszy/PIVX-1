@@ -12,6 +12,7 @@
 #include "util.h"
 
 #include "allocators.h"
+#include "sapling/circuitparams.h"
 #include "chainparamsbase.h"
 #include "random.h"
 #include "utilstrencodings.h"
@@ -449,10 +450,23 @@ void initZKSNARKS()
         throw std::runtime_error("Sapling params don't exist");
     }
 
+    // simple raw test for packing the circuit params within the sources.
+    // essentially is taking the hex string of the sapling-spend.params file
+    // parsing it and storing it into a file that is used to initialize the circuit library.
+    // can definitely be improved in many ways in the future.
+    std::vector<unsigned char> params = ParseHex(LoadSaplingParam());
+    fs::path sapling_spend2 = path / "sapling-spend-test.params";
+    if (!fs::exists(sapling_spend2)) {
+        // lets create it..
+        auto myfile = std::fstream(sapling_spend2.native().c_str(), std::ios::out | std::ios::binary);
+        myfile.write((char*)&params[0], sizeof(params[0]) * params.size());
+        myfile.close();
+    }
+
     static_assert(
         sizeof(fs::path::value_type) == sizeof(codeunit),
         "librustzcash not configured correctly");
-    auto sapling_spend_str = sapling_spend.native();
+    auto sapling_spend_str = sapling_spend2.native();
     auto sapling_output_str = sapling_output.native();
     auto sprout_groth16_str = sprout_groth16.native();
 
