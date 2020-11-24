@@ -31,7 +31,7 @@ void UnregisterValidationInterface(CValidationInterface* pwalletIn);
 void UnregisterAllValidationInterfaces();
 
 class CValidationInterface {
-protected:
+public:
     /** Notifies listeners of updated block chain tip */
     virtual void UpdatedBlockTip(const CBlockIndex *pindexNew, const CBlockIndex *pindexFork, bool fInitialDownload) {}
     virtual void SyncTransaction(const CTransaction &tx, const CBlockIndex *pindex, int posInBlock) {}
@@ -41,8 +41,10 @@ protected:
     virtual void SetBestChain(const CBlockLocator &locator) {}
     virtual bool UpdatedTransaction(const uint256 &hash) { return false;}
     /** Tells listeners to broadcast their data. */
+    virtual void Broadcast(CConnman* connman) { }
     virtual void ResendWalletTransactions(CConnman* connman) {}
     virtual void BlockChecked(const CBlock&, const CValidationState&) {}
+    virtual void BlockFound(const uint256&) {}
     virtual void ResetRequestCount(const uint256 &hash) {};
     friend void ::RegisterValidationInterface(CValidationInterface*);
     friend void ::UnregisterValidationInterface(CValidationInterface*);
