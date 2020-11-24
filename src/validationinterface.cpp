@@ -15,48 +15,75 @@
 #include <unordered_map>
 #include <boost/signals2/signal.hpp>
 
-struct ValidationInterfaceConnections {
-    boost::signals2::scoped_connection UpdatedBlockTip;
-    boost::signals2::scoped_connection SyncTransaction;
-    boost::signals2::scoped_connection NotifyTransactionLock;
-    boost::signals2::scoped_connection UpdatedTransaction;
-    boost::signals2::scoped_connection SetBestChain;
-    boost::signals2::scoped_connection Broadcast;
-    boost::signals2::scoped_connection BlockChecked;
-    boost::signals2::scoped_connection BlockFound;
-    boost::signals2::scoped_connection ChainTip;
-};
-
+//! The MainSignalsInstance manages a list of shared_ptr<CValidationInterface>
+//! callbacks.
+//!
+//! A std::unordered_map is used to track what callbacks are currently
+//! registered, and a std::list is to used to store the callbacks that are
+//! currently registered as well as any callbacks that are just unregistered
+//! and about to be deleted when they are done executing.
 struct MainSignalsInstance {
-// XX42    boost::signals2::signal<void(const uint256&)> EraseTransaction;
-    /** Notifies listeners of updated block chain tip */
-    boost::signals2::signal<void (const CBlockIndex *, const CBlockIndex *, bool fInitialDownload)> UpdatedBlockTip;
-    /** A posInBlock value for SyncTransaction which indicates the transaction was conflicted, disconnected, or not in a block */
-    static const int SYNC_TRANSACTION_NOT_IN_BLOCK = -1;
-    /** Notifies listeners of updated transaction data (transaction, and optionally the block it is found in. */
-    boost::signals2::signal<void (const CTransaction &, const CBlockIndex *pindex, int posInBlock)> SyncTransaction;
-    /** Notifies listeners of an updated transaction lock without new data. */
-    boost::signals2::signal<void (const CTransaction &)> NotifyTransactionLock;
-    /** Notifies listeners of an updated transaction without new data (for now: a coinbase potentially becoming visible). */
-    boost::signals2::signal<bool (const uint256 &)> UpdatedTransaction;
-    /** Notifies listeners of a new active block chain. */
-    boost::signals2::signal<void (const CBlockLocator &)> SetBestChain;
-    /** Tells listeners to broadcast their data. */
-    boost::signals2::signal<void (CConnman* connman)> Broadcast;
-    /** Notifies listeners of a block validation result */
-    boost::signals2::signal<void (const CBlock&, const CValidationState&)> BlockChecked;
-    /** Notifies listeners that a block has been successfully mined */
-    boost::signals2::signal<void (const uint256 &)> BlockFound;
-    /** Notifies listeners of a change to the tip of the active block chain. */
-    boost::signals2::signal<void (const CBlockIndex *, const CBlock *, Optional<SaplingMerkleTree>)> ChainTip;
+private:
+    Mutex m_mutex;
+    //! List entries consist of a callback pointer and reference count. The
+    //! count is equal to the number of current executions of that entry, plus 1
+    //! if it's registered. It cannot be 0 because that would imply it is
+    //! unregistered and also not being executed (so shouldn't exist).
+    struct ListEntry { std::shared_ptr<CValidationInterface> callbacks; int count = 1; };
+    std::list<ListEntry> m_list GUARDED_BY(m_mutex);
+    std::unordered_map<CValidationInterface*, std::list<ListEntry>::iterator> m_map GUARDED_BY(m_mutex);
 
+public:
     // We are not allowed to assume the scheduler only runs in one thread,
     // but must ensure all callbacks happen in-order, so we end up creating
     // our own queue here :(
     SingleThreadedSchedulerClient m_schedulerClient;
-    std::unordered_map<CValidationInterface*, ValidationInterfaceConnections> m_connMainSignals;
 
-    MainSignalsInstance(CScheduler *pscheduler) : m_schedulerClient(pscheduler) {}
+    explicit MainSignalsInstance(CScheduler *pscheduler) : m_schedulerClient(pscheduler) {}
+
+    void Register(std::shared_ptr<CValidationInterface> callbacks)
+    {
+        LOCK(m_mutex);
+        auto inserted = m_map.emplace(callbacks.get(), m_list.end());
+        if (inserted.second) inserted.first->second = m_list.emplace(m_list.end());
+        inserted.first->second->callbacks = std::move(callbacks);
+    }
+
+    void Unregister(CValidationInterface* callbacks)
+    {
+        LOCK(m_mutex);
+        auto it = m_map.find(callbacks);
+        if (it != m_map.end()) {
+            if (!--it->second->count) m_list.erase(it->second);
+            m_map.erase(it);
+        }
+    }
+
+    //! Clear unregisters every previously registered callback, erasing every
+    //! map entry. After this call, the list may still contain callbacks that
+    //! are currently executing, but it will be cleared when they are done
+    //! executing.
+    void Clear()
+    {
+        LOCK(m_mutex);
+        for (auto it = m_list.begin(); it != m_list.end();) {
+            it = --it->count ? std::next(it) : m_list.erase(it);
+        }
+        m_map.clear();
+    }
+
+    template<typename F> void Iterate(F&& f)
+    {
+        WAIT_LOCK(m_mutex, lock);
+        for (auto it = m_list.begin(); it != m_list.end();) {
+            ++it->count;
+            {
+                REVERSE_LOCK(lock);
+                f(*it->callbacks);
+            }
+            it = --it->count ? std::next(it) : m_list.erase(it);
+        }
+    }
 };
 
 static CMainSignals g_signals;
@@ -83,22 +110,14 @@ CMainSignals& GetMainSignals()
 
 void RegisterValidationInterface(CValidationInterface* pwalletIn)
 {
-    ValidationInterfaceConnections& conns = g_signals.m_internals->m_connMainSignals[pwalletIn];
-    conns.UpdatedBlockTip = g_signals.m_internals->UpdatedBlockTip.connect(std::bind(&CValidationInterface::UpdatedBlockTip, pwalletIn, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-    conns.SyncTransaction = g_signals.m_internals->SyncTransaction.connect(std::bind(&CValidationInterface::SyncTransaction, pwalletIn, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-    conns.ChainTip = g_signals.m_internals->ChainTip.connect(std::bind(&CValidationInterface::ChainTip, pwalletIn, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-    conns.NotifyTransactionLock = g_signals.m_internals->NotifyTransactionLock.connect(std::bind(&CValidationInterface::NotifyTransactionLock, pwalletIn, std::placeholders::_1));
-    conns.UpdatedTransaction = g_signals.m_internals->UpdatedTransaction.connect(std::bind(&CValidationInterface::UpdatedTransaction, pwalletIn, std::placeholders::_1));
-    conns.SetBestChain = g_signals.m_internals->SetBestChain.connect(std::bind(&CValidationInterface::SetBestChain, pwalletIn, std::placeholders::_1));
-    conns.Broadcast = g_signals.m_internals->Broadcast.connect(std::bind(&CValidationInterface::ResendWalletTransactions, pwalletIn, std::placeholders::_1));
-    conns.BlockChecked = g_signals.m_internals->BlockChecked.connect(std::bind(&CValidationInterface::BlockChecked, pwalletIn, std::placeholders::_1, std::placeholders::_2));
-    conns.BlockFound = g_signals.m_internals->BlockFound.connect(std::bind(&CValidationInterface::ResetRequestCount, pwalletIn, std::placeholders::_1));
+    std::shared_ptr<CValidationInterface> sharedValidation = std::make_shared<CValidationInterface>(*pwalletIn);
+    g_signals.m_internals->Register(std::move(sharedValidation));
 }
 
 void UnregisterValidationInterface(CValidationInterface* pwalletIn)
 {
     if (g_signals.m_internals) {
-        g_signals.m_internals->m_connMainSignals.erase(pwalletIn);
+        g_signals.m_internals->Unregister(pwalletIn);
     }
 }
 
@@ -107,41 +126,41 @@ void UnregisterAllValidationInterfaces()
     if (!g_signals.m_internals) {
         return;
     }
-    g_signals.m_internals->m_connMainSignals.clear();
+    g_signals.m_internals->Clear();
 }
 
 void CMainSignals::UpdatedBlockTip(const CBlockIndex* pindexNew, const CBlockIndex* pindexFork, bool fInitialDownload) {
-    m_internals->UpdatedBlockTip(pindexNew, pindexFork, fInitialDownload);
+    m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.UpdatedBlockTip(pindexNew, pindexFork, fInitialDownload); });
 }
 
 void CMainSignals::SyncTransaction(const CTransaction& tx, const CBlockIndex* pindex, int posInBlock) {
-    m_internals->SyncTransaction(tx, pindex, posInBlock);
+    m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.SyncTransaction(tx, pindex, posInBlock); });
 }
 
 void CMainSignals::NotifyTransactionLock(const CTransaction& tx) {
-    m_internals->NotifyTransactionLock(tx);
+    m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.NotifyTransactionLock(tx); });
 }
 
 void CMainSignals::UpdatedTransaction(const uint256& hash) {
-    m_internals->UpdatedTransaction(hash);
+    m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.UpdatedTransaction(hash); });
 }
 
 void CMainSignals::SetBestChain(const CBlockLocator& locator) {
-    m_internals->SetBestChain(locator);
+    m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.SetBestChain(locator); });
 }
 
 void CMainSignals::Broadcast(CConnman* connman) {
-    m_internals->Broadcast(connman);
+    m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.Broadcast(connman); });
 }
 
 void CMainSignals::BlockChecked(const CBlock& block, const CValidationState& state) {
-    m_internals->BlockChecked(block, state);
+    m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.BlockChecked(block, state); });
 }
 
 void CMainSignals::BlockFound(const uint256& hash) {
-    m_internals->BlockFound(hash);
+    m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.BlockFound(hash); });
 }
 
 void CMainSignals::ChainTip(const CBlockIndex* pindex, const CBlock* block, Optional<SaplingMerkleTree> tree) {
-    m_internals->ChainTip(pindex, block, tree);
+    m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.ChainTip(pindex, block, tree); });
 }
