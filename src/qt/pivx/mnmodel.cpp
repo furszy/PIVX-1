@@ -22,17 +22,13 @@ void MNModel::updateMNList()
     int end = nodes.size();
     nodes.clear();
     collateralTxAccepted.clear();
-    for (CMasternodeConfig::CMasternodeEntry mne : masternodeConfig.getEntries()) {
+    for (const CMasternodeConfig::CMasternodeEntry& mne : masternodeConfig.getEntries()) {
         int nIndex;
         if (!mne.castOutputIndex(nIndex))
             continue;
         uint256 txHash(mne.getTxHash());
         CTxIn txIn(txHash, uint32_t(nIndex));
         CMasternode* pmn = mnodeman.Find(txIn.prevout);
-        if (!pmn) {
-            pmn = new CMasternode();
-            pmn->vin = txIn;
-        }
         nodes.insert(QString::fromStdString(mne.getAlias()), std::make_pair(QString::fromStdString(mne.getIp()), pmn));
         if (pwalletMain) {
             bool txAccepted = false;
@@ -90,7 +86,7 @@ QVariant MNModel::data(const QModelIndex &index, int role) const
                 return (pair.second) ? QString::fromStdString(pair.second->Status()) : "MISSING";
             }
             case PRIV_KEY: {
-                for (CMasternodeConfig::CMasternodeEntry mne : masternodeConfig.getEntries()) {
+                for (const CMasternodeConfig::CMasternodeEntry& mne : masternodeConfig.getEntries()) {
                     if (mne.getTxHash().compare(rec->vin.prevout.hash.GetHex()) == 0) {
                         return QString::fromStdString(mne.getPrivKey());
                     }
