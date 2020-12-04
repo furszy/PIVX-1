@@ -265,7 +265,7 @@ bool StartMasternodeEntry(UniValue& statusObjRet, CMasternodeBroadcast& mnbRet, 
         if (strCommand == "disabled" && pmn->IsEnabled()) return false;
     }
 
-    fSuccessRet = CMasternodeBroadcast::Create(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), errorMessage, mnbRet);
+    fSuccessRet = CMasternodeBroadcast::Create(mne.getIp(), mne.getPrivKeyStr(), mne.getTxHash(), mne.getOutputIndex(), errorMessage, mnbRet);
 
     statusObjRet.pushKV("alias", mne.getAlias());
     statusObjRet.pushKV("result", fSuccessRet ? "success" : "failed");
@@ -558,7 +558,7 @@ UniValue listmasternodeconf (const JSONRPCRequest& request)
         UniValue mnObj(UniValue::VOBJ);
         mnObj.pushKV("alias", mne.getAlias());
         mnObj.pushKV("address", mne.getIp());
-        mnObj.pushKV("privateKey", mne.getPrivKey());
+        mnObj.pushKV("privateKey", mne.getPrivKeyStr());
         mnObj.pushKV("txHash", mne.getTxHash());
         mnObj.pushKV("outputIndex", mne.getOutputIndex());
         mnObj.pushKV("status", strStatus);

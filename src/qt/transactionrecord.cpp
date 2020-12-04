@@ -80,7 +80,6 @@ bool TransactionRecord::decomposeZcSpendTx(const CWallet* wallet, const CWalletT
     int64_t nTime = wtx.GetTxTime();
 
     //zerocoin spend outputs
-    bool fFeeAssigned = false;
     for (unsigned int nOut = 0; nOut < wtx.vout.size(); nOut++) {
         const CTxOut& txout = wtx.vout[nOut];
         // change that was reminted as zerocoins
