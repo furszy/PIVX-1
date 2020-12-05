@@ -336,8 +336,7 @@ public:
         consensus.vUpgrades[Consensus::UPGRADE_ZC_PUBLIC].nActivationHeight     = 1106100;
         consensus.vUpgrades[Consensus::UPGRADE_V3_4].nActivationHeight          = 1214000;
         consensus.vUpgrades[Consensus::UPGRADE_V4_0].nActivationHeight          = 1347000;
-        consensus.vUpgrades[Consensus::UPGRADE_V5_0].nActivationHeight =
-                Consensus::NetworkUpgrade::NO_ACTIVATION_HEIGHT;
+        consensus.vUpgrades[Consensus::UPGRADE_V5_0].nActivationHeight          = 1868140;
 
         consensus.vUpgrades[Consensus::UPGRADE_ZC].hashActivationBlock =
                 uint256S("0x258c489f42f03cb97db2255e47938da4083eee4e242853c2d48bae2b1d0110a6");
@@ -356,8 +355,8 @@ public:
          * a large 4-byte int at any alignment.
          */
 
-        pchMessageStart[0] = 0x45;
-        pchMessageStart[1] = 0x76;
+        pchMessageStart[0] = 0x85;
+        pchMessageStart[1] = 0x26;
         pchMessageStart[2] = 0x65;
         pchMessageStart[3] = 0xba;
         nDefaultPort = 51474;
