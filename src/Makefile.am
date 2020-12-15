@@ -190,7 +190,7 @@ BITCOIN_CORE_H = \
   httprpc.h \
   httpserver.h \
   init.h \
-  interface/wallet.h \
+  interfaces/wallet.h \
   invalid.h \
   invalid_outpoints.json.h \
   invalid_serials.json.h \
@@ -373,7 +373,7 @@ libbitcoin_wallet_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_wallet_a_SOURCES = \
   activemasternode.cpp \
   bip38.cpp \
-  interface/wallet.cpp \
+  interfaces/wallet.cpp \
   addressbook.cpp \
   crypter.cpp \
   key_io.cpp \
