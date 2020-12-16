@@ -776,6 +776,18 @@ bool AppInitServers()
     std::terminate();
 };
 
+namespace { // Variables internal to initialization process only
+
+    ServiceFlags nRelevantServices = NODE_NETWORK;
+    int nMaxConnections;
+    int nUserMaxConnections;
+    int nFD;
+    ServiceFlags nLocalServices = NODE_NETWORK;
+
+    std::string strWalletFile;
+    bool fDisableWallet = false;
+}
+
 bool AppInitBasicSetup()
 {
 // ********************************************************* Step 1: setup
@@ -969,16 +981,10 @@ void InitLogging()
     LogPrintf("PIVX version %s (%s)\n", version_string, CLIENT_DATE);
 }
 
-/** Initialize pivx.
- *  @pre Parameters should be parsed and config file should be read.
- */
-bool AppInit2()
+bool AppInitParameterInteraction()
 {
-    // ********************************************************* Step 1: setup
-    if (!AppInitBasicSetup())
-        return false;
-
     // ********************************************************* Step 2: parameter interactions
+
     // Make sure enough file descriptors are available
 
     // -bind and -whitebind can't be set when not listening
@@ -988,12 +994,12 @@ bool AppInit2()
     }
 
     int nBind = std::max(nUserBind, size_t(1));
-    int nUserMaxConnections = gArgs.GetArg("-maxconnections", DEFAULT_MAX_PEER_CONNECTIONS);
-    int nMaxConnections = std::max(nUserMaxConnections, 0);
+    nUserMaxConnections = gArgs.GetArg("-maxconnections", DEFAULT_MAX_PEER_CONNECTIONS);
+    nMaxConnections = std::max(nUserMaxConnections, 0);
 
     // Trim requested connection counts, to fit into system limitations
-    nMaxConnections = std::max(std::min(nMaxConnections, (int)(FD_SETSIZE - nBind - MIN_CORE_FILEDESCRIPTORS)), 0);
-    int nFD = RaiseFileDescriptorLimit(nMaxConnections + MIN_CORE_FILEDESCRIPTORS);
+    nMaxConnections = std::max(std::min(nMaxConnections, (int) (FD_SETSIZE - nBind - MIN_CORE_FILEDESCRIPTORS)), 0);
+    nFD = RaiseFileDescriptorLimit(nMaxConnections + MIN_CORE_FILEDESCRIPTORS);
     if (nFD < MIN_CORE_FILEDESCRIPTORS)
         return UIError(_("Not enough file descriptors available."));
     if (nFD - MIN_CORE_FILEDESCRIPTORS < nMaxConnections)
@@ -1005,7 +1011,7 @@ bool AppInit2()
     const std::vector<std::string>& categories = gArgs.GetArgs("-debug");
 
     if (!(gArgs.GetBoolArg("-nodebug", false) ||
-            find(categories.begin(), categories.end(), std::string("0")) != categories.end())) {
+          find(categories.begin(), categories.end(), std::string("0")) != categories.end())) {
         for (const auto& cat : categories) {
             if (!g_logger->EnableCategory(cat)) {
                 UIWarning(strprintf(_("Unsupported logging category %s=%s."), "-debug", cat));
@@ -1025,7 +1031,8 @@ bool AppInit2()
         UIWarning(_("Warning: Unsupported argument -debugnet ignored, use -debug=net."));
     // Check for -socks - as this is a privacy risk to continue, exit here
     if (gArgs.IsArgSet("-socks"))
-        return UIError(_("Error: Unsupported argument -socks found. Setting SOCKS version isn't possible anymore, only SOCKS5 proxies are supported."));
+        return UIError(
+                _("Error: Unsupported argument -socks found. Setting SOCKS version isn't possible anymore, only SOCKS5 proxies are supported."));
     // Check for -tor - as this is a privacy risk to continue, exit here
     if (gArgs.GetBoolArg("-tor", false))
         return UIError(_("Error: Unsupported argument -tor found, use -onion."));
@@ -1036,15 +1043,18 @@ bool AppInit2()
     if (gArgs.GetBoolArg("-masternode", DEFAULT_MASTERNODE) && !gArgs.GetBoolArg("-listen", DEFAULT_LISTEN))
         return UIError(_("Error: -listen must be true if -masternode is set."));
     // Exit early if -masternode=1 and -port is not the default port
-    if (gArgs.GetBoolArg("-masternode", DEFAULT_MASTERNODE) && (GetListenPort() != Params().GetDefaultPort() && !Params().IsRegTestNet()))
+    if (gArgs.GetBoolArg("-masternode", DEFAULT_MASTERNODE) &&
+        (GetListenPort() != Params().GetDefaultPort() && !Params().IsRegTestNet()))
         return UIError(strprintf(_("Error: Invalid port %d for running a masternode."), GetListenPort()) + "\n\n" +
-                       strprintf(_("Masternodes are required to run on port %d for %s-net"), Params().GetDefaultPort(), Params().NetworkIDString()));
+                       strprintf(_("Masternodes are required to run on port %d for %s-net"), Params().GetDefaultPort(),
+                                 Params().NetworkIDString()));
 
     if (gArgs.GetBoolArg("-benchmark", false))
         UIWarning(_("Warning: Unsupported argument -benchmark ignored, use -debug=bench."));
 
     // Checkmempool and checkblockindex default to true in regtest mode
-    int ratio = std::min<int>(std::max<int>(gArgs.GetArg("-checkmempool", Params().DefaultConsistencyChecks() ? 1 : 0), 0), 1000000);
+    int ratio = std::min<int>(
+            std::max<int>(gArgs.GetArg("-checkmempool", Params().DefaultConsistencyChecks() ? 1 : 0), 0), 1000000);
     if (ratio != 0) {
         mempool.setSanityCheck(1.0 / ratio);
     }
@@ -1055,7 +1065,8 @@ bool AppInit2()
     int64_t nMempoolSizeLimit = gArgs.GetArg("-maxmempool", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000;
     int64_t nMempoolDescendantSizeLimit = gArgs.GetArg("-limitdescendantsize", DEFAULT_DESCENDANT_SIZE_LIMIT) * 1000;
     if (nMempoolSizeLimit < 0 || nMempoolSizeLimit < nMempoolDescendantSizeLimit * 40)
-        return UIError(strprintf(_("Error: -maxmempool must be at least %d MB"), gArgs.GetArg("-limitdescendantsize", DEFAULT_DESCENDANT_SIZE_LIMIT) / 25));
+        return UIError(strprintf(_("Error: -maxmempool must be at least %d MB"),
+                                 gArgs.GetArg("-limitdescendantsize", DEFAULT_DESCENDANT_SIZE_LIMIT) / 25));
 
     // -par=0 means autodetect, but nScriptCheckThreads==0 means no concurrency
     nScriptCheckThreads = gArgs.GetArg("-par", DEFAULT_SCRIPTCHECK_THREADS);
@@ -1102,7 +1113,7 @@ bool AppInit2()
     }
 
 #ifdef ENABLE_WALLET
-    std::string strWalletFile = gArgs.GetArg("-wallet", DEFAULT_WALLET_DAT);
+    strWalletFile = gArgs.GetArg("-wallet", DEFAULT_WALLET_DAT);
     if (!CWallet::ParameterInteraction())
         return false;
 #endif // ENABLE_WALLET
@@ -1115,9 +1126,6 @@ bool AppInit2()
         SetMockTime(gArgs.GetArg("-mocktime", 0)); // SetMockTime(0) is a no-op
     }
 
-    ServiceFlags nLocalServices = NODE_NETWORK;
-    ServiceFlags nRelevantServices = NODE_NETWORK;
-
     if (gArgs.GetBoolArg("-peerbloomfilters", DEFAULT_PEERBLOOMFILTERS))
         nLocalServices = ServiceFlags(nLocalServices | NODE_BLOOM);
 
@@ -1126,7 +1134,12 @@ bool AppInit2()
     if (!InitNUParams())
         return false;
 
-    // ********************************************************* Step 4: application initialization: dir lock, daemonize, pidfile, debug log
+    return true;
+}
+
+bool AppInitSanityChecks()
+{
+    // ********************************************************* Step 4: sanity checks
 
     // Initialize elliptic curve code
     RandomInit();
@@ -1145,9 +1158,23 @@ bool AppInit2()
     if (file) fclose(file);
     static boost::interprocess::file_lock lock(pathLockFile.string().c_str());
 
-    // Wait maximum 10 seconds if an old wallet is still running. Avoids lockup during restart
-    if (!lock.timed_lock(boost::get_system_time() + boost::posix_time::seconds(10)))
-        return UIError(strprintf(_("Cannot obtain a lock on data directory %s. PIVX Core is probably already running."), strDataDir));
+    try {
+        // Wait maximum 10 seconds if an old wallet is still running. Avoids lockup during restart
+        if (!lock.timed_lock(boost::get_system_time() + boost::posix_time::seconds(10))) {
+            return UIError(strprintf(_("Cannot obtain a lock on data directory %s. %s is probably already running."),
+                                     strDataDir, _(PACKAGE_NAME)));
+        }
+    } catch (const boost::interprocess::interprocess_exception& e) {
+        return UIError(
+                strprintf(_("Cannot obtain a lock on data directory %s. %s is probably already running.") + " %s.",
+                          strDataDir, _(PACKAGE_NAME), e.what()));
+    }
+    return true;
+}
+
+bool AppInitMain()
+{
+    // ********************************************************* Step 4a: application initialization
 
 #ifndef WIN32
     CreatePidFile(GetPidFile(), getpid());
@@ -1164,7 +1191,7 @@ bool AppInit2()
     if (!g_logger->m_log_timestamps)
         LogPrintf("Startup time: %s\n", DateTimeStrFormat("%Y-%m-%d %H:%M:%S", GetTime()));
     LogPrintf("Default data directory %s\n", GetDefaultDataDir().string());
-    LogPrintf("Using data directory %s\n", strDataDir);
+    LogPrintf("Using data directory %s\n", GetDataDir().string());
     LogPrintf("Using config file %s\n", GetConfigFile().string());
     LogPrintf("Using at most %i connections (%i file descriptors available)\n", nMaxConnections, nFD);
     std::ostringstream strErrors;
