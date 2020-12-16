@@ -1137,19 +1137,8 @@ bool AppInitParameterInteraction()
     return true;
 }
 
-bool AppInitSanityChecks()
+static bool LockDataDirectory(bool probeOnly)
 {
-    // ********************************************************* Step 4: sanity checks
-
-    // Initialize elliptic curve code
-    RandomInit();
-    ECC_Start();
-    globalVerifyHandle.reset(new ECCVerifyHandle());
-
-    // Sanity check
-    if (!InitSanityCheck())
-        return UIError(_("Initialization sanity check failed. PIVX Core is shutting down."));
-
     std::string strDataDir = GetDataDir().string();
 
     // Make sure only a single PIVX process is using the data directory.
@@ -1164,6 +1153,9 @@ bool AppInitSanityChecks()
             return UIError(strprintf(_("Cannot obtain a lock on data directory %s. %s is probably already running."),
                                      strDataDir, _(PACKAGE_NAME)));
         }
+        if (probeOnly) {
+            lock.unlock();
+        }
     } catch (const boost::interprocess::interprocess_exception& e) {
         return UIError(
                 strprintf(_("Cannot obtain a lock on data directory %s. %s is probably already running.") + " %s.",
@@ -1172,9 +1164,33 @@ bool AppInitSanityChecks()
     return true;
 }
 
+bool AppInitSanityChecks()
+{
+    // ********************************************************* Step 4: sanity checks
+
+    // Initialize elliptic curve code
+    RandomInit();
+    ECC_Start();
+    globalVerifyHandle.reset(new ECCVerifyHandle());
+
+    // Sanity check
+    if (!InitSanityCheck())
+        return UIError(strprintf(_("Initialization sanity check failed. %s is shutting down."), _(PACKAGE_NAME)));
+
+    // Probe the data directory lock to give an early error message, if possible
+    return LockDataDirectory(true);
+}
+
 bool AppInitMain()
 {
     // ********************************************************* Step 4a: application initialization
+    // After daemonization get the data directory lock again and hold on to it until exit
+    // This creates a slight window for a race condition to happen, however this condition is harmless: it
+    // will at most make us exit without printing a message to console.
+    if (!LockDataDirectory(false)) {
+        // Detailed error printed inside LockDataDirectory
+        return false;
+    }
 
 #ifndef WIN32
     CreatePidFile(GetPidFile(), getpid());
