@@ -690,7 +690,7 @@ static bool ThreadSafeMessageBox(PIVXGUI* gui, const std::string& message, const
 void PIVXGUI::subscribeToCoreSignals()
 {
     // Connect signals to client
-    m_handler_message_box = interfaces::MakeHandler(uiInterface.ThreadSafeMessageBox.connect(boost::bind(ThreadSafeMessageBox, this, boost::placeholders::_1, boost::placeholders::_2, boost::placeholders::_3)));
+    m_handler_message_box = interfaces::MakeHandler(uiInterface.ThreadSafeMessageBox.connect(std::bind(ThreadSafeMessageBox, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 }
 
 void PIVXGUI::unsubscribeFromCoreSignals()
