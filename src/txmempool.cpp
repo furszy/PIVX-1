@@ -468,7 +468,7 @@ void CTxMemPool::CalculateDescendants(txiter entryit, setEntries &setDescendants
     }
 }
 
-void CTxMemPool::remove(const CTransaction& origTx, std::list<CTransactionRef>& removed, bool fRecursive)
+void CTxMemPool::removeRecursive(const CTransaction& origTx, std::list<CTransactionRef>& removed)
 {
     // Remove transaction from memory pool
     {
@@ -477,8 +477,8 @@ void CTxMemPool::remove(const CTransaction& origTx, std::list<CTransactionRef>& 
         txiter origit = mapTx.find(origTx.GetHash());
         if (origit != mapTx.end()) {
             txToRemove.insert(origit);
-        } else if (fRecursive) {
-            // If recursively removing but origTx isn't in the mempool
+        } else {
+            // When recursively removing but origTx isn't in the mempool
             // be sure to remove any children that are in the pool. This can
             // happen during chain re-orgs if origTx isn't re-accepted into
             // the mempool for any reason.
@@ -492,12 +492,8 @@ void CTxMemPool::remove(const CTransaction& origTx, std::list<CTransactionRef>& 
             }
         }
         setEntries setAllRemoves;
-        if (fRecursive) {
-            for (const txiter& it : txToRemove) {
-                CalculateDescendants(it, setAllRemoves);
-            }
-        } else {
-            setAllRemoves.swap(txToRemove);
+        for (const txiter& it : txToRemove) {
+            CalculateDescendants(it, setAllRemoves);
         }
         for (const txiter& it : setAllRemoves) {
             removed.emplace_back(it->GetSharedTx());
@@ -532,7 +528,7 @@ void CTxMemPool::removeForReorg(const CCoinsViewCache *pcoins, unsigned int nMem
     }
     for (const CTransaction& tx : transactionsToRemove) {
         std::list<CTransactionRef> removed;
-        remove(tx, removed, true);
+        removeRecursive(tx, removed);
     }
 }
 
@@ -557,7 +553,7 @@ void CTxMemPool::removeWithAnchor(const uint256& invalidRoot)
     }
     for (const CTransaction& tx : transactionsToRemove) {
         std::list<CTransactionRef> removed;
-        remove(tx, removed, true);
+        removeRecursive(tx, removed);
     }
 }
 
@@ -571,7 +567,7 @@ void CTxMemPool::removeConflicts(const CTransaction& tx, std::list<CTransactionR
         if (it != mapNextTx.end()) {
             const CTransaction& txConflict = *it->second.ptx;
             if (txConflict != tx) {
-                remove(txConflict, removed, true);
+                removeRecursive(txConflict, removed);
             }
         }
     }
@@ -582,7 +578,7 @@ void CTxMemPool::removeConflicts(const CTransaction& tx, std::list<CTransactionR
             if (it != mapSaplingNullifiers.end()) {
                 const CTransaction& txConflict = *it->second;
                 if (txConflict != tx) {
-                    remove(txConflict, removed, true);
+                    removeRecursive(txConflict, removed);
                 }
             }
         }

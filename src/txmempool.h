@@ -477,7 +477,7 @@ public:
     // then invoke the second version.
     bool addUnchecked(const uint256& hash, const CTxMemPoolEntry& entry, bool fCurrentEstimate = true);
     bool addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry, setEntries &setAncestors, bool fCurrentEstimate = true);
-    void remove(const CTransaction& tx, std::list<CTransactionRef>& removed, bool fRecursive = false);
+    void removeRecursive(const CTransaction& tx, std::list<CTransactionRef>& removed);
     void removeForReorg(const CCoinsViewCache* pcoins, unsigned int nMemPoolHeight, int flags);
     void removeWithAnchor(const uint256& invalidRoot);
     void removeConflicts(const CTransaction& tx, std::list<CTransactionRef>& removed);

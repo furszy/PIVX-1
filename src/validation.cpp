@@ -1965,7 +1965,7 @@ bool static DisconnectTip(CValidationState& state, const CChainParams& chainpara
         std::list<CTransactionRef> removed;
         CValidationState stateDummy;
         if (tx->IsCoinBase() || tx->IsCoinStake() || !AcceptToMemoryPool(mempool, stateDummy, tx, false, nullptr, true)) {
-            mempool.remove(*tx, removed, true);
+            mempool.removeRecursive(*tx, removed);
         } else if (mempool.exists(tx->GetHash())) {
             vHashUpdate.push_back(tx->GetHash());
         }
