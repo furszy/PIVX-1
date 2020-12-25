@@ -16,6 +16,7 @@
 #include "coincontrol.h"
 #include "db.h"
 #include "keystore.h"
+#include "interfaces/handler.h"
 #include "sapling/key_io_sapling.h"
 #include "sapling/sapling_operation.h"
 #include "spork.h"
@@ -757,23 +758,23 @@ static void NotifyWalletBacked(WalletModel* model, const bool& fSuccess, const s
 void WalletModel::subscribeToCoreSignals()
 {
     // Connect signals to wallet
-    wallet->NotifyStatusChanged.connect(boost::bind(&NotifyKeyStoreStatusChanged, this, _1));
-    wallet->NotifyAddressBookChanged.connect(boost::bind(NotifyAddressBookChanged, this, _1, _2, _3, _4, _5, _6));
-    wallet->NotifyTransactionChanged.connect(boost::bind(NotifyTransactionChanged, this, _1, _2, _3));
-    wallet->ShowProgress.connect(boost::bind(ShowProgress, this, _1, _2));
-    wallet->NotifyWatchonlyChanged.connect(boost::bind(NotifyWatchonlyChanged, this, _1));
-    wallet->NotifyWalletBacked.connect(boost::bind(NotifyWalletBacked, this, _1, _2));
+    m_handler_notify_status_changed = interfaces::MakeHandler(wallet->NotifyStatusChanged.connect(std::bind(&NotifyKeyStoreStatusChanged, this, std::placeholders::_1)));
+    m_handler_notify_addressbook_changed = interfaces::MakeHandler(wallet->NotifyAddressBookChanged.connect(std::bind(NotifyAddressBookChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6)));
+    m_handler_notify_transaction_changed = interfaces::MakeHandler(wallet->NotifyTransactionChanged.connect(std::bind(NotifyTransactionChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+    m_handler_show_progress = interfaces::MakeHandler(wallet->ShowProgress.connect(std::bind(ShowProgress, this, std::placeholders::_1, std::placeholders::_2)));
+    m_handler_notify_watch_only_changed = interfaces::MakeHandler(wallet->NotifyWatchonlyChanged.connect(std::bind(NotifyWatchonlyChanged, this, std::placeholders::_1)));
+    m_handler_notify_walletbacked = interfaces::MakeHandler(wallet->NotifyWalletBacked.connect(std::bind(NotifyWalletBacked, this, std::placeholders::_1, std::placeholders::_2)));
 }
 
 void WalletModel::unsubscribeFromCoreSignals()
 {
     // Disconnect signals from wallet
-    wallet->NotifyStatusChanged.disconnect(boost::bind(&NotifyKeyStoreStatusChanged, this, _1));
-    wallet->NotifyAddressBookChanged.disconnect(boost::bind(NotifyAddressBookChanged, this, _1, _2, _3, _4, _5, _6));
-    wallet->NotifyTransactionChanged.disconnect(boost::bind(NotifyTransactionChanged, this, _1, _2, _3));
-    wallet->ShowProgress.disconnect(boost::bind(ShowProgress, this, _1, _2));
-    wallet->NotifyWatchonlyChanged.disconnect(boost::bind(NotifyWatchonlyChanged, this, _1));
-    wallet->NotifyWalletBacked.disconnect(boost::bind(NotifyWalletBacked, this, _1, _2));
+    m_handler_notify_status_changed->disconnect();
+    m_handler_notify_addressbook_changed->disconnect();
+    m_handler_notify_transaction_changed->disconnect();
+    m_handler_show_progress->disconnect();
+    m_handler_notify_watch_only_changed->disconnect();
+    m_handler_notify_walletbacked->disconnect();
 }
 
 // WalletModel::UnlockContext implementation

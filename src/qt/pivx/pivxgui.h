@@ -27,6 +27,9 @@
 #include "qt/pivx/settings/settingsfaqwidget.h"
 #include "qt/rpcconsole.h"
 
+namespace interfaces {
+    class Handler;
+}
 
 class ClientModel;
 class NetworkStyle;
@@ -114,13 +117,15 @@ protected:
      */
 
 private:
+    // Handlers
+    std::unique_ptr<interfaces::Handler> m_handler_message_box;
+
     bool enableWallet;
     ClientModel* clientModel = nullptr;
 
     // Actions
     QAction* quitAction = nullptr;
     QAction* toggleHideAction = nullptr;
-
 
     // Frame
     NavMenuWidget *navMenu = nullptr;
