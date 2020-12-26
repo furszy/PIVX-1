@@ -531,6 +531,7 @@ public:
     void removeForBlock(const std::vector<CTransactionRef>& vtx, unsigned int nBlockHeight, std::list<CTransactionRef>& conflicts, bool fCurrentEstimate = true);
     void clear();
     void _clear();  // lock-free
+    bool CompareDepthAndScore(const uint256& hasha, const uint256& hashb);
     void queryHashes(std::vector<uint256>& vtxid);
     void getTransactions(std::set<uint256>& setTxid);
     bool isSpent(const COutPoint& outpoint);
