@@ -5,6 +5,7 @@
 #ifndef BITCOIN_MEMUSAGE_H
 #define BITCOIN_MEMUSAGE_H
 
+#include "indirectmap.h"
 #include "prevector.h"
 
 #include <stdlib.h>
@@ -183,6 +184,20 @@ static inline size_t DynamicUsage(const std::shared_ptr<X>& p)
     // the counter and the storage (when using std::make_shared), or separate.
     // We can't observe the difference, however, so assume the worst.
     return p ? MallocUsage(sizeof(X)) + MallocUsage(sizeof(stl_shared_counter)) : 0;
+}
+
+// indirectmap has underlying map with pointer as key
+
+template<typename X, typename Y>
+static inline size_t DynamicUsage(const indirectmap<X, Y>& m)
+{
+    return MallocUsage(sizeof(stl_tree_node<std::pair<const X*, Y> >)) * m.size();
+}
+
+template<typename X, typename Y>
+static inline size_t IncrementalDynamicUsage(const indirectmap<X, Y>& m)
+{
+    return MallocUsage(sizeof(stl_tree_node<std::pair<const X*, Y> >));
 }
 
 // Boost data structures

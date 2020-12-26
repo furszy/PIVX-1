@@ -193,6 +193,7 @@ set(SERVER_SOURCES
         ./src/checkpoints.cpp
         ./src/httprpc.cpp
         ./src/httpserver.cpp
+        ./src/indirectmap.h
         ./src/init.cpp
         ./src/interfaces/handler.cpp
         ./src/interfaces/wallet.cpp

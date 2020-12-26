@@ -189,6 +189,7 @@ BITCOIN_CORE_H = \
   hash.h \
   httprpc.h \
   httpserver.h \
+  indirectmap.h \
   init.h \
   interfaces/handler.h \
   interfaces/wallet.h \
