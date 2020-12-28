@@ -10,8 +10,6 @@
 #include "optional.h"
 #include "sapling/incrementalmerkletree.h"
 
-#include <boost/signals2/signal.hpp>
-
 class CBlock;
 struct CBlockLocator;
 class CBlockIndex;
@@ -33,12 +31,15 @@ void UnregisterAllValidationInterfaces();
 
 class CValidationInterface {
 protected:
+    /** Notifies listeners of updated block chain tip */
     virtual void UpdatedBlockTip(const CBlockIndex *pindexNew, const CBlockIndex *pindexFork, bool fInitialDownload) {}
     virtual void SyncTransaction(const CTransaction &tx, const CBlockIndex *pindex, int posInBlock) {}
     virtual void ChainTip(const CBlockIndex *pindex, const CBlock *pblock, Optional<SaplingMerkleTree> added) {}
     virtual void NotifyTransactionLock(const CTransaction &tx) {}
+    /** Notifies listeners of the new active block chain on-disk. */
     virtual void SetBestChain(const CBlockLocator &locator) {}
     virtual bool UpdatedTransaction(const uint256 &hash) { return false;}
+    /** Tells listeners to broadcast their data. */
     virtual void ResendWalletTransactions(CConnman* connman) {}
     virtual void BlockChecked(const CBlock&, const CValidationState&) {}
     virtual void ResetRequestCount(const uint256 &hash) {};
@@ -47,29 +48,29 @@ protected:
     friend void ::UnregisterAllValidationInterfaces();
 };
 
-struct CMainSignals {
-// XX42    boost::signals2::signal<void(const uint256&)> EraseTransaction;
-    /** Notifies listeners of updated block chain tip */
-    boost::signals2::signal<void (const CBlockIndex *, const CBlockIndex *, bool fInitialDownload)> UpdatedBlockTip;
+struct MainSignalsInstance;
+class CMainSignals {
+private:
+    std::unique_ptr<MainSignalsInstance> m_internals;
+
+    friend void ::RegisterValidationInterface(CValidationInterface*);
+    friend void ::UnregisterValidationInterface(CValidationInterface*);
+    friend void ::UnregisterAllValidationInterfaces();
+public:
+    CMainSignals();
+
     /** A posInBlock value for SyncTransaction which indicates the transaction was conflicted, disconnected, or not in a block */
     static const int SYNC_TRANSACTION_NOT_IN_BLOCK = -1;
-    /** Notifies listeners of updated transaction data (transaction, and optionally the block it is found in. */
-    boost::signals2::signal<void (const CTransaction &, const CBlockIndex *pindex, int posInBlock)> SyncTransaction;
-    /** Notifies listeners of an updated transaction lock without new data. */
-    boost::signals2::signal<void (const CTransaction &)> NotifyTransactionLock;
-    /** Notifies listeners of an updated transaction without new data (for now: a coinbase potentially becoming visible). */
-    boost::signals2::signal<bool (const uint256 &)> UpdatedTransaction;
-    /** Notifies listeners of a new active block chain. */
-    boost::signals2::signal<void (const CBlockLocator &)> SetBestChain;
-    /** Tells listeners to broadcast their data. */
-    boost::signals2::signal<void (CConnman* connman)> Broadcast;
-    /** Notifies listeners of a block validation result */
-    boost::signals2::signal<void (const CBlock&, const CValidationState&)> BlockChecked;
-    /** Notifies listeners that a block has been successfully mined */
-    boost::signals2::signal<void (const uint256 &)> BlockFound;
 
-    /** Notifies listeners of a change to the tip of the active block chain. */
-    boost::signals2::signal<void (const CBlockIndex *, const CBlock *, Optional<SaplingMerkleTree>)> ChainTip;
+    void UpdatedBlockTip(const CBlockIndex *, const CBlockIndex *, bool fInitialDownload);
+    void SyncTransaction(const CTransaction &, const CBlockIndex *pindex, int posInBlock);
+    void NotifyTransactionLock(const CTransaction&);
+    void UpdatedTransaction(const uint256 &);
+    void SetBestChain(const CBlockLocator &);
+    void Broadcast(CConnman* connman);
+    void BlockChecked(const CBlock&, const CValidationState&);
+    void BlockFound(const uint256&);
+    void ChainTip(const CBlockIndex *, const CBlock *, Optional<SaplingMerkleTree>);
 };
 
 CMainSignals& GetMainSignals();

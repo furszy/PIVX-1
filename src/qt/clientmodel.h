@@ -12,13 +12,17 @@
 #include <QObject>
 #include <QDateTime>
 
+#include <memory>
+
 class AddressTableModel;
 class BanTableModel;
 class OptionsModel;
 class PeerTableModel;
 class TransactionTableModel;
 
-class CWallet;
+namespace interfaces {
+    class Handler;
+}
 
 QT_BEGIN_NAMESPACE
 class QDateTime;
@@ -94,6 +98,13 @@ public:
     QString getMasternodesCount();
 
 private:
+    // Listeners
+    std::unique_ptr<interfaces::Handler> m_handler_show_progress;
+    std::unique_ptr<interfaces::Handler> m_handler_notify_num_connections_changed;
+    std::unique_ptr<interfaces::Handler> m_handler_notify_alert_changed;
+    std::unique_ptr<interfaces::Handler> m_handler_banned_list_changed;
+    std::unique_ptr<interfaces::Handler> m_handler_notify_block_tip;
+
     QString getMasternodeCountString() const;
     OptionsModel* optionsModel;
     PeerTableModel* peerTableModel;

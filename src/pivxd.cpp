@@ -108,6 +108,24 @@ bool AppInit(int argc, char* argv[])
             }
         }
 
+        // -server defaults to true for bitcoind but not for the GUI so do this here
+        gArgs.SoftSetBoolArg("-server", true);
+        // Set this early so that parameter interactions go to console
+        InitLogging();
+        InitParameterInteraction();
+        if (!AppInitBasicSetup()) {
+            // UIError will have been called with detailed error, which ends up on console
+            exit(1);
+        }
+        if (!AppInitParameterInteraction()) {
+            // UIError will have been called with detailed error, which ends up on console
+            exit(1);
+        }
+        if (!AppInitSanityChecks()) {
+            // UIError will have been called with detailed error, which ends up on console
+            exit(1);
+        }
+
 #ifndef WIN32
         fDaemon = gArgs.GetBoolArg("-daemon", false);
         if (fDaemon) {
@@ -130,12 +148,9 @@ bool AppInit(int argc, char* argv[])
                 fprintf(stderr, "Error: setsid() returned %d errno %d\n", sid, errno);
         }
 #endif
-        gArgs.SoftSetBoolArg("-server", true);
 
         // Set this early so that parameter interactions go to console
-        InitLogging();
-        InitParameterInteraction();
-        fRet = AppInit2();
+        fRet = AppInitMain();
     } catch (const std::exception& e) {
         PrintExceptionContinue(&e, "AppInit()");
     } catch (...) {

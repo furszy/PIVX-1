@@ -10,6 +10,7 @@
 
 #include "qt/guiutil.h"
 #include "clientmodel.h"
+#include "interfaces/handler.h"
 #include "optionsmodel.h"
 #include "networkstyle.h"
 #include "notificator.h"
@@ -689,11 +690,11 @@ static bool ThreadSafeMessageBox(PIVXGUI* gui, const std::string& message, const
 void PIVXGUI::subscribeToCoreSignals()
 {
     // Connect signals to client
-    uiInterface.ThreadSafeMessageBox.connect(boost::bind(ThreadSafeMessageBox, this, _1, _2, _3));
+    m_handler_message_box = interfaces::MakeHandler(uiInterface.ThreadSafeMessageBox.connect(std::bind(ThreadSafeMessageBox, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 }
 
 void PIVXGUI::unsubscribeFromCoreSignals()
 {
     // Disconnect signals from client
-    uiInterface.ThreadSafeMessageBox.disconnect(boost::bind(ThreadSafeMessageBox, this, _1, _2, _3));
+    m_handler_message_box->disconnect();
 }
