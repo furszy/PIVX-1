@@ -648,7 +648,10 @@ bool GetTransaction(const uint256& hash, CTransaction& txOut, uint256& hashBlock
     LOCK(cs_main);
 
     if (!blockIndex) {
-        if (mempool.lookup(hash, txOut)) {
+
+        CTransactionRef ptx = mempool.get(hash);
+        if (ptx) {
+            txOut = *ptx;
             return true;
         }
 
