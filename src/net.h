@@ -625,6 +625,8 @@ public:
     std::multimap<int64_t, CInv> mapAskFor;
     std::vector<uint256> vBlockRequested;
     int64_t nNextInvSend;
+    // Used for BIP35 mempool sending, also protected by cs_inventory
+    bool fSendMempool;
 
     // Ping time measurement:
     // The pong reply we're expecting, or 0 if no pong expected.
