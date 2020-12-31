@@ -864,11 +864,11 @@ void static ProcessGetData(CNode* pfrom, CConnman& connman, std::atomic<bool>& i
                 bool pushed = false;
 
                 if (inv.type == MSG_TX) {
-                    CTransaction tx;
-                    if (mempool.lookup(inv.hash, tx)) {
+                    auto txinfo = mempool.info(inv.hash);
+                    if (txinfo.tx) { // future: add timeLastMempoolReq check
                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                         ss.reserve(1000);
-                        ss << tx;
+                        ss << *txinfo.tx;
                         connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::TX, ss));
                         pushed = true;
                     }
@@ -1027,7 +1027,6 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         std::string strSubVer;
         std::string cleanSubVer;
         int nStartingHeight = -1;
-        bool fRelay = true;
         vRecv >> nVersion >> nServiceInt >> nTime >> addrMe;
         nSendVersion = std::min(nVersion, PROTOCOL_VERSION);
         nServices = ServiceFlags(nServiceInt);
@@ -2105,21 +2104,18 @@ bool SendMessages(CNode* pto, CConnman& connman, std::atomic<bool>& interruptMsg
 
             // Respond to BIP35 mempool requests
             if (fSendTrickle && pto->fSendMempool) {
-                std::vector<uint256> vtxid;
-                mempool.queryHashes(vtxid);
+                auto vtxinfo = mempool.infoAll();
                 pto->fSendMempool = false;
                 // future: back port fee filter rate
                 LOCK(pto->cs_filter);
 
-                for (const uint256& hash : vtxid) {
+                for (const auto& txinfo : vtxinfo) {
+                    const uint256& hash = txinfo.tx->GetHash();
                     CInv inv(MSG_TX, hash);
                     pto->setInventoryTxToSend.erase(hash);
                     // future: add fee filter check here..
                     if (pto->pfilter) {
-                        CTransaction tx;
-                        bool fInMemPool = mempool.lookup(hash, tx);
-                        if (!fInMemPool) continue; // another thread removed since queryHashes, maybe...
-                        if (!pto->pfilter->IsRelevantAndUpdate(tx)) continue;
+                        if (!pto->pfilter->IsRelevantAndUpdate(*txinfo.tx)) continue;
                     }
                     pto->filterInventoryKnown.insert(hash);
                     vInv.emplace_back(inv);
@@ -2128,6 +2124,7 @@ bool SendMessages(CNode* pto, CConnman& connman, std::atomic<bool>& interruptMsg
                         vInv.clear();
                     }
                 }
+                pto->timeLastMempoolReq = GetTime();
             }
 
             // Determine transactions to relay
@@ -2159,12 +2156,12 @@ bool SendMessages(CNode* pto, CConnman& connman, std::atomic<bool>& interruptMsg
                         continue;
                     }
                     // Not in the mempool anymore? don't bother sending it.
-                    // todo: back port feerate filter.
-                    if (pto->pfilter) {
-                        CTransaction tx;
-                        if (!mempool.lookup(hash, tx)) continue;
-                        if (!pto->pfilter->IsRelevantAndUpdate(tx)) continue;
+                    auto txinfo = mempool.info(hash);
+                    if (!txinfo.tx) {
+                        continue;
                     }
+                    // todo: back port feerate filter.
+                    if (pto->pfilter && !pto->pfilter->IsRelevantAndUpdate(*txinfo.tx)) continue;
                     // Send
                     vInv.emplace_back(CInv(MSG_TX, hash));
                     nRelayedTransactions++;

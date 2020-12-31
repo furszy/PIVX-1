@@ -829,25 +829,60 @@ bool CTxMemPool::CompareDepthAndScore(const uint256& hasha, const uint256& hashb
 }
 
 namespace {
-class DepthAndScoreComparator
+    class DepthAndScoreComparator
+    {
+    public:
+        bool operator()(const CTxMemPool::indexed_transaction_set::const_iterator& a, const CTxMemPool::indexed_transaction_set::const_iterator& b) const
+        {
+            uint64_t counta = a->GetCountWithAncestors();
+            uint64_t countb = b->GetCountWithAncestors();
+            if (counta == countb) {
+                return CompareTxMemPoolEntryByScore()(*a, *b);
+            }
+            return counta < countb;
+        }
+    };
+}
+
+std::vector<CTxMemPool::indexed_transaction_set::const_iterator> CTxMemPool::GetSortedDepthAndScore() const
 {
-    CTxMemPool *mp;
-public:
-    DepthAndScoreComparator(CTxMemPool *mempool) : mp(mempool) {}
-    bool operator()(const uint256& a, const uint256& b) { return mp->CompareDepthAndScore(a, b); }
-};
+    std::vector<indexed_transaction_set::const_iterator> iters;
+    AssertLockHeld(cs);
+
+    iters.reserve(mapTx.size());
+
+    for (indexed_transaction_set::iterator mi = mapTx.begin(); mi != mapTx.end(); ++mi) {
+        iters.push_back(mi);
+    }
+    std::sort(iters.begin(), iters.end(), DepthAndScoreComparator());
+    return iters;
 }
 
 void CTxMemPool::queryHashes(std::vector<uint256>& vtxid)
 {
-    vtxid.clear();
-
     LOCK(cs);
-    vtxid.reserve(mapTx.size());
-    for (indexed_transaction_set::iterator mi = mapTx.begin(); mi != mapTx.end(); ++mi)
-        vtxid.push_back(mi->GetTx().GetHash());
+    auto iters = GetSortedDepthAndScore();
 
-    std::sort(vtxid.begin(), vtxid.end(), DepthAndScoreComparator(this));
+    vtxid.clear();
+    vtxid.reserve(mapTx.size());
+
+    for (auto it : iters) {
+        vtxid.emplace_back(it->GetTx().GetHash());
+    }
+}
+
+std::vector<TxMempoolInfo> CTxMemPool::infoAll() const
+{
+    LOCK(cs);
+    auto iters = GetSortedDepthAndScore();
+
+    std::vector<TxMempoolInfo> ret;
+    ret.reserve(mapTx.size());
+    for (auto it : iters) {
+        ret.emplace_back(TxMempoolInfo{it->GetSharedTx(), it->GetTime(), CFeeRate(it->GetFee(), it->GetTxSize())});
+    }
+
+    return ret;
 }
 
 void CTxMemPool::getTransactions(std::set<uint256>& setTxid)
@@ -859,13 +894,32 @@ void CTxMemPool::getTransactions(std::set<uint256>& setTxid)
         setTxid.insert(mi->GetTx().GetHash());
 }
 
-bool CTxMemPool::lookup(uint256 hash, CTransaction& result) const
+std::shared_ptr<const CTransaction> CTxMemPool::get(const uint256& hash) const
 {
     LOCK(cs);
     indexed_transaction_set::const_iterator i = mapTx.find(hash);
-    if (i == mapTx.end()) return false;
-    result = i->GetTx();
-    return true;
+    if (i == mapTx.end())
+        return nullptr;
+    return i->GetSharedTx();
+}
+
+bool CTxMemPool::lookup(uint256 hash, CTransaction& result) const
+{
+    auto tx = get(hash);
+    if (tx) {
+        result = *tx;
+        return true;
+    }
+    return false;
+}
+
+TxMempoolInfo CTxMemPool::info(const uint256& hash) const
+{
+    LOCK(cs);
+    indexed_transaction_set::const_iterator i = mapTx.find(hash);
+    if (i == mapTx.end())
+        return TxMempoolInfo();
+    return TxMempoolInfo{i->GetSharedTx(), i->GetTime(), CFeeRate(i->GetFee(), i->GetTxSize())};
 }
 
 CFeeRate CTxMemPool::estimateFee(int nBlocks) const

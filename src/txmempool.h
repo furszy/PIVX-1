@@ -287,6 +287,21 @@ struct ancestor_score {};
 class CBlockPolicyEstimator;
 
 /**
+ * Information about a mempool transaction.
+ */
+struct TxMempoolInfo
+{
+    /** The transaction itself */
+    std::shared_ptr<const CTransaction> tx;
+
+    /** Time the transaction entered the mempool. */
+    int64_t nTime;
+
+    /** Feerate of the transaction. */
+    CFeeRate feeRate;
+};
+
+/**
  * CTxMemPool stores valid-according-to-the-current-best-chain
  * transactions that may be included in the next block.
  *
@@ -476,6 +491,8 @@ private:
     void UpdateParent(txiter entry, txiter parent, bool add);
     void UpdateChild(txiter entry, txiter child, bool add);
 
+    std::vector<indexed_transaction_set::const_iterator> GetSortedDepthAndScore() const;
+
 public:
     indirectmap<COutPoint, CTransactionRef> mapNextTx;
     std::map<uint256, std::pair<double, CAmount> > mapDeltas;
@@ -603,6 +620,9 @@ public:
     }
 
     bool lookup(uint256 hash, CTransaction& result) const;
+    CTransactionRef get(const uint256& hash) const;
+    TxMempoolInfo info(const uint256& hash) const;
+    std::vector<TxMempoolInfo> infoAll() const;
 
     /** Estimate fee rate needed to get into the next nBlocks
      *  If no answer can be given at nBlocks, return an estimate
