@@ -4280,7 +4280,6 @@ CWallet::CWallet(std::string strWalletFileIn)
 CWallet::~CWallet()
 {
     delete pwalletdbEncryption;
-    delete pStakerStatus;
 }
 
 void CWallet::SetNull()
@@ -4300,7 +4299,7 @@ void CWallet::SetNull()
     if (pStakerStatus) {
         pStakerStatus->SetNull();
     } else {
-        pStakerStatus = new CStakerStatus();
+        pStakerStatus = MakeUnique<CStakerStatus>();
     }
     // Stake split threshold
     nStakeSplitThreshold = DEFAULT_STAKE_SPLIT_THRESHOLD;

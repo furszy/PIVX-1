@@ -280,7 +280,7 @@ private:
     int64_t nLastResend;
 
     // Staker status (last hashed block and time)
-    CStakerStatus* pStakerStatus{nullptr};
+    std::unique_ptr<CStakerStatus> pStakerStatus;
 
     /**
      * Used to keep track of spent outpoints, and
