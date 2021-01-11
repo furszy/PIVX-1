@@ -84,7 +84,7 @@ bool WalletModel::isSaplingEnforced() const
 
 bool WalletModel::isStakingStatusActive() const
 {
-    return wallet && wallet->pStakerStatus && wallet->pStakerStatus->IsActive();
+    return wallet && wallet->IsStakingActive();
 }
 
 bool WalletModel::isHDEnabled() const
