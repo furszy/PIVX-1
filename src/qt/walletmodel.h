@@ -152,6 +152,7 @@ public:
 
     bool isTestNetwork() const;
     bool isRegTestNetwork() const;
+    bool isShutdownRequested();
     /** Whether cold staking is enabled or disabled in the network **/
     bool isColdStakingNetworkelyEnabled() const;
     bool isSaplingInMaintenance() const;

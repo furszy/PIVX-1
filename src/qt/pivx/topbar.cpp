@@ -443,12 +443,13 @@ void TopBar::setStakingStatusActive(bool fActive)
 }
 void TopBar::updateStakingStatus()
 {
-    setStakingStatusActive(walletModel &&
-                           !walletModel->isWalletLocked() &&
-                           walletModel->isStakingStatusActive());
+    if (walletModel && !walletModel->isShutdownRequested()) {
+        setStakingStatusActive(!walletModel->isWalletLocked() &&
+                               walletModel->isStakingStatusActive());
 
-    // Taking advantage of this timer to update Tor status if needed.
-    updateTorIcon();
+        // Taking advantage of this timer to update Tor status if needed.
+        updateTorIcon();
+    }
 }
 
 void TopBar::setNumConnections(int count)

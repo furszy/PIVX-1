@@ -11,6 +11,7 @@
 #include "optionsmodel.h"
 #include "recentrequeststablemodel.h"
 #include "transactiontablemodel.h"
+#include "init.h" // for ShutdownRequested(). Future: move to an interface wrapper
 
 #include "base58.h"
 #include "coincontrol.h"
@@ -65,6 +66,11 @@ bool WalletModel::isTestNetwork() const
 bool WalletModel::isRegTestNetwork() const
 {
     return Params().IsRegTestNet();
+}
+
+bool WalletModel::isShutdownRequested()
+{
+    return ShutdownRequested();
 }
 
 bool WalletModel::isColdStakingNetworkelyEnabled() const
