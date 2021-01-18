@@ -32,7 +32,9 @@ bench_bench_pivx_LDADD = \
   $(LIBLEVELDB) \
   $(LIBMEMENV) \
   $(LIBSECP256K1) \
+  $(LIBUNIVALUE) \
   $(LIBBITCOIN_ZEROCOIN) \
+  $(LIBSAPLING) \
   $(LIBRUSTZCASH) \
   $(LIBZCASH_LIBS)
 
