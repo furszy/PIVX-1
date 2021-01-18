@@ -25,6 +25,7 @@ bench_bench_pivx_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(EVENT_CFLAGS) $
 bench_bench_pivx_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 bench_bench_pivx_LDADD = \
   $(LIBBITCOIN_SERVER) \
+  $(LIBBITCOIN_WALLET) \
   $(LIBBITCOIN_COMMON) \
   $(LIBBITCOIN_UNIVALUE) \
   $(LIBBITCOIN_UTIL) \
@@ -40,10 +41,6 @@ bench_bench_pivx_LDADD = \
 
 if ENABLE_ZMQ
 bench_bench_pivx_LDADD += $(LIBBITCOIN_ZMQ) $(ZMQ_LIBS)
-endif
-
-if ENABLE_WALLET
-bench_bench_pivx_LDADD += $(LIBBITCOIN_WALLET)
 endif
 
 bench_bench_pivx_LDADD += $(LIBBITCOIN_CONSENSUS) $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS)
