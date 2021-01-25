@@ -57,8 +57,7 @@ static bool CheckStringSig(const Payload& pl, const CKeyID& keyID, CValidationSt
 template <typename Payload>
 static bool CheckInputsHash(const CTransaction& tx, const Payload& pl, CValidationState& state)
 {
-    uint256 inputsHash = CalcTxInputsHash(tx);
-    if (inputsHash != pl.inputsHash) {
+    if (CalcTxInputsHash(tx) != pl.inputsHash) {
         return state.DoS(100, false, REJECT_INVALID, "bad-protx-inputs-hash");
     }
 

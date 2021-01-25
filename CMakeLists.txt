@@ -221,6 +221,7 @@ set(SERVER_SOURCES
         ./src/rpc/misc.cpp
         ./src/rpc/net.cpp
         ./src/rpc/rawtransaction.cpp
+        ./src/rpc/rpcevo.cpp
         ./src/rpc/server.cpp
         ./src/script/sigcache.cpp
         ./src/script/ismine.cpp
