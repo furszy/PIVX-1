@@ -201,6 +201,7 @@ set(SERVER_SOURCES
         ./src/legacy/validation_zerocoin_legacy.cpp
         ./src/merkleblock.cpp
         ./src/miner.cpp
+        ./src/blockassembler.cpp
         ./src/net.cpp
         ./src/net_processing.cpp
         ./src/noui.cpp

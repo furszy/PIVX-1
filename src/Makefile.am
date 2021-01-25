@@ -220,6 +220,7 @@ BITCOIN_CORE_H = \
   masternodeconfig.h \
   merkleblock.h \
   messagesigner.h \
+  blockassembler.h \
   miner.h \
   moneysupply.h \
   net.h \
@@ -328,6 +329,7 @@ libbitcoin_server_a_SOURCES = \
   legacy/validation_zerocoin_legacy.cpp \
   sapling/sapling_validation.cpp \
   merkleblock.cpp \
+  blockassembler.cpp \
   miner.cpp \
   net.cpp \
   net_processing.cpp \

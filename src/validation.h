@@ -49,7 +49,6 @@ class CNode;
 class CScriptCheck;
 
 struct PrecomputedTransactionData;
-struct CBlockTemplate;
 
 /** Default for -limitancestorcount, max number of in-mempool ancestors */
 static const unsigned int DEFAULT_ANCESTOR_LIMIT = 25;
