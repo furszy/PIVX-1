@@ -8,11 +8,13 @@
 #include "test/test_pivx.h"
 
 #include "guiinterface.h"
+#include "miner.h"
 #include "net_processing.h"
 #include "random.h"
 #include "rpc/server.h"
 #include "rpc/register.h"
 #include "script/sigcache.h"
+#include "sporkdb.h"
 #include "txmempool.h"
 #include "txdb.h"
 #include "validation.h"
@@ -53,6 +55,8 @@ TestingSetup::TestingSetup()
         // Ideally we'd move all the RPC tests to the functional testing framework
         // instead of unit tests, but for now we need these here.
         RegisterAllCoreRPCCommands(tableRPC);
+        zerocoinDB = new CZerocoinDB(0, true);
+        pSporkDB = new CSporkDB(0, true);
         pblocktree = new CBlockTreeDB(1 << 20, true);
         pcoinsdbview = new CCoinsViewDB(1 << 23, true);
         pcoinsTip = new CCoinsViewCache(pcoinsdbview);
@@ -79,7 +83,81 @@ TestingSetup::~TestingSetup()
         delete pcoinsTip;
         delete pcoinsdbview;
         delete pblocktree;
+        delete zerocoinDB;
+        delete pSporkDB;
         fs::remove_all(pathTemp);
+}
+
+TestChainSetup::TestChainSetup(int blockCount)
+{
+    SelectParams(CBaseChainParams::REGTEST);
+
+    // if blockCount is over PoS start, delay it to 100 blocks after.
+    if (blockCount > Params().GetConsensus().vUpgrades[Consensus::UPGRADE_POS].nActivationHeight) {
+        UpdateNetworkUpgradeParameters(Consensus::UPGRADE_POS, blockCount + 100);
+        UpdateNetworkUpgradeParameters(Consensus::UPGRADE_V3_4, blockCount + 101);
+    }
+
+    // Generate a blockCount-block chain:
+    coinbaseKey.MakeNewKey(true);
+    CScript scriptPubKey = CScript() << ToByteVector(coinbaseKey.GetPubKey()) << OP_CHECKSIG;
+    for (int i = 0; i < blockCount; i++)
+    {
+        std::vector<CMutableTransaction> noTxns;
+        CBlock b = CreateAndProcessBlock(noTxns, scriptPubKey);
+        coinbaseTxns.push_back(*b.vtx[0]);
+    }
+}
+
+//
+// Create a new block with just given transactions, coinbase paying to
+// scriptPubKey, and try to add it to the current chain.
+//
+CBlock TestChainSetup::CreateAndProcessBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey)
+{
+    CBlock block = CreateBlock(txns, scriptPubKey);
+    CValidationState state;
+    if (!ProcessNewBlock(state, nullptr, std::make_shared<const CBlock>(block), nullptr)) {
+        throw std::runtime_error(state.GetRejectReason());
+    }
+    return block;
+}
+
+CBlock TestChainSetup::CreateAndProcessBlock(const std::vector<CMutableTransaction>& txns, const CKey& scriptKey)
+{
+    CScript scriptPubKey = CScript() <<  ToByteVector(scriptKey.GetPubKey()) << OP_CHECKSIG;
+    return CreateAndProcessBlock(txns, scriptPubKey);
+}
+
+CBlock TestChainSetup::CreateBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey)
+{
+    CBlockTemplate* pblocktemplate = CreateNewBlock(scriptPubKey, nullptr, false);
+    std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>(pblocktemplate->block);
+
+    // Replace mempool-selected txns with just coinbase plus passed-in txns:
+    pblock->vtx.resize(1);
+    for (const CMutableTransaction& tx : txns)
+        pblock->vtx.push_back(MakeTransactionRef(tx));
+
+    // IncrementExtraNonce creates a valid coinbase and merkleRoot
+    unsigned int extraNonce = 0;
+    {
+        LOCK(cs_main);
+        IncrementExtraNonce(pblock, chainActive.Tip(), extraNonce);
+    }
+
+    while (!CheckProofOfWork(pblock->GetHash(), pblock->nBits)) ++pblock->nNonce;
+    return *pblock;
+}
+
+CBlock TestChainSetup::CreateBlock(const std::vector<CMutableTransaction>& txns, const CKey& scriptKey)
+{
+    CScript scriptPubKey = CScript() <<  ToByteVector(scriptKey.GetPubKey()) << OP_CHECKSIG;
+    return CreateBlock(txns, scriptPubKey);
+}
+
+TestChainSetup::~TestChainSetup()
+{
 }
 
 CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(CMutableTransaction &tx, CTxMemPool *pool) {

@@ -54,6 +54,37 @@ struct TestingSetup: public BasicTestingSetup {
     ~TestingSetup();
 };
 
+class CBlock;
+struct CMutableTransaction;
+class CScript;
+
+struct TestChainSetup : public TestingSetup
+{
+    TestChainSetup(int blockCount);
+    ~TestChainSetup();
+
+    // Create a new block with just given transactions, coinbase paying to
+    // scriptPubKey, and try to add it to the current chain.
+    CBlock CreateAndProcessBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey);
+    CBlock CreateAndProcessBlock(const std::vector<CMutableTransaction>& txns, const CKey& scriptKey);
+    CBlock CreateBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey);
+    CBlock CreateBlock(const std::vector<CMutableTransaction>& txns, const CKey& scriptKey);
+
+    std::vector<CTransaction> coinbaseTxns; // For convenience, coinbase transactions
+    CKey coinbaseKey; // private/public key needed to spend coinbase transactions
+};
+
+// Testing fixture that pre-creates a 100-block REGTEST-mode blockchain
+struct TestChain100Setup : public TestChainSetup {
+    TestChain100Setup() : TestChainSetup(100) {}
+};
+
+// Testing fixture that pre-creates a 400-block REGTEST-mode blockchain
+// all 400 blocks are PoW. PoS starts at height 500
+struct TestChain400Setup : public TestChainSetup {
+    TestChain400Setup() : TestChainSetup(400) {}
+};
+
 class CTxMemPoolEntry;
 class CTxMemPool;
 
