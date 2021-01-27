@@ -86,8 +86,6 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     entry.dPriority = 111.0;
     entry.nHeight = 11;
 
-    LOCK(cs_main);
-    LOCK(mempool.cs);
     Checkpoints::fEnabled = false;
 
     // Simple block creation, nothing special yet:
@@ -100,7 +98,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     std::vector<CTransactionRef>txFirst;
     std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>(pblocktemplate->block); // pointer for convenience
     for (unsigned int i = 0; i < sizeof(blockinfo)/sizeof(*blockinfo); ++i) {
-        CBlockIndex* pindexPrev = chainActive.Tip();
+        CBlockIndex* pindexPrev = WITH_LOCK(cs_main, return chainActive.Tip());
         pblock->nTime = pindexPrev->GetMedianTimePast() + 60;
         pblock->vtx.clear(); // Update coinbase input height manually
         CreateCoinbaseTx(pblock.get(), CScript(), pindexPrev);
@@ -235,7 +233,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     mempool.clear();
 
     // non-final txs in mempool
-    SetMockTime(chainActive.Tip()->GetMedianTimePast()+1);
+    SetMockTime(WITH_LOCK(cs_main, return chainActive.Tip()->GetMedianTimePast()+1));
 
     // height locked
     tx.vin[0].prevout.hash = txFirst[0]->GetHash();
@@ -243,10 +241,10 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     tx.vin[0].nSequence = 0;
     tx.vout[0].nValue = 4900000000LL;
     tx.vout[0].scriptPubKey = CScript() << OP_1;
-    tx.nLockTime = chainActive.Tip()->nHeight+1;
+    tx.nLockTime = WITH_LOCK(cs_main, return chainActive.Tip()->nHeight+1);
     hash = tx.GetHash();
     mempool.addUnchecked(hash, entry.Fee(100000000L).Time(GetTime()).SpendsCoinbaseOrCoinstake(true).FromTx(tx));
-    BOOST_CHECK(!CheckFinalTx(tx, LOCKTIME_MEDIAN_TIME_PAST));
+    { LOCK(cs_main); BOOST_CHECK(!CheckFinalTx(tx, LOCKTIME_MEDIAN_TIME_PAST)); }
 
     // time locked
     tx2.vin.resize(1);
@@ -257,19 +255,22 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     tx2.vout.resize(1);
     tx2.vout[0].nValue = 4900000000LL;
     tx2.vout[0].scriptPubKey = CScript() << OP_1;
-    tx2.nLockTime = chainActive.Tip()->GetMedianTimePast()+1;
+    tx2.nLockTime = WITH_LOCK(cs_main, return chainActive.Tip()->GetMedianTimePast()+1);
     hash = tx2.GetHash();
     mempool.addUnchecked(hash, entry.Fee(100000000L).Time(GetTime()).SpendsCoinbaseOrCoinstake(true).FromTx(tx2));
-    BOOST_CHECK(!CheckFinalTx(tx2, LOCKTIME_MEDIAN_TIME_PAST));
+    { LOCK(cs_main); BOOST_CHECK(!CheckFinalTx(tx2, LOCKTIME_MEDIAN_TIME_PAST)); }
 
     BOOST_CHECK(pblocktemplate = BlockAssembler(Params(), DEFAULT_PRINTPRIORITY).CreateNewBlock(scriptPubKey, pwalletMain, false));
 
     // Neither tx should have make it into the template.
     BOOST_CHECK_EQUAL(pblocktemplate->block.vtx.size(), 1);
 
-    // However if we advance height and time by one, both will.
-    chainActive.Tip()->nHeight++;
-    SetMockTime(chainActive.Tip()->GetMedianTimePast()+2);
+    {
+        LOCK(cs_main);
+        // However if we advance height and time by one, both will.
+        chainActive.Tip()->nHeight++;
+        SetMockTime(chainActive.Tip()->GetMedianTimePast() + 2);
+    }
 
     // FIXME: we should *actually* create a new block so the following test
     //        works; CheckFinalTx() isn't fooled by monkey-patching nHeight.
@@ -279,7 +280,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     BOOST_CHECK(pblocktemplate = BlockAssembler(Params(), DEFAULT_PRINTPRIORITY).CreateNewBlock(scriptPubKey, pwalletMain, false));
     BOOST_CHECK_EQUAL(pblocktemplate->block.vtx.size(), 3);
 
-    chainActive.Tip()->nHeight--;
+    WITH_LOCK(cs_main, chainActive.Tip()->nHeight--);
     SetMockTime(0);
     mempool.clear();
 
