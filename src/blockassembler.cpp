@@ -160,8 +160,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     pblocktemplate->vTxFees.push_back(-1); // updated at end
     pblocktemplate->vTxSigOps.push_back(-1); // updated at end
 
-    LOCK2(cs_main, mempool.cs);
-    CBlockIndex* pindexPrev = chainActive.Tip();
+    CBlockIndex* pindexPrev = WITH_LOCK(cs_main, return chainActive.Tip());
     nHeight = pindexPrev->nHeight + 1;
 
     pblock->nVersion = ComputeBlockVersion(chainparams.GetConsensus(), nHeight);
@@ -177,9 +176,12 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         return nullptr;
     }
 
-    // Add transactions
-    addPriorityTxs();
-    addScoreTxs();
+    {
+        // Add transactions from mempool
+        LOCK2(cs_main,mempool.cs);
+        addPriorityTxs();
+        addScoreTxs();
+    }
 
     if (!fProofOfStake) {
         // Coinbase can get the fees.
@@ -211,9 +213,15 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         }
     }
 
-    CValidationState state;
-    if (!TestBlockValidity(state, *pblock, pindexPrev, false, false)) {
-        throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));
+    {
+        LOCK(cs_main);
+        if (chainActive.Tip() != pindexPrev) return nullptr; // new block came in, move on
+
+        CValidationState state;
+        if (!TestBlockValidity(state, *pblock, pindexPrev, false, false)) {
+            throw std::runtime_error(
+                    strprintf("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));
+        }
     }
 
     return std::move(pblocktemplate);
