@@ -125,6 +125,7 @@ set(BITCOIN_TESTS
         ${CMAKE_CURRENT_SOURCE_DIR}/timedata_tests.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/torcontrol_tests.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/transaction_tests.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/txvalidationcache_tests.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/uint256_tests.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/univalue_tests.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/util_tests.cpp
