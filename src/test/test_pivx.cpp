@@ -7,6 +7,7 @@
 
 #include "test/test_pivx.h"
 
+#include "blockassembler.h"
 #include "guiinterface.h"
 #include "miner.h"
 #include "net_processing.h"
@@ -131,7 +132,7 @@ CBlock TestChainSetup::CreateAndProcessBlock(const std::vector<CMutableTransacti
 
 CBlock TestChainSetup::CreateBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey)
 {
-    CBlockTemplate* pblocktemplate = CreateNewBlock(scriptPubKey, nullptr, false);
+    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(Params(), DEFAULT_PRINTPRIORITY).CreateNewBlock(scriptPubKey, nullptr, false);
     std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>(pblocktemplate->block);
 
     // Replace mempool-selected txns with just coinbase plus passed-in txns:
