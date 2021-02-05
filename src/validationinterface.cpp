@@ -67,7 +67,9 @@ void CMainSignals::UnregisterBackgroundSignalScheduler() {
 }
 
 void CMainSignals::FlushBackgroundCallbacks() {
-    m_internals->m_schedulerClient.EmptyQueue();
+    if (m_internals) {
+        m_internals->m_schedulerClient.EmptyQueue();
+    }
 }
 
 CMainSignals& GetMainSignals()
