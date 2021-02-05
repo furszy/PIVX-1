@@ -242,6 +242,11 @@ void PrepareShutdown()
 
     StopTorControl();
 
+    // After everything has been shut down, but before things get flushed, stop the
+    // CScheduler/checkqueue threadGroup
+    threadGroup.interrupt_all();
+    threadGroup.join_all();
+
     DumpMasternodes();
     DumpBudgets(g_budgetman);
     DumpMasternodePayments();
@@ -272,11 +277,6 @@ void PrepareShutdown()
     // would too. The only reason to do the above flushes is to let the wallet catch
     // up with our current chain to avoid any strange pruning edge cases and make
     // next startup faster by avoiding rescan.
-
-    // After everything has been shut down, but before things get flushed, stop the
-    // CScheduler/checkqueue threadGroup
-    threadGroup.interrupt_all();
-    threadGroup.join_all();
 
     {
         LOCK(cs_main);
