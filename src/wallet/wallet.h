@@ -748,8 +748,6 @@ public:
     void LoadAddressBookName(const CWDestination& dest, const std::string& strName);
     void LoadAddressBookPurpose(const CWDestination& dest, const std::string& strPurpose);
 
-    bool UpdatedTransaction(const uint256& hashTx) override;
-
     unsigned int GetKeyPoolSize();
     unsigned int GetStakingKeyPoolSize();
 

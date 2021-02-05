@@ -3549,20 +3549,6 @@ void CReserveKey::ReturnKey()
     vchPubKey = CPubKey();
 }
 
-bool CWallet::UpdatedTransaction(const uint256& hashTx)
-{
-    {
-        LOCK(cs_wallet);
-        // Only notify UI if this transaction is in this wallet
-        std::map<uint256, CWalletTx>::const_iterator mi = mapWallet.find(hashTx);
-        if (mi != mapWallet.end()) {
-            NotifyTransactionChanged(this, hashTx, CT_UPDATED);
-            return true;
-        }
-    }
-    return false;
-}
-
 void CWallet::LockCoin(const COutPoint& output)
 {
     AssertLockHeld(cs_wallet); // setLockedCoins

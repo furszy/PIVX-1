@@ -15,7 +15,6 @@ struct ValidationInterfaceConnections {
     boost::signals2::scoped_connection BlockConnected;
     boost::signals2::scoped_connection BlockDisconnected;
     boost::signals2::scoped_connection NotifyTransactionLock;
-    boost::signals2::scoped_connection UpdatedTransaction;
     boost::signals2::scoped_connection SetBestChain;
     boost::signals2::scoped_connection Broadcast;
     boost::signals2::scoped_connection BlockChecked;
@@ -36,8 +35,6 @@ struct MainSignalsInstance {
     boost::signals2::signal<void (const std::shared_ptr<const CBlock> &, int nBlockHeight)> BlockDisconnected;
     /** Notifies listeners of an updated transaction lock without new data. */
     boost::signals2::signal<void (const CTransaction &)> NotifyTransactionLock;
-    /** Notifies listeners of an updated transaction without new data (for now: a coinbase potentially becoming visible). */
-    boost::signals2::signal<bool (const uint256 &)> UpdatedTransaction;
     /** Notifies listeners of a new active block chain. */
     boost::signals2::signal<void (const CBlockLocator &)> SetBestChain;
     /** Tells listeners to broadcast their data. */
@@ -67,7 +64,6 @@ void RegisterValidationInterface(CValidationInterface* pwalletIn)
     conns.BlockConnected = g_signals.m_internals->BlockConnected.connect(std::bind(&CValidationInterface::BlockConnected, pwalletIn, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     conns.BlockDisconnected = g_signals.m_internals->BlockDisconnected.connect(std::bind(&CValidationInterface::BlockDisconnected, pwalletIn, std::placeholders::_1, std::placeholders::_2));
     conns.NotifyTransactionLock = g_signals.m_internals->NotifyTransactionLock.connect(std::bind(&CValidationInterface::NotifyTransactionLock, pwalletIn, std::placeholders::_1));
-    conns.UpdatedTransaction = g_signals.m_internals->UpdatedTransaction.connect(std::bind(&CValidationInterface::UpdatedTransaction, pwalletIn, std::placeholders::_1));
     conns.SetBestChain = g_signals.m_internals->SetBestChain.connect(std::bind(&CValidationInterface::SetBestChain, pwalletIn, std::placeholders::_1));
     conns.Broadcast = g_signals.m_internals->Broadcast.connect(std::bind(&CValidationInterface::ResendWalletTransactions, pwalletIn, std::placeholders::_1));
     conns.BlockChecked = g_signals.m_internals->BlockChecked.connect(std::bind(&CValidationInterface::BlockChecked, pwalletIn, std::placeholders::_1, std::placeholders::_2));
@@ -106,10 +102,6 @@ void CMainSignals::BlockDisconnected(const std::shared_ptr<const CBlock> &block,
 
 void CMainSignals::NotifyTransactionLock(const CTransaction& tx) {
     m_internals->NotifyTransactionLock(tx);
-}
-
-void CMainSignals::UpdatedTransaction(const uint256& hash) {
-    m_internals->UpdatedTransaction(hash);
 }
 
 void CMainSignals::SetBestChain(const CBlockLocator& locator) {

@@ -38,7 +38,6 @@ protected:
     virtual void NotifyTransactionLock(const CTransaction &tx) {}
     /** Notifies listeners of the new active block chain on-disk. */
     virtual void SetBestChain(const CBlockLocator &locator) {}
-    virtual bool UpdatedTransaction(const uint256 &hash) { return false;}
     /** Tells listeners to broadcast their data. */
     virtual void ResendWalletTransactions(CConnman* connman) {}
     virtual void BlockChecked(const CBlock&, const CValidationState&) {}
@@ -63,7 +62,6 @@ public:
     void BlockConnected(const std::shared_ptr<const CBlock> &block, const CBlockIndex *pindex, const std::vector<CTransactionRef> &txnConflicted);
     void BlockDisconnected(const std::shared_ptr<const CBlock> &block, int nBlockHeight);
     void NotifyTransactionLock(const CTransaction&);
-    void UpdatedTransaction(const uint256 &);
     void SetBestChain(const CBlockLocator &);
     void Broadcast(CConnman* connman);
     void BlockChecked(const CBlock&, const CValidationState&);
