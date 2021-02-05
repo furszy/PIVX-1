@@ -301,6 +301,7 @@ void PrepareShutdown()
 
     // Disconnect all slots
     UnregisterAllValidationInterfaces();
+    GetMainSignals().UnregisterBackgroundSignalScheduler();
 
 #ifndef WIN32
     try {
@@ -1241,6 +1242,8 @@ bool AppInitMain()
     // Start the lightweight task scheduler thread
     CScheduler::Function serviceLoop = std::bind(&CScheduler::serviceQueue, &scheduler);
     threadGroup.create_thread(std::bind(&TraceThread<CScheduler::Function>, "scheduler", serviceLoop));
+
+    GetMainSignals().RegisterBackgroundSignalScheduler(scheduler);
 
     // Initialize Sapling circuit parameters
     LoadSaplingParams();
