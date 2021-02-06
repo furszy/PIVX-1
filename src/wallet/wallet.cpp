@@ -21,6 +21,7 @@
 #include "utilmoneystr.h"
 #include "zpivchain.h"
 
+#include <future>
 #include <boost/algorithm/string/replace.hpp>
 
 CWallet* pwalletMain = nullptr;
@@ -1285,6 +1286,8 @@ void CWallet::BlockConnected(const std::shared_ptr<const CBlock>& pblock, const 
 
     // Sapling: Update cached incremental witnesses
     ChainTipAdded(pindex, pblock.get(), oldSaplingTree);
+
+    m_last_block_processed = pindex;
 }
 
 void CWallet::BlockDisconnected(const std::shared_ptr<const CBlock>& pblock, int nBlockHeight)
@@ -1299,6 +1302,35 @@ void CWallet::BlockDisconnected(const std::shared_ptr<const CBlock>& pblock, int
         m_sspk_man->DecrementNoteWitnesses(nBlockHeight);
         m_sspk_man->UpdateSaplingNullifierNoteMapForBlock(pblock.get());
     }
+}
+
+void CWallet::BlockUntilSyncedToCurrentChain() {
+    AssertLockNotHeld(cs_main);
+    AssertLockNotHeld(cs_wallet);
+
+    {
+        // Skip the queue-draining stuff if we know we're caught up with
+        // chainActive.Tip()...
+        // We could also take cs_wallet here, and call m_last_block_processed
+        // protected by cs_wallet instead of cs_main, but as long as we need
+        // cs_main here anyway, its easier to just call it cs_main-protected.
+        LOCK(cs_main);
+        const CBlockIndex* initialChainTip = chainActive.Tip();
+
+        if (m_last_block_processed->GetAncestor(initialChainTip->nHeight) == initialChainTip) {
+            return;
+        }
+    }
+
+    // ...otherwise put a callback in the validation interface queue and wait
+    // for the queue to drain enough to execute it (indicating we are caught up
+    // at least with the time we entered this function).
+
+    std::promise<void> promise;
+    CallFunctionInValidationInterfaceQueue([&promise] {
+        promise.set_value();
+    });
+    promise.get_future().wait();
 }
 
 void CWallet::MarkAffectedTransactionsDirty(const CTransaction& tx)
@@ -4112,8 +4144,6 @@ CWallet* CWallet::CreateWalletFromFile(const std::string walletFile)
 
     LogPrintf("Wallet completed loading in %15dms\n", GetTimeMillis() - nStart);
 
-    RegisterValidationInterface(walletInstance);
-
     CBlockIndex* pindexRescan = chainActive.Tip();
     if (gArgs.GetBoolArg("-rescan", false))
         pindexRescan = chainActive.Genesis();
@@ -4125,6 +4155,10 @@ CWallet* CWallet::CreateWalletFromFile(const std::string walletFile)
         else
             pindexRescan = chainActive.Genesis();
     }
+
+    walletInstance->m_last_block_processed = chainActive.Tip();
+    RegisterValidationInterface(walletInstance);
+
     if (chainActive.Tip() && chainActive.Tip() != pindexRescan) {
         uiInterface.InitMessage(_("Rescanning..."));
         LogPrintf("Rescanning last %i blocks (from block %i)...\n", chainActive.Height() - pindexRescan->nHeight, pindexRescan->nHeight);
