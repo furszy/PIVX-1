@@ -19,6 +19,8 @@ class CValidationInterface;
 class CValidationState;
 class uint256;
 class CScheduler;
+class CTxMemPool;
+enum class MemPoolRemovalReason;
 
 // These functions dispatch to one or all registered wallets
 
@@ -36,6 +38,15 @@ protected:
     /** Notifies listeners of updated block chain tip */
     virtual void UpdatedBlockTip(const CBlockIndex *pindexNew, const CBlockIndex *pindexFork, bool fInitialDownload) {}
     virtual void TransactionAddedToMempool(const CTransactionRef &ptxn) {}
+    /**
+     * Notifies listeners of a transaction leaving mempool.
+     *
+     * This only fires for transactions which leave mempool because of expiry,
+     * size limiting, reorg (changes in lock times/coinbase/coinstake maturity), or
+     * replacement. This does not include any transactions which are included
+     * in BlockConnectedDisconnected either in block->vtx or in txnConflicted.
+     */
+    virtual void TransactionRemovedFromMempool(const CTransactionRef &ptx) {}
     virtual void BlockConnected(const std::shared_ptr<const CBlock> &block, const CBlockIndex *pindex, const std::vector<CTransactionRef> &txnConflicted) {}
     virtual void BlockDisconnected(const std::shared_ptr<const CBlock> &block, int nBlockHeight) {}
     /** Notifies listeners of the new active block chain on-disk. */
@@ -53,6 +64,8 @@ class CMainSignals {
 private:
     std::unique_ptr<MainSignalsInstance> m_internals;
 
+    void MempoolEntryRemoved(CTransactionRef tx, MemPoolRemovalReason reason);
+
     friend void ::RegisterValidationInterface(CValidationInterface*);
     friend void ::UnregisterValidationInterface(CValidationInterface*);
     friend void ::UnregisterAllValidationInterfaces();
@@ -64,6 +77,11 @@ public:
     void UnregisterBackgroundSignalScheduler();
     /** Call any remaining callbacks on the calling thread */
     void FlushBackgroundCallbacks();
+
+    /** Register with mempool to call TransactionRemovedFromMempool callbacks */
+    void RegisterWithMempoolSignals(CTxMemPool& pool);
+    /** Unregister with mempool */
+    void UnregisterWithMempoolSignals(CTxMemPool& pool);
 
     void UpdatedBlockTip(const CBlockIndex *, const CBlockIndex *, bool fInitialDownload);
     void TransactionAddedToMempool(const CTransactionRef &ptxn);
