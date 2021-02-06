@@ -73,11 +73,11 @@ void CMainSignals::FlushBackgroundCallbacks() {
 }
 
 void CMainSignals::RegisterWithMempoolSignals(CTxMemPool& pool) {
-    pool.NotifyEntryRemoved.connect(boost::bind(&CMainSignals::MempoolEntryRemoved, this, _1, _2));
+    pool.NotifyEntryRemoved.connect(boost::bind(&CMainSignals::MempoolEntryRemoved, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 void CMainSignals::UnregisterWithMempoolSignals(CTxMemPool& pool) {
-    pool.NotifyEntryRemoved.disconnect(boost::bind(&CMainSignals::MempoolEntryRemoved, this, _1, _2));
+    pool.NotifyEntryRemoved.disconnect(boost::bind(&CMainSignals::MempoolEntryRemoved, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 CMainSignals& GetMainSignals()
