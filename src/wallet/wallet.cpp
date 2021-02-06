@@ -23,7 +23,6 @@
 
 #include <future>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/thread.hpp>
 
 CWallet* pwalletMain = nullptr;
 /**
@@ -3175,7 +3174,7 @@ CWallet::CommitResult CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey*
 
         // Try ATMP. This must not fail. The transaction has already been signed and recorded.
         CValidationState state;
-        if (!AcceptToMemoryPool(mempool, state, MakeTransactionRef(std::move(wtxNew)), true, nullptr, false, true, false)) {
+        if (!wtxNew.AcceptToMemoryPool( true, true, false)) {
             res.state = state;
             // Abandon the transaction
             if (AbandonTransaction(res.hashTx)) {
@@ -4299,7 +4298,7 @@ bool CMerkleTx::IsInMainChainImmature() const
 bool CMerkleTx::AcceptToMemoryPool(bool fLimitFree, bool fRejectInsaneFee, bool ignoreFees)
 {
     CValidationState state;
-    bool fAccepted = ::AcceptToMemoryPool(mempool, state, MakeTransactionRef(*this), fLimitFree, nullptr, false, fRejectInsaneFee, ignoreFees);
+    bool fAccepted = ::AcceptToMemoryPool(mempool, state, tx, fLimitFree, nullptr, false, fRejectInsaneFee, ignoreFees);
     if (!fAccepted)
         LogPrintf("%s : %s\n", __func__, state.GetRejectReason());
     return fAccepted;
