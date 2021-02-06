@@ -518,6 +518,10 @@ UniValue fundrawtransaction(const JSONRPCRequest& request)
     if (!pwalletMain)
         throw std::runtime_error("wallet not initialized");
 
+    // Make sure the results are valid at least up to the most recent block
+    // the user could have gotten from another RPC command prior to now
+    pwalletMain->BlockUntilSyncedToCurrentChain();
+
     RPCTypeCheck(request.params, {UniValue::VSTR});
 
     CTxDestination changeAddress = CNoDestination();
