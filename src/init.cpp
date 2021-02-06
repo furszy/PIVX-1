@@ -1258,6 +1258,7 @@ bool AppInitMain()
     threadGroup.create_thread(std::bind(&TraceThread<CScheduler::Function>, "scheduler", serviceLoop));
 
     GetMainSignals().RegisterBackgroundSignalScheduler(scheduler);
+    GetMainSignals().RegisterWithMempoolSignals(mempool);
 
     // Initialize Sapling circuit parameters
     LoadSaplingParams();
