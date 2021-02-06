@@ -315,6 +315,7 @@ void PrepareShutdown()
     // Disconnect all slots
     UnregisterAllValidationInterfaces();
     GetMainSignals().UnregisterBackgroundSignalScheduler();
+    GetMainSignals().UnregisterWithMempoolSignals(mempool);
 
 #ifndef WIN32
     try {
