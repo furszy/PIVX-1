@@ -1251,6 +1251,19 @@ void CWallet::TransactionAddedToMempool(const CTransactionRef& ptx)
 {
     LOCK2(cs_main, cs_wallet);
     SyncTransaction(ptx, NULL, -1);
+
+    auto it = mapWallet.find(ptx->GetHash());
+    if (it != mapWallet.end()) {
+        it->second.fInMempool = true;
+    }
+}
+
+void CWallet::TransactionRemovedFromMempool(const CTransactionRef &ptx) {
+    LOCK(cs_wallet);
+    auto it = mapWallet.find(ptx->GetHash());
+    if (it != mapWallet.end()) {
+        it->second.fInMempool = false;
+    }
 }
 
 void CWallet::BlockConnected(const std::shared_ptr<const CBlock>& pblock, const CBlockIndex *pindex, const std::vector<CTransactionRef>& vtxConflicted)
@@ -1266,9 +1279,11 @@ void CWallet::BlockConnected(const std::shared_ptr<const CBlock>& pblock, const 
 
     for (const CTransactionRef& ptx : vtxConflicted) {
         SyncTransaction(ptx, nullptr, -1);
+        TransactionRemovedFromMempool(ptx);
     }
     for (size_t i = 0; i < pblock->vtx.size(); i++) {
         SyncTransaction(pblock->vtx[i], pindex, i);
+        TransactionRemovedFromMempool(pblock->vtx[i]);
     }
 
     // Sapling: notify about the connected block
@@ -1882,8 +1897,7 @@ void CWallet::ReacceptWalletTransactions(bool fFirstLoad)
 
 bool CWalletTx::InMempool() const
 {
-    LOCK(mempool.cs);
-    return mempool.exists(GetHash());
+    return fInMempool;
 }
 
 void CWalletTx::RelayWalletTransaction(CConnman* connman)
@@ -3193,9 +3207,13 @@ CWallet::CommitResult CWallet::CommitTransaction(CTransactionRef tx, CReserveKey
 
         res.hashTx = wtxNew.GetHash();
 
+        // Get the inserted-CWalletTx from mapWallet so that the
+        // fInMempool flag is cached properly
+        CWalletTx& wtx = mapWallet.at(wtxNew.GetHash());
+
         // Try ATMP. This must not fail. The transaction has already been signed and recorded.
         CValidationState state;
-        if (!wtxNew.AcceptToMemoryPool(state, true, true, false)) {
+        if (!wtx.AcceptToMemoryPool(state, true, true, false)) {
             res.state = state;
             // Abandon the transaction
             if (AbandonTransaction(res.hashTx)) {
@@ -3211,7 +3229,7 @@ CWallet::CommitResult CWallet::CommitTransaction(CTransactionRef tx, CReserveKey
         res.status = CWallet::CommitStatus::OK;
 
         // Broadcast
-        wtxNew.RelayWalletTransaction(connman);
+        wtx.RelayWalletTransaction(connman);
     }
     return res;
 }
@@ -4310,7 +4328,13 @@ bool CWalletTx::IsInMainChainImmature() const
 
 bool CWalletTx::AcceptToMemoryPool(CValidationState& state, bool fLimitFree, bool fRejectInsaneFee, bool ignoreFees)
 {
+    // We must set fInMempool here - while it will be re-set to true by the
+    // entered-mempool callback, if we did not there would be a race where a
+    // user could call sendmoney in a loop and hit spurious out of funds errors
+    // because we think that the transaction they just generated's change is
+    // unavailable as we're not yet aware its in mempool.
     bool fAccepted = ::AcceptToMemoryPool(mempool, state, tx, fLimitFree, nullptr, false, fRejectInsaneFee, ignoreFees);
+    fInMempool = fAccepted;
     if (!fAccepted)
         LogPrintf("%s : %s\n", __func__, state.GetRejectReason());
     return fAccepted;
@@ -4576,6 +4600,7 @@ void CWalletTx::Init(const CWallet* pwalletIn)
     nTimeSmart = 0;
     fFromMe = false;
     fChangeCached = false;
+    fInMempool = false;
     nChangeCached = 0;
     fStakeDelegationVoided = false;
     fShieldedChangeCached = false;

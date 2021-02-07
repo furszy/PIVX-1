@@ -337,6 +337,7 @@ public:
 
     mutable bool fStakeDelegationVoided;
     mutable bool fChangeCached;
+    mutable bool fInMempool;
     mutable CAmount nChangeCached;
     mutable bool fShieldedChangeCached;
     mutable CAmount nShieldedChangeCached;
@@ -863,6 +864,7 @@ public:
     bool ActivateSaplingWallet(bool memOnly = false);
 
     int ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate = false, bool fromStartup = false);
+    void TransactionRemovedFromMempool(const CTransactionRef &ptx) override;
     void ReacceptWalletTransactions(bool fFirstLoad = false);
     void ResendWalletTransactions(CConnman* connman) override;
 
