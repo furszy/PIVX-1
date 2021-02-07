@@ -129,20 +129,28 @@ void CMainSignals::UpdatedBlockTip(const CBlockIndex* pindexNew, const CBlockInd
     m_internals->UpdatedBlockTip(pindexNew, pindexFork, fInitialDownload);
 }
 
-void CMainSignals::TransactionAddedToMempool(const CTransactionRef &ptxn) {
-    m_internals->TransactionAddedToMempool(ptxn);
+void CMainSignals::TransactionAddedToMempool(const CTransactionRef &ptx) {
+    m_internals->m_schedulerClient.AddToProcessQueue([ptx, this] {
+        m_internals->TransactionAddedToMempool(ptx);
+    });
 }
 
-void CMainSignals::BlockConnected(const std::shared_ptr<const CBlock> &block, const CBlockIndex *pindex, const std::vector<CTransactionRef> &txnConflicted) {
-    m_internals->BlockConnected(block, pindex, txnConflicted);
+void CMainSignals::BlockConnected(const std::shared_ptr<const CBlock> &pblock, const CBlockIndex *pindex, const std::shared_ptr<const std::vector<CTransactionRef>>& pvtxConflicted) {
+    m_internals->m_schedulerClient.AddToProcessQueue([pblock, pindex, pvtxConflicted, this] {
+        m_internals->BlockConnected(pblock, pindex, *pvtxConflicted);
+    });
 }
 
-void CMainSignals::BlockDisconnected(const std::shared_ptr<const CBlock> &block, int nBlockHeight) {
-    m_internals->BlockDisconnected(block, nBlockHeight);
+void CMainSignals::BlockDisconnected(const std::shared_ptr<const CBlock> &pblock, int nBlockHeight) {
+    m_internals->m_schedulerClient.AddToProcessQueue([pblock, nBlockHeight, this] {
+        m_internals->BlockDisconnected(pblock, nBlockHeight);
+    });
 }
 
-void CMainSignals::SetBestChain(const CBlockLocator& locator) {
-    m_internals->SetBestChain(locator);
+void CMainSignals::SetBestChain(const CBlockLocator &locator) {
+    m_internals->m_schedulerClient.AddToProcessQueue([locator, this] {
+        m_internals->SetBestChain(locator);
+    });
 }
 
 void CMainSignals::Broadcast(CConnman* connman) {
