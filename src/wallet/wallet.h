@@ -626,6 +626,7 @@ public:
     bool ActivateSaplingWallet(bool memOnly = false);
 
     int ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate = false, bool fromStartup = false);
+    void TransactionRemovedFromMempool(const CTransactionRef &ptx) override;
     void ReacceptWalletTransactions(bool fFirstLoad = false);
     void ResendWalletTransactions(CConnman* connman) override;
 
@@ -949,7 +950,6 @@ public:
     bool IsInMainChain() const;
     bool IsInMainChainImmature() const;
     int GetBlocksToMaturity() const;
-    bool AcceptToMemoryPool(CValidationState& state, bool fLimitFree = true, bool fRejectInsaneFee = true, bool ignoreFees = false);
     bool hashUnset() const { return (hashBlock.IsNull() || hashBlock == ABANDON_HASH); }
     bool isAbandoned() const { return (hashBlock == ABANDON_HASH); }
     void setAbandoned() { hashBlock = ABANDON_HASH; }
@@ -990,6 +990,7 @@ public:
 
     mutable bool fStakeDelegationVoided;
     mutable bool fChangeCached;
+    mutable bool fInMempool;
     mutable CAmount nChangeCached;
     mutable bool fShieldedChangeCached;
     mutable CAmount nShieldedChangeCached;
@@ -1111,6 +1112,9 @@ public:
     void UpdateTimeSmart();
     void RelayWalletTransaction(CConnman* connman);
     std::set<uint256> GetConflicts() const;
+
+    /** Pass this transaction to the mempool. Fails if absolute fee exceeds absurd fee. */
+    bool AcceptToMemoryPool(CValidationState& state, bool fLimitFree = true, bool fRejectInsaneFee = true, bool ignoreFees = false);
 };
 
 
