@@ -2285,7 +2285,7 @@ bool ActivateBestChain(CValidationState& state, std::shared_ptr<const CBlock> pb
 
             for (const PerBlockConnectTrace& trace : connectTrace.GetBlocksConnected()) {
                 assert(trace.pblock && trace.pindex);
-                GetMainSignals().BlockConnected(trace.pblock, trace.pindex, *trace.conflictedTxs);
+                GetMainSignals().BlockConnected(trace.pblock, trace.pindex, trace.conflictedTxs);
             }
 
             break;
