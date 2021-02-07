@@ -34,8 +34,6 @@
 #include "zpiv/deterministicmint.h"
 
 #include <univalue.h>
-#include <iostream>
-
 
 int64_t nWalletUnlockTime;
 static RecursiveMutex cs_nWalletUnlockTime;
@@ -3455,7 +3453,6 @@ UniValue listunspent(const JSONRPCRequest& request)
 
     UniValue results(UniValue::VARR);
     std::vector<COutput> vecOutputs;
-    assert(pwalletMain != NULL);
     LOCK2(cs_main, pwalletMain->cs_wallet);
     CWallet::AvailableCoinsFilter coinFilter;
     coinFilter.fOnlyConfirmed = false;
@@ -3464,7 +3461,7 @@ UniValue listunspent(const JSONRPCRequest& request)
         if (out.nDepth < nMinDepth || out.nDepth > nMaxDepth)
             continue;
 
-        if (destinations.size()) {
+        if (!destinations.empty()) {
             CTxDestination address;
             if (!ExtractDestination(out.tx->tx->vout[out.i].scriptPubKey, address))
                 continue;
