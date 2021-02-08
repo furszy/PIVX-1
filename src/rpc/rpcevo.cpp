@@ -5,6 +5,7 @@
 
 #include "core_io.h"
 #include "destination_io.h"
+#include "evo/deterministicmns.h"
 #include "evo/specialtx.h"
 #include "evo/providertx.h"
 #include "masternode.h"
@@ -569,10 +570,153 @@ UniValue protx_register_fund(const JSONRPCRequest& request)
 
 #endif  //ENABLE_WALLET
 
+static bool CheckWalletOwnsScript(CWallet* pwallet, const CScript& script)
+{
+#ifdef ENABLE_WALLET
+    if (!pwallet)
+        return false;
+    AssertLockHeld(pwallet->cs_wallet);
+    CTxDestination dest;
+    if (ExtractDestination(script, dest)) {
+        const CKeyID* keyID = boost::get<CKeyID>(&dest);
+        if (keyID && pwallet->HaveKey(*keyID))
+            return true;
+        const CScriptID* scriptID = boost::get<CScriptID>(&dest);
+        if (scriptID && pwallet->HaveCScript(*scriptID))
+            return true;
+    }
+    return false;
+#else
+    return false;
+#endif
+}
+
+static Optional<int> GetUTXOConfirmations(const COutPoint& outpoint)
+{
+    // nullopt means UTXO is yet unknown or already spent
+    Optional<int> coinHeight = GetUTXOHeight(outpoint);
+    if (coinHeight == nullopt || *coinHeight < 0)
+        return nullopt;
+    int nChainHeight(WITH_LOCK(cs_main, return chainActive.Height(); ));
+    if (nChainHeight < 0 || *coinHeight > nChainHeight)
+        return nullopt;
+    return Optional<int>(nChainHeight - *coinHeight + 1);
+}
+
+static void AddDMNEntryToList(UniValue& ret, CWallet* pwallet, const CDeterministicMNCPtr& dmn, bool fVerbose, bool fFromWallet)
+{
+    assert(!fFromWallet || pwallet);
+    assert(ret.isArray());
+
+    bool hasOwnerKey{false};
+    bool hasOperatorKey{false};
+    bool hasVotingKey{false};
+    bool ownsCollateral{false};
+    bool ownsPayeeScript{false};
+
+    // No need to check wallet if not wallet_only and not verbose
+    bool skipWalletCheck = !fFromWallet && !fVerbose;
+
+    if (pwallet && !skipWalletCheck) {
+        LOCK(pwallet->cs_wallet);
+        hasOwnerKey = pwallet->HaveKey(dmn->pdmnState->keyIDOwner);
+        hasOperatorKey = pwallet->HaveKey(dmn->pdmnState->keyIDOperator);
+        hasVotingKey = pwallet->HaveKey(dmn->pdmnState->keyIDVoting);
+        ownsPayeeScript = CheckWalletOwnsScript(pwallet, dmn->pdmnState->scriptPayout);
+        CTransactionRef collTx;
+        uint256 hashBlock;
+        if (GetTransaction(dmn->collateralOutpoint.hash, collTx, hashBlock, true)) {
+            ownsCollateral = CheckWalletOwnsScript(pwallet, collTx->vout[dmn->collateralOutpoint.n].scriptPubKey);
+        }
+    }
+
+    if (fFromWallet && !hasOwnerKey && !hasOperatorKey  && !hasVotingKey && !ownsCollateral && !ownsPayeeScript) {
+        // not one of ours
+        return;
+    }
+
+    if (fVerbose) {
+        UniValue o(UniValue::VOBJ);
+        dmn->ToJson(o);
+        Optional<int> confirmations = GetUTXOConfirmations(dmn->collateralOutpoint);
+        o.pushKV("confirmations", confirmations ? *confirmations : -1);
+        o.pushKV("hasOwnerKey", hasOwnerKey);
+        o.pushKV("hasOperatorKey", hasOperatorKey);
+        o.pushKV("hasVotingKey", hasVotingKey);
+        o.pushKV("ownsCollateral", ownsCollateral);
+        o.pushKV("ownsPayeeScript", ownsPayeeScript);
+        ret.push_back(o);
+    } else {
+        ret.push_back(dmn->proTxHash.ToString());
+    }
+}
+
+UniValue protx_list(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() > 4) {
+        throw std::runtime_error(
+                "protx_list_wallet (detailed wallet_only valid_only height)\n"
+                "\nLists all ProTxs.\n"
+                "\nArguments:\n"
+                "1. \"detailed\"               (bool, optional, default=true) Return detailed information about each protx.\n"
+                "                                 If set to false, return only the list of txids.\n"
+                "2. \"wallet_only\"            (bool, optional, default=false) If set to true, return only protx which involves\n"
+                "                                 keys from this wallet (collateral, owner, operator, voting, or payout addresses).\n"
+                "3. \"valid_only\"             (bool, optional, default=false) If set to true, return only ProTx which are active/valid\n"
+                "                                 at the height specified.\n"
+                "4. \"height\"                 (numeric, optional) If height is not specified, it defaults to the current chain-tip.\n"
+                "\nResult:\n"
+                "\"...!TODO..."
+                "\nExamples:\n"
+                + HelpExampleCli("protx_list_wallet", "...!TODO...")
+        );
+    }
+
+#ifdef ENABLE_WALLET
+    CWallet* const pwallet = pwalletMain;
+#else
+    CWallet* const pwallet = nullptr;
+#endif
+
+    const bool fVerbose = (request.params.size() == 0 || request.params[0].get_bool());
+    const bool fFromWallet = (request.params.size() > 1 && request.params[1].get_bool());
+    const bool fValidOnly = (request.params.size() > 2 && request.params[2].get_bool());
+
+    if (fFromWallet && !pwallet) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "wallet_only not supported when wallet is disabled");
+    }
+
+    // Get a reference to the block index at the specified height (or at the chain tip)
+    const CBlockIndex* pindex;
+    {
+        LOCK(cs_main);
+        const CBlockIndex* pindexTip = chainActive.Tip();
+        if (request.params.size() > 3) {
+            const int height = request.params[3].get_int();
+            if (height <= 0 || height > pindexTip->nHeight) {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("height must be between 1 and %d", pindexTip->nHeight));
+            }
+            pindexTip = chainActive[height];
+        }
+        pindex = mapBlockIndex.at(pindexTip->GetBlockHash());
+    }
+
+    // Get the deterministic mn list at the index
+    CDeterministicMNList mnList = deterministicMNManager->GetListForBlock(pindex);
+
+    // Build/filter the list
+    UniValue ret(UniValue::VARR);
+    mnList.ForEachMN(fValidOnly, [&](const CDeterministicMNCPtr& dmn) {
+        AddDMNEntryToList(ret, pwallet, dmn, fVerbose, fFromWallet);
+    });
+    return ret;
+}
+
 
 static const CRPCCommand commands[] =
 { //  category       name                              actor (function)
   //  -------------- --------------------------------- ------------------------
+    { "evo",         "protx_list",                     &protx_list,             {}  },
 #ifdef ENABLE_WALLET
     { "evo",         "protx_register",                 &protx_register,         {}  },
     { "evo",         "protx_register_fund",            &protx_register_fund,    {}  },
