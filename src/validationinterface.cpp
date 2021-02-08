@@ -7,7 +7,9 @@
 #include "validationinterface.h"
 #include "scheduler.h"
 #include "txmempool.h"
+#include "validation.h"
 
+#include <future>
 #include <list>
 #include <unordered_map>
 #include <boost/signals2/signal.hpp>
@@ -120,6 +122,16 @@ void UnregisterAllValidationInterfaces()
 
 void CallFunctionInValidationInterfaceQueue(std::function<void ()> func) {
     g_signals.m_internals->m_schedulerClient.AddToProcessQueue(std::move(func));
+}
+
+void SyncWithValidationInterfaceQueue() {
+    AssertLockNotHeld(cs_main);
+    // Block until the validation queue drains
+    std::promise<void> promise;
+    CallFunctionInValidationInterfaceQueue([&promise] {
+        promise.set_value();
+    });
+    promise.get_future().wait();
 }
 
 void CMainSignals::MempoolEntryRemoved(CTransactionRef ptx, MemPoolRemovalReason reason) {
