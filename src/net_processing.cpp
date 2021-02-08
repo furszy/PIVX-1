@@ -937,6 +937,8 @@ bool static IsTierTwoInventoryTypeKnown(int type)
 
 void static ProcessGetData(CNode* pfrom, CConnman& connman, const std::atomic<bool>& interruptMsgProc)
 {
+    AssertLockNotHeld(cs_main);
+
     std::deque<CInv>::iterator it = pfrom->vRecvGetData.begin();
     std::vector<CInv> vNotFound;
     CNetMsgMaker msgMaker(pfrom->GetSendVersion());
@@ -977,15 +979,15 @@ void static ProcessGetData(CNode* pfrom, CConnman& connman, const std::atomic<bo
 
             // todo: inventory signal
         }
-
-        if (it != pfrom->vRecvGetData.end()) {
-            const CInv &inv = *it;
-            it++;
-            if (inv.type == MSG_BLOCK || inv.type == MSG_FILTERED_BLOCK) {
-                ProcessGetBlockData(pfrom, inv, connman, interruptMsgProc);
-            }
-        }
     } // release cs_main
+
+    if (it != pfrom->vRecvGetData.end()) {
+        const CInv &inv = *it;
+        it++;
+        if (inv.type == MSG_BLOCK || inv.type == MSG_FILTERED_BLOCK) {
+            ProcessGetBlockData(pfrom, inv, connman, interruptMsgProc);
+        }
+    }
 
     pfrom->vRecvGetData.erase(pfrom->vRecvGetData.begin(), it);
 
