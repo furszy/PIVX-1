@@ -777,77 +777,81 @@ static void RelayAddress(const CAddress& addr, bool fReachable, CConnman& connma
     connman.ForEachNodeThen(std::move(sortfunc), std::move(pushfunc));
 }
 
-void static PushTierTwoGetDataRequest(const CInv& inv,
+bool static PushTierTwoGetDataRequest(const CInv& inv,
                                       CNode* pfrom,
                                       CConnman& connman,
-                                      CNetMsgMaker& msgMaker,
-                                      bool& pushed)
+                                      CNetMsgMaker& msgMaker)
 {
-    if (!pushed && inv.type == MSG_SPORK) {
+    if (inv.type == MSG_SPORK) {
         if (mapSporks.count(inv.hash)) {
             CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
             ss.reserve(1000);
             ss << mapSporks[inv.hash];
             connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::SPORK, ss));
-            pushed = true;
+            return true;
         }
     }
-    if (!pushed && inv.type == MSG_MASTERNODE_WINNER) {
+
+    if (inv.type == MSG_MASTERNODE_WINNER) {
         if (masternodePayments.mapMasternodePayeeVotes.count(inv.hash)) {
             CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
             ss.reserve(1000);
             ss << masternodePayments.mapMasternodePayeeVotes[inv.hash];
             connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::MNWINNER, ss));
-            pushed = true;
+            return true;
         }
     }
-    if (!pushed && inv.type == MSG_BUDGET_VOTE) {
+
+    if (inv.type == MSG_BUDGET_VOTE) {
         if (g_budgetman.HaveSeenProposalVote(inv.hash)) {
             connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::BUDGETVOTE, g_budgetman.GetProposalVoteSerialized(inv.hash)));
-            pushed = true;
+            return true;
         }
     }
 
-    if (!pushed && inv.type == MSG_BUDGET_PROPOSAL) {
+    if (inv.type == MSG_BUDGET_PROPOSAL) {
         if (g_budgetman.HaveProposal(inv.hash)) {
             connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::BUDGETPROPOSAL, g_budgetman.GetProposalSerialized(inv.hash)));
-            pushed = true;
+            return true;
         }
     }
 
-    if (!pushed && inv.type == MSG_BUDGET_FINALIZED_VOTE) {
+    if (inv.type == MSG_BUDGET_FINALIZED_VOTE) {
         if (g_budgetman.HaveSeenFinalizedBudgetVote(inv.hash)) {
             connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::FINALBUDGETVOTE, g_budgetman.GetFinalizedBudgetVoteSerialized(inv.hash)));
-            pushed = true;
+            return true;
         }
     }
 
-    if (!pushed && inv.type == MSG_BUDGET_FINALIZED) {
+    if (inv.type == MSG_BUDGET_FINALIZED) {
         if (g_budgetman.HaveFinalizedBudget(inv.hash)) {
             connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::FINALBUDGET, g_budgetman.GetFinalizedBudgetSerialized(inv.hash)));
-            pushed = true;
+            return true;
         }
     }
 
-    if (!pushed && inv.type == MSG_MASTERNODE_ANNOUNCE) {
+    if (inv.type == MSG_MASTERNODE_ANNOUNCE) {
         if (mnodeman.mapSeenMasternodeBroadcast.count(inv.hash)) {
             CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
             ss.reserve(1000);
             ss << mnodeman.mapSeenMasternodeBroadcast[inv.hash];
             connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::MNBROADCAST, ss));
-            pushed = true;
+            return true;
         }
     }
 
-    if (!pushed && inv.type == MSG_MASTERNODE_PING) {
+    if (inv.type == MSG_MASTERNODE_PING) {
         if (mnodeman.mapSeenMasternodePing.count(inv.hash)) {
             CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
             ss.reserve(1000);
             ss << mnodeman.mapSeenMasternodePing[inv.hash];
             connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::MNPING, ss));
-            pushed = true;
+            return true;
         }
     }
+
+    // nothing was pushed.
+    return false;
 }
 
 void static ProcessGetData(CNode* pfrom, CConnman& connman, std::atomic<bool>& interruptMsgProc)
@@ -947,12 +951,10 @@ void static ProcessGetData(CNode* pfrom, CConnman& connman, std::atomic<bool>& i
                     }
                 }
 
-                // Now check if it's a tier two data request and push it.
-                PushTierTwoGetDataRequest(inv,
-                                          pfrom,
-                                          connman,
-                                          msgMaker,
-                                          pushed);
+                if (!pushed) {
+                    // Now check if it's a tier two data request and push it.
+                    pushed = PushTierTwoGetDataRequest(inv, pfrom, connman, msgMaker);
+                }
 
                 if (!pushed) {
                     vNotFound.push_back(inv);
