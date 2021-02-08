@@ -144,6 +144,14 @@ static CKey GetKeyFromWallet(CWallet* pwallet, const CKeyID& keyID)
 }
 #endif
 
+static void CheckEvoUpgradeEnforcement()
+{
+    const int nHeight = WITH_LOCK(cs_main, return chainActive.Height(); );
+    if (!Params().GetConsensus().NetworkUpgradeActive(nHeight, Consensus::UPGRADE_V6_0)) {
+        throw JSONRPCError(RPC_MISC_ERROR, "Evo upgrade is not active yet");
+    }
+}
+
 // Allows to specify PIVX address or priv key (as strings). In case of PIVX address, the priv key is taken from the wallet
 static CKey ParsePrivKey(CWallet* pwallet, const std::string &strKeyOrAddress, bool allowAddresses = true) {
     bool isStaking{false}, isShield{false};
@@ -394,6 +402,7 @@ static UniValue ProTxRegister(const JSONRPCRequest& request, bool fSignAndSend)
                 )
         );
     }
+    if (fSignAndSend) CheckEvoUpgradeEnforcement();
 
     EnsureWallet();
     EnsureWalletIsUnlocked();
@@ -484,6 +493,7 @@ UniValue protx_register_submit(const JSONRPCRequest& request)
                 + HelpExampleCli("protx", "register_submit \"tx\" \"sig\"")
         );
     }
+    CheckEvoUpgradeEnforcement();
 
     EnsureWallet();
     EnsureWalletIsUnlocked();
@@ -535,6 +545,7 @@ UniValue protx_register_fund(const JSONRPCRequest& request)
                 + HelpExampleCli("protx_register_fund", "...!TODO...")
         );
     }
+    CheckEvoUpgradeEnforcement();
 
     EnsureWallet();
     EnsureWalletIsUnlocked();
@@ -671,6 +682,8 @@ UniValue protx_list(const JSONRPCRequest& request)
                 + HelpExampleCli("protx_list_wallet", "...!TODO...")
         );
     }
+
+    CheckEvoUpgradeEnforcement();
 
 #ifdef ENABLE_WALLET
     CWallet* const pwallet = pwalletMain;
