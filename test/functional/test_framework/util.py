@@ -420,9 +420,9 @@ def sync_mempools(rpc_connections, *, wait=1, timeout=60, flush_scheduler=True):
     while time.time() <= stop_time:
         pool = [set(r.getrawmempool()) for r in rpc_connections]
         if pool.count(pool[0]) == len(rpc_connections):
-            #if flush_scheduler:
-            #    for r in rpc_connections:
-            #        r.syncwithvalidationinterfacequeue()
+            if flush_scheduler:
+                for r in rpc_connections:
+                    r.syncwithvalidationinterfacequeue()
             return
         # Check that each peer has at least one connection
         assert (all([len(x.getpeerinfo()) for x in rpc_connections]))

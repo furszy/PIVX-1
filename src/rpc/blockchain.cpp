@@ -21,6 +21,7 @@
 #include "utilmoneystr.h"
 #include "utilstrencodings.h"
 #include "hash.h"
+#include "validationinterface.h"
 #include "wallet/wallet.h"
 #include "zpiv/zpivmodule.h"
 #include "zpivchain.h"
@@ -47,6 +48,21 @@ static CUpdatedBlock latestblock;
 
 extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry);
 void ScriptPubKeyToJSON(const CScript& scriptPubKey, UniValue& out, bool fIncludeHex);
+
+UniValue syncwithvalidationinterfacequeue(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() > 0) {
+        throw std::runtime_error(
+                "syncwithvalidationinterfacequeue\n"
+                "\nWaits for the validation interface queue to catch up on everything that was there when we entered this function.\n"
+                "\nExamples:\n"
+                + HelpExampleCli("syncwithvalidationinterfacequeue","")
+                + HelpExampleRpc("syncwithvalidationinterfacequeue","")
+        );
+    }
+    SyncWithValidationInterfaceQueue();
+    return NullUniValue;
+}
 
 double GetDifficulty(const CBlockIndex* blockindex)
 {
@@ -1448,6 +1464,7 @@ static const CRPCCommand commands[] =
     { "hidden",             "waitfornewblock",        &waitfornewblock,        true  },
     { "hidden",             "waitforblock",           &waitforblock,           true  },
     { "hidden",             "waitforblockheight",     &waitforblockheight,     true  },
+    { "hidden",             "syncwithvalidationinterfacequeue", &syncwithvalidationinterfacequeue, true },
 
 
 };
