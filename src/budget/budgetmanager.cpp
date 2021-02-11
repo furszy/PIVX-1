@@ -5,6 +5,7 @@
 
 #include "budget/budgetmanager.h"
 
+#include "evo/deterministicmns.h"
 #include "masternode-sync.h"
 #include "masternodeman.h"
 #include "net_processing.h"
@@ -796,10 +797,18 @@ void CBudgetManager::RemoveStaleVotesOnProposal(CBudgetProposal* prop)
 
     auto it = prop->mapVotes.begin();
     while (it != prop->mapVotes.end()) {
-        CMasternode* pmn = mnodeman.Find(it->first);
-        (*it).second.SetValid(pmn && pmn->IsEnabled());
+        auto mnList = deterministicMNManager->GetListAtChainTip();
+        auto dmn = mnList.GetMNByCollateral(it->first);
+        if (dmn) {
+            (*it).second.SetValid(mnList.IsMNValid(dmn));
+        } else {
+            // -- Legacy System (!TODO: remove after enforcement) --
+            CMasternode* pmn = mnodeman.Find(it->first);
+            (*it).second.SetValid(pmn && pmn->IsEnabled());
+        }
         ++it;
     }
+
     LogPrint(BCLog::MNBUDGET, "Cleaned proposal votes for %s. After: YES=%d, NO=%d\n",
             prop->GetName(), prop->GetYeas(), prop->GetNays());
 }
@@ -965,6 +974,30 @@ int CBudgetManager::ProcessProposalVote(CBudgetVote& vote, CNode* pfrom)
     }
 
     const CTxIn& voteVin = vote.GetVin();
+
+    // See if this vote was signed with a deterministic masternode
+    auto mnList = deterministicMNManager->GetListAtChainTip();
+    auto dmn = mnList.GetMNByCollateral(voteVin.prevout);
+    if (dmn) {
+        if (!vote.CheckSignature(dmn->pdmnState->keyIDVoting)) {
+            LogPrintf("mvote - signature invalid from dmn %s\n", dmn->proTxHash.ToString());
+            return 100;
+        }
+        AddSeenProposalVote(vote);
+        std::string strError = "masternode not valid or PoSe banned";
+        if (mnList.IsMNValid(dmn) && UpdateProposal(vote, pfrom, strError)) {
+            vote.Relay();
+            const uint256& voteID = vote.GetHash();
+            masternodeSync.AddedBudgetItem(voteID);
+            LogPrint(BCLog::MNBUDGET, "mvote - new vote (%s) for proposal %s from dmn %s\n",
+                    voteID.ToString(), vote.GetProposalHash().ToString(), dmn->proTxHash.ToString());
+        } else {
+            LogPrint(BCLog::MNBUDGET, "mvote - error: %s", strError);
+        }
+        return 0;
+    }
+
+    // -- Legacy System (!TODO: remove after enforcement) --
     CMasternode* pmn = mnodeman.Find(voteVin.prevout);
     if (!pmn) {
         LogPrint(BCLog::MNBUDGET, "mvote - unknown masternode - vin: %s\n", voteVin.ToString());
