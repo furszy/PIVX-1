@@ -69,7 +69,7 @@ class MempoolPersistTest(PivxTestFramework):
         assert_equal(len(self.nodes[1].getrawmempool()), 0)
 
         # Verify accounting of mempool transactions after restart is correct
-        #self.nodes[2].syncwithvalidationinterfacequeue()  # Flush mempool to wallet
+        self.nodes[2].syncwithvalidationinterfacequeue()  # Flush mempool to wallet
         assert_equal(node2_balance, self.nodes[2].getbalance())
 
         self.log.debug("Stop-start node0 with -persistmempool=0. Verify that it doesn't load its mempool.dat file.")
