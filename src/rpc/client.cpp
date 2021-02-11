@@ -118,6 +118,7 @@ static const CRPCConvertParam vRPCConvertParams[] = {
     { "importpubkey", 2 },
     { "importmulti", 0 },
     { "importmulti", 1 },
+    { "initmasternode", 2},
     { "exportsaplingkey", 1 },
     { "importsaplingkey", 2 },
     { "importsaplingviewingkey", 2 },

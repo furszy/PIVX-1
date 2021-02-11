@@ -69,8 +69,18 @@ OperationResult CActiveDeterministicMasternodeManager::SetOperatorKey(const std:
 
 void CActiveDeterministicMasternodeManager::Init()
 {
-    if (!fMasterNode || !deterministicMNManager->IsDIP3Enforced())
+    // set masternode arg if called from RPC
+    if (!fMasterNode) {
+        gArgs.ForceSetArg("-masternode", "1");
+        fMasterNode = true;
+    }
+
+    if (!deterministicMNManager->IsDIP3Enforced()) {
+        state = MASTERNODE_ERROR;
+        strError = "Evo upgrade is not active yet.";
+        LogPrintf("%s -- ERROR: %s\n", __func__, strError);
         return;
+    }
 
     LOCK(cs_main);
 
@@ -260,6 +270,7 @@ void CActiveMasternode::ManageStatus()
         return;
     }
 
+    // !TODO: Legacy masternodes - remove after enforcement
     LogPrint(BCLog::MASTERNODE, "CActiveMasternode::ManageStatus() - Begin\n");
 
     // If a DMN has been registered with same collateral, disable me.
@@ -427,3 +438,4 @@ void CActiveMasternode::GetKeys(CKey& _privKeyMasternode, CPubKey& _pubKeyMaster
     _privKeyMasternode = privKeyMasternode;
     _pubKeyMasternode = pubKeyMasternode;
 }
+

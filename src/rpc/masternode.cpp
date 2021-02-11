@@ -52,13 +52,14 @@ UniValue mnping(const JSONRPCRequest& request)
 
 UniValue initmasternode(const JSONRPCRequest& request)
 {
-    if (request.fHelp || (request.params.empty() || request.params.size() > 2)) {
+    if (request.fHelp || (request.params.size() < 2|| request.params.size() > 3)) {
         throw std::runtime_error(
                 "initmasternode ( \"masternodePrivKey\" \"masternodeAddr\" )\n"
                 "\nInitialize masternode on demand if it's not already initialized.\n"
                 "\nArguments:\n"
                 "1. masternodePrivKey          (string, required) The masternode private key.\n"
                 "2. masternodeAddr             (string, required) The IP:Port of this masternode.\n"
+                "3. deterministic              (boolean, optional, default=false) Init as DMN.\n"
 
                 "\nResult:\n"
                 " success                      (string) if the masternode initialization succeeded.\n"
@@ -70,6 +71,21 @@ UniValue initmasternode(const JSONRPCRequest& request)
 
     std::string _strMasterNodePrivKey = request.params[0].get_str();
     std::string _strMasterNodeAddr = request.params[1].get_str();
+    bool fDeterministic = request.params.size() > 2 && request.params[2].get_bool();
+    if (fDeterministic) {
+        if (!activeMasternodeManager) {
+            activeMasternodeManager = new CActiveDeterministicMasternodeManager();
+            auto res = activeMasternodeManager->SetOperatorKey(_strMasterNodePrivKey);
+            if (!res) throw std::runtime_error(res.getError());
+            RegisterValidationInterface(activeMasternodeManager);
+        }
+        activeMasternodeManager->Init();
+        if (activeMasternodeManager->GetState() == CActiveDeterministicMasternodeManager::MASTERNODE_ERROR) {
+            throw std::runtime_error(activeMasternodeManager->GetStatus());
+        }
+        return "success";
+    }
+    // legacy
     auto res = initMasternode(_strMasterNodePrivKey, _strMasterNodeAddr, false);
     if (!res) throw std::runtime_error(res.getError());
     return "success";
