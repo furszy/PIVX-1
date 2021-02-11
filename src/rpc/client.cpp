@@ -142,6 +142,7 @@ static const CRPCConvertParam vRPCConvertParams[] = {
     // TODO: remove this and switch over to proper arg parsing in rpc/masternode.cpp for the second argument
     //{"startmasternode", 1},
     { "startmasternode", 3 },
+    { "mnbudgetvote", 4 },
     { "mnvoteraw", 1 },
     { "mnvoteraw", 4 },
     { "setstakesplitthreshold", 0 },
