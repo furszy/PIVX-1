@@ -5,7 +5,7 @@
 
 from test_framework.test_framework import PivxTier2TestFramework
 from test_framework.util import (
-    assert_equal,
+    assert_greater_than_or_equal,
     connect_nodes_clique,
     disconnect_nodes,
     satoshi_round,
@@ -44,9 +44,13 @@ class MasternodeActivationTest(PivxTier2TestFramework):
         self.controller_start_all_masternodes()
 
     def spend_collateral(self):
-        mnCollateralOutput = self.ownerOne.getmasternodeoutputs()[0]
-        assert_equal(mnCollateralOutput["txhash"], self.mnOneTxHash)
-        mnCollateralOutputIndex = mnCollateralOutput["outputidx"]
+        mnCollateralOutputs = self.ownerOne.getmasternodeoutputs()
+        mnCollateralOutputIndex = -1
+        for x in mnCollateralOutputs:
+            if x["txhash"] == self.mnOneTxHash:
+                mnCollateralOutputIndex = x["outputidx"]
+                break
+        assert_greater_than_or_equal(mnCollateralOutputIndex, 0)
         send_value = satoshi_round(100 - 0.001)
         inputs = [{'txid' : self.mnOneTxHash, 'vout' : mnCollateralOutputIndex}]
         outputs = {}
@@ -86,7 +90,7 @@ class MasternodeActivationTest(PivxTier2TestFramework):
 
     def run_test(self):
         self.enable_mocktime()
-        self.setup_2_masternodes_network()
+        self.setup_3_masternodes_network()
 
         # check masternode expiration
         self.log.info("testing expiration now.")

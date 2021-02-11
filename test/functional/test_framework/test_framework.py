@@ -1069,6 +1069,35 @@ class PivxTestFramework():
                 self.send_pings(with_ping_mns)
 
 
+
+    def setupDMN(self,
+                 mnOwner,
+                 miner,
+                 mnRemotePos):
+        self.log.info("Creating proRegTx for deterministic masternode...")
+        collateralAdd = mnOwner.getnewaddress("dmn1")
+        # send to the owner the collateral tx cost + some dust for the ProReg and fee
+        fundingTxId = miner.sendtoaddress(collateralAdd, Decimal('10001'))
+        # confirm and verify reception
+        self.stake_and_sync(self.nodes.index(miner), 1)
+        assert_greater_than(mnOwner.getrawtransaction(fundingTxId, 1)["confirmations"], 0)
+        # create and send the ProRegTx funding the collateral
+        operatorAdd = self.nodes[mnRemotePos].getnewaddress("dmn_operator")
+        ipport = "127.0.0.1:"+str(p2p_port(mnRemotePos))
+        ownerAdd = mnOwner.getnewaddress("dmn_owner")
+        votingAdd = mnOwner.getnewaddress("dmn_voting")
+        proTxId = mnOwner.protx_register_fund(collateralAdd, ipport, ownerAdd, operatorAdd, votingAdd, collateralAdd)
+        self.sync_mempools([mnOwner, miner])
+        # confirm and verify inclusion in list
+        self.stake_and_sync(self.nodes.index(miner), 1)
+        assert_greater_than(self.nodes[mnRemotePos].getrawtransaction(proTxId, 1)["confirmations"], 0)
+        assert proTxId in self.nodes[mnRemotePos].protx_list(False)
+        return (
+            proTxId,
+            self.nodes[mnRemotePos].dumpprivkey(operatorAdd)
+        )
+
+
     def setupMasternode(self,
                         mnOwner,
                         miner,
@@ -1153,12 +1182,7 @@ class PivxTier2TestFramework(PivxTestFramework):
 
     def set_test_params(self):
         self.setup_clean_chain = True
-        self.num_nodes = 5
-        self.extra_args = [[],
-                           ["-listen", "-externalip=127.0.0.1"],
-                           [],
-                           ["-listen", "-externalip=127.0.0.1"],
-                           ["-sporkkey=932HEevBSujW2ud7RfB1YF91AFygbBRQj3de3LyaCRqNzKKgWXi"]]
+        self.num_nodes = 6
         self.enable_mocktime()
 
         self.ownerOnePos = 0
@@ -1166,6 +1190,12 @@ class PivxTier2TestFramework(PivxTestFramework):
         self.ownerTwoPos = 2
         self.remoteTwoPos = 3
         self.minerPos = 4
+        self.remoteDMNPos = 5
+
+        self.extra_args = [["-nuparams=v5_shield:249", "-nuparams=v6_evo:250"]] * self.num_nodes
+        for i in [self.remoteOnePos, self.remoteTwoPos, self.remoteDMNPos]:
+            self.extra_args[i] += ["-listen", "-externalip=127.0.0.1"]
+        self.extra_args[self.minerPos].append("-sporkkey=932HEevBSujW2ud7RfB1YF91AFygbBRQj3de3LyaCRqNzKKgWXi")
 
         self.masternodeOneAlias = "mnOne"
         self.masternodeTwoAlias = "mntwo"
@@ -1173,22 +1203,25 @@ class PivxTier2TestFramework(PivxTestFramework):
         self.mnOnePrivkey = "9247iC59poZmqBYt9iDh9wDam6v9S1rW5XekjLGyPnDhrDkP4AK"
         self.mnTwoPrivkey = "92Hkebp3RHdDidGZ7ARgS4orxJAGyFUPDXNqtsYsiwho1HGVRbF"
 
-        # Updated in setup_2_masternodes_network() to be called at the start of run_test
+        # Updated in setup_3_masternodes_network() to be called at the start of run_test
         self.ownerOne = None        # self.nodes[self.ownerOnePos]
         self.remoteOne = None       # self.nodes[self.remoteOnePos]
         self.ownerTwo = None        # self.nodes[self.ownerTwoPos]
         self.remoteTwo = None       # self.nodes[self.remoteTwoPos]
         self.miner = None           # self.nodes[self.minerPos]
+        self.remoteDMN = None       # self.nodes[self.remoteDMNPos]
         self.mnOneTxHash = ""
         self.mnTwoTxHash = ""
+        self.proRegTx = ""
 
 
     def send_3_pings(self):
+        mns = [self.remoteOne, self.remoteTwo]
         self.advance_mocktime(30)
-        self.send_pings([self.remoteOne, self.remoteTwo])
-        self.stake(1, [self.remoteOne, self.remoteTwo])
+        self.send_pings(mns)
+        self.stake(1, mns)
         self.advance_mocktime(30)
-        self.send_pings([self.remoteOne, self.remoteTwo])
+        self.send_pings(mns)
         time.sleep(2)
 
     def stake(self, num_blocks, with_ping_mns=[]):
@@ -1210,22 +1243,23 @@ class PivxTier2TestFramework(PivxTestFramework):
         self.mocktime = self.generate_pos(self.minerPos, self.mocktime)
         time.sleep(2)
 
-    def setup_2_masternodes_network(self):
+    def setup_3_masternodes_network(self):
         self.ownerOne = self.nodes[self.ownerOnePos]
         self.remoteOne = self.nodes[self.remoteOnePos]
         self.ownerTwo = self.nodes[self.ownerTwoPos]
         self.remoteTwo = self.nodes[self.remoteTwoPos]
         self.miner = self.nodes[self.minerPos]
+        self.remoteDMN = self.nodes[self.remoteDMNPos]
         ownerOneDir = os.path.join(self.options.tmpdir, "node0")
         ownerTwoDir = os.path.join(self.options.tmpdir, "node2")
 
-        self.log.info("generating 259 blocks..")
+        self.log.info("generating 256 blocks..")
         # First mine 250 PoW blocks
         for i in range(250):
             self.mocktime = self.generate_pow(self.minerPos, self.mocktime)
         self.sync_blocks()
         # Then start staking
-        self.stake(9)
+        self.stake(6)
 
         self.log.info("masternodes setup..")
         # setup first masternode node, corresponding to nodeOne
@@ -1244,6 +1278,12 @@ class PivxTier2TestFramework(PivxTestFramework):
             os.path.join(ownerTwoDir, "regtest"),
             self.remoteTwoPos,
             self.mnTwoPrivkey)
+        # setup deterministic masternode
+        self.proRegTx, self.dmnPrivkey = self.setupDMN(
+            self.ownerOne,
+            self.miner,
+            self.remoteDMNPos
+        )
 
         self.log.info("masternodes setup completed, initializing them..")
 
@@ -1255,6 +1295,7 @@ class PivxTier2TestFramework(PivxTestFramework):
         remoteTwoPort = p2p_port(self.remoteTwoPos)
         self.remoteOne.initmasternode(self.mnOnePrivkey, "127.0.0.1:"+str(remoteOnePort))
         self.remoteTwo.initmasternode(self.mnTwoPrivkey, "127.0.0.1:"+str(remoteTwoPort))
+        self.remoteDMN.initmasternode(self.dmnPrivkey, "", True)
 
         # wait until mnsync complete on all nodes
         self.stake(1)

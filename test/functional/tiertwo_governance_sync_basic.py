@@ -7,7 +7,7 @@ from test_framework.test_framework import PivxTier2TestFramework
 from test_framework.util import (
     assert_equal,
     assert_true,
-    Decimal,
+    satoshi_round,
 )
 
 import time
@@ -96,7 +96,7 @@ class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
 
     def run_test(self):
         self.enable_mocktime()
-        self.setup_2_masternodes_network()
+        self.setup_3_masternodes_network()
 
         # Prepare the proposal
         self.log.info("preparing budget proposal..")
@@ -147,8 +147,8 @@ class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
         self.stake(7, [self.remoteOne, self.remoteTwo])
 
         # now let's vote for the proposal with the first MN
-        self.log.info("broadcasting votes for the proposal now..")
-        voteResult = self.ownerOne.mnbudgetvote("alias", proposalHash, "yes", self.masternodeOneAlias)
+        self.log.info("Voting with MN1...")
+        voteResult = self.ownerOne.mnbudgetvote("alias", proposalHash, "yes", self.masternodeOneAlias, True)
         assert_equal(voteResult["detail"][0]["result"], "success")
 
         # check that the vote was accepted everywhere
@@ -157,13 +157,24 @@ class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
         self.log.info("all good, MN1 vote accepted everywhere!")
 
         # now let's vote for the proposal with the second MN
-        voteResult = self.ownerTwo.mnbudgetvote("alias", proposalHash, "yes", self.masternodeTwoAlias)
+        self.log.info("Voting with MN2...")
+        voteResult = self.ownerTwo.mnbudgetvote("alias", proposalHash, "yes", self.masternodeTwoAlias, True)
         assert_equal(voteResult["detail"][0]["result"], "success")
 
         # check that the vote was accepted everywhere
         self.stake(1, [self.remoteOne, self.remoteTwo])
         self.check_vote_existence(firstProposalName, self.mnTwoTxHash, "YES")
         self.log.info("all good, MN2 vote accepted everywhere!")
+
+        # now let's vote for the proposal with the first DMN
+        self.log.info("Voting with DMN...")
+        voteResult = self.ownerOne.mnbudgetvote("alias", proposalHash, "yes", self.proRegTx)
+        assert_equal(voteResult["detail"][0]["result"], "success")
+
+        # check that the vote was accepted everywhere
+        self.stake(1, [self.remoteOne, self.remoteTwo])
+        self.check_vote_existence(firstProposalName, self.proRegTx, "YES")
+        self.log.info("all good, DM1 vote accepted everywhere!")
 
         # Now check the budget
         blockStart = nextSuperBlockHeight
@@ -174,8 +185,8 @@ class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
         expected_budget = [
             self.get_proposal_obj(firstProposalName, firstProposalLink, proposalHash, proposalFeeTxId, blockStart,
                                   blockEnd, firstProposalCycles, RemainingPaymentCount, firstProposalAddress, 1,
-                                  2, 0, 0, Decimal(str(TotalPayment)), Decimal(str(firstProposalAmountPerCycle)),
-                                  True, True, Decimal(str(Allotted)), Decimal(str(Allotted)))
+                                  3, 0, 0, satoshi_round(TotalPayment), satoshi_round(firstProposalAmountPerCycle),
+                                  True, True, satoshi_round(Allotted), satoshi_round(Allotted))
                            ]
         self.check_budgetprojection(expected_budget)
 
@@ -215,9 +226,6 @@ class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
         # Check that the proposal info returns updated payment count
         expected_budget[0]["RemainingPaymentCount"] -= 1
         self.check_budgetprojection(expected_budget)
-
-
-
 
 
 if __name__ == '__main__':
