@@ -210,12 +210,19 @@ class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
 
         self.log.info("budget finalization synced!, now voting for the budget finalization..")
 
-        self.ownerOne.mnfinalbudget("vote-many", budgetFinHash)
-        self.ownerTwo.mnfinalbudget("vote-many", budgetFinHash)
+        voteResult = self.ownerOne.mnfinalbudget("vote-many", budgetFinHash, True)
+        assert_equal(voteResult["detail"][0]["result"], "success")
+        self.log.info("Remote One voted successfully.")
+        voteResult = self.ownerTwo.mnfinalbudget("vote-many", budgetFinHash, True)
+        assert_equal(voteResult["detail"][0]["result"], "success")
+        self.log.info("Remote Two voted successfully.")
+        voteResult = self.remoteDMN.mnfinalbudget("vote", budgetFinHash)
+        assert_equal(voteResult["detail"][0]["result"], "success")
+        self.log.info("DMN voted successfully.")
         self.stake(2, [self.remoteOne, self.remoteTwo])
 
         self.log.info("checking finalization votes..")
-        self.check_budget_finalization_sync(2, "OK")
+        self.check_budget_finalization_sync(3, "OK")
 
         self.stake(8, [self.remoteOne, self.remoteTwo])
         addrInfo = self.miner.listreceivedbyaddress(0, False, False, firstProposalAddress)
