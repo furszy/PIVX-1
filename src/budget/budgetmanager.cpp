@@ -470,9 +470,28 @@ void CBudgetManager::VoteOnFinalizedBudgets()
         LogPrint(BCLog::MNBUDGET,"%s: Not a masternode\n", __func__);
         return;
     }
-    if (activeMasternode.vin == nullopt) {
-        LogPrint(BCLog::MNBUDGET,"%s: Active Masternode not initialized\n", __func__);
-        return;
+
+    CKey mnKey; CKeyID mnKeyID; CTxIn mnVin;
+    if (activeMasternodeManager != nullptr) {
+        // deterministic mn
+        CDeterministicMNCPtr dmn;
+        auto res = activeMasternodeManager->GetOperatorKey(mnKey, mnKeyID, dmn);
+        if (!res) {
+            LogPrint(BCLog::MNBUDGET,"%s: %s\n", __func__, res.getError());
+            return;
+        }
+        mnVin = CTxIn(dmn->collateralOutpoint);
+
+    } else {
+        // legacy mn
+        if (activeMasternode.vin == nullopt) {
+            LogPrint(BCLog::MNBUDGET,"%s: Active Masternode not initialized\n", __func__);
+            return;
+        }
+        CPubKey mnPubKey;
+        activeMasternode.GetKeys(mnKey, mnPubKey);
+        mnKeyID = mnPubKey.GetID();
+        mnVin = *activeMasternode.vin;
     }
 
     // Do this 1 in 4 blocks -- spread out the voting activity
@@ -513,15 +532,10 @@ void CBudgetManager::VoteOnFinalizedBudgets()
         }
     }
 
-    // Get masternode keys
-    CPubKey pubKeyMasternode;
-    CKey keyMasternode;
-    activeMasternode.GetKeys(keyMasternode, pubKeyMasternode);
-
     // Sign finalized budgets
     for (const uint256& budgetHash: vBudgetHashes) {
-        CFinalizedBudgetVote vote(*(activeMasternode.vin), budgetHash);
-        if (!vote.Sign(keyMasternode, pubKeyMasternode.GetID())) {
+        CFinalizedBudgetVote vote(mnVin, budgetHash);
+        if (!vote.Sign(mnKey, mnKeyID)) {
             LogPrintf("%s: Failure to sign budget %s", __func__, budgetHash.ToString());
             continue;
         }
@@ -821,8 +835,15 @@ void CBudgetManager::RemoveStaleVotesOnFinalBudget(CFinalizedBudget* fbud)
 
     auto it = fbud->mapVotes.begin();
     while (it != fbud->mapVotes.end()) {
-        CMasternode* pmn = mnodeman.Find(it->first);
-        (*it).second.SetValid(pmn && pmn->IsEnabled());
+        auto mnList = deterministicMNManager->GetListAtChainTip();
+        auto dmn = mnList.GetMNByCollateral(it->first);
+        if (dmn) {
+            (*it).second.SetValid(mnList.IsMNValid(dmn));
+        } else {
+            // -- Legacy System (!TODO: remove after enforcement) --
+            CMasternode* pmn = mnodeman.Find(it->first);
+            (*it).second.SetValid(pmn && pmn->IsEnabled());
+        }
         ++it;
     }
     LogPrint(BCLog::MNBUDGET, "Cleaned finalized budget votes for [%s (%s)]. After: %d\n",
@@ -1030,6 +1051,7 @@ int CBudgetManager::ProcessProposalVote(CBudgetVote& vote, CNode* pfrom)
 
 int CBudgetManager::ProcessFinalizedBudget(CFinalizedBudget& finalbudget)
 {
+
     const uint256& nHash = finalbudget.GetHash();
     if (HaveFinalizedBudget(nHash)) {
         masternodeSync.AddedBudgetItem(nHash);
@@ -1055,6 +1077,30 @@ int CBudgetManager::ProcessFinalizedBudgetVote(CFinalizedBudgetVote& vote, CNode
     }
 
     const CTxIn& voteVin = vote.GetVin();
+
+    // See if this vote was signed with a deterministic masternode
+    auto mnList = deterministicMNManager->GetListAtChainTip();
+    auto dmn = mnList.GetMNByCollateral(voteVin.prevout);
+    if (dmn) {
+        if (!vote.CheckSignature(dmn->pdmnState->keyIDOperator)) {
+            LogPrintf("fbvote - signature invalid from dmn %s\n", dmn->proTxHash.ToString());
+            return 100;
+        }
+        AddSeenFinalizedBudgetVote(vote);
+        std::string strError = "masternode not valid or PoSe banned";
+        if (mnList.IsMNValid(dmn) && UpdateFinalizedBudget(vote, pfrom, strError)) {
+            vote.Relay();
+            const uint256& voteID = vote.GetHash();
+            masternodeSync.AddedBudgetItem(voteID);
+            LogPrint(BCLog::MNBUDGET, "fbvote - new vote (%s) for budget %s from dmn %s\n",
+                    voteID.ToString(), vote.GetBudgetHash().ToString(), dmn->proTxHash.ToString());
+        } else {
+            LogPrint(BCLog::MNBUDGET, "fbvote - error: %s", strError);
+        }
+        return 0;
+    }
+
+    // -- Legacy System (!TODO: remove after enforcement) --
     CMasternode* pmn = mnodeman.Find(voteVin.prevout);
     if (!pmn) {
         LogPrint(BCLog::MNBUDGET, "fbvote - unknown masternode - vin: %s\n", voteVin.prevout.hash.ToString());
