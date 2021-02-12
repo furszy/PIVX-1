@@ -987,11 +987,14 @@ int CBudgetManager::ProcessProposal(CBudgetProposal& proposal)
     return 0;
 }
 
-int CBudgetManager::ProcessProposalVote(CBudgetVote& vote, CNode* pfrom)
+bool CBudgetManager::ProcessProposalVote(CBudgetVote& vote, CNode* pfrom, int& nDos, std::string& strError)
 {
-    if (HaveSeenProposalVote(vote.GetHash())) {
-        masternodeSync.AddedBudgetItem(vote.GetHash());
-        return 0;
+    nDos = 0;
+    const uint256& voteID = vote.GetHash();
+
+    if (HaveSeenProposalVote(voteID)) {
+        masternodeSync.AddedBudgetItem(voteID);
+        return false;
     }
 
     const CTxIn& voteVin = vote.GetVin();
@@ -1001,52 +1004,61 @@ int CBudgetManager::ProcessProposalVote(CBudgetVote& vote, CNode* pfrom)
     auto dmn = mnList.GetMNByCollateral(voteVin.prevout);
     if (dmn) {
         if (!vote.CheckSignature(dmn->pdmnState->keyIDVoting)) {
-            LogPrintf("mvote - signature invalid from dmn %s\n", dmn->proTxHash.ToString());
-            return 100;
+            strError = strprintf("signature invalid from dmn %s", dmn->proTxHash.ToString());
+            LogPrintf("mvote - error: %s\n", strError);
+            nDos = 100;
+            return false;
         }
         AddSeenProposalVote(vote);
-        std::string strError = "masternode not valid or PoSe banned";
-        if (mnList.IsMNValid(dmn) && UpdateProposal(vote, pfrom, strError)) {
-            vote.Relay();
-            const uint256& voteID = vote.GetHash();
-            masternodeSync.AddedBudgetItem(voteID);
-            LogPrint(BCLog::MNBUDGET, "mvote - new vote (%s) for proposal %s from dmn %s\n",
-                    voteID.ToString(), vote.GetProposalHash().ToString(), dmn->proTxHash.ToString());
-        } else {
+        strError = "masternode not valid or PoSe banned";
+        if (!mnList.IsMNValid(dmn) || !UpdateProposal(vote, pfrom, strError)) {
             LogPrint(BCLog::MNBUDGET, "mvote - error: %s", strError);
+            return false;
         }
-        return 0;
+
+        vote.Relay();
+        const uint256& voteID = vote.GetHash();
+        masternodeSync.AddedBudgetItem(voteID);
+        LogPrint(BCLog::MNBUDGET, "mvote - new vote (%s) for proposal %s from dmn %s\n",
+                voteID.ToString(), vote.GetProposalHash().ToString(), dmn->proTxHash.ToString());
+        return true;
     }
 
     // -- Legacy System (!TODO: remove after enforcement) --
+
     CMasternode* pmn = mnodeman.Find(voteVin.prevout);
     if (!pmn) {
-        LogPrint(BCLog::MNBUDGET, "mvote - unknown masternode - vin: %s\n", voteVin.ToString());
+        strError = strprintf("unknown masternode %s", voteVin.ToString());
+        LogPrintf("mvote - error: %s\n", strError);
         mnodeman.AskForMN(pfrom, voteVin);
-        return 0;
+        return false;
     }
 
     AddSeenProposalVote(vote);
 
     if (!vote.CheckSignature(pmn->pubKeyMasternode.GetID())) {
         if (masternodeSync.IsSynced()) {
-            LogPrintf("mvote - signature invalid\n");
-            return 20;
+            strError = strprintf("signature invalid from mn %s", voteVin.ToString());
+            LogPrintf("mvote - error: %s\n", strError);
+            nDos = 20;
+        } else {
+            // it could just be a non-synced masternode
+            mnodeman.AskForMN(pfrom, voteVin);
         }
-        // it could just be a non-synced masternode
-        mnodeman.AskForMN(pfrom, voteVin);
-        return 0;
+        return false;
     }
 
-    std::string strError;
-    if (pmn->IsEnabled() && UpdateProposal(vote, pfrom, strError)) {
-        vote.Relay();
-        masternodeSync.AddedBudgetItem(vote.GetHash());
-        LogPrint(BCLog::MNBUDGET, "mvote - new budget vote for budget %s - %s\n", vote.GetProposalHash().ToString(),  vote.GetHash().ToString());
-    } else {
+    strError = "masternode not valid";
+    if (!pmn->IsEnabled() || !UpdateProposal(vote, pfrom, strError)) {
         LogPrint(BCLog::MNBUDGET, "mvote error: %s", strError);
+        return false;
     }
-    return 0;
+
+    vote.Relay();
+    masternodeSync.AddedBudgetItem(voteID);
+    LogPrint(BCLog::MNBUDGET, "mvote - new vote (%s) for proposal %s from dmn %s\n",
+            voteID.ToString(), vote.GetProposalHash().ToString(), voteVin.ToString());
+    return true;
 }
 
 int CBudgetManager::ProcessFinalizedBudget(CFinalizedBudget& finalbudget)
@@ -1069,11 +1081,14 @@ int CBudgetManager::ProcessFinalizedBudget(CFinalizedBudget& finalbudget)
     return 0;
 }
 
-int CBudgetManager::ProcessFinalizedBudgetVote(CFinalizedBudgetVote& vote, CNode* pfrom)
+bool CBudgetManager::ProcessFinalizedBudgetVote(CFinalizedBudgetVote& vote, CNode* pfrom, int& nDos, std::string& strError)
 {
-    if (HaveSeenFinalizedBudgetVote(vote.GetHash())) {
-        masternodeSync.AddedBudgetItem(vote.GetHash());
-        return 0;
+    nDos = 0;
+    const uint256& voteID = vote.GetHash();
+
+    if (HaveSeenFinalizedBudgetVote(voteID)) {
+        masternodeSync.AddedBudgetItem(voteID);
+        return false;
     }
 
     const CTxIn& voteVin = vote.GetVin();
@@ -1083,52 +1098,59 @@ int CBudgetManager::ProcessFinalizedBudgetVote(CFinalizedBudgetVote& vote, CNode
     auto dmn = mnList.GetMNByCollateral(voteVin.prevout);
     if (dmn) {
         if (!vote.CheckSignature(dmn->pdmnState->keyIDOperator)) {
-            LogPrintf("fbvote - signature invalid from dmn %s\n", dmn->proTxHash.ToString());
-            return 100;
+            strError = strprintf("signature invalid from dmn %s", dmn->proTxHash.ToString());
+            LogPrintf("fbvote - error: %s\n", strError);
+            nDos = 100;
+            return false;
         }
         AddSeenFinalizedBudgetVote(vote);
-        std::string strError = "masternode not valid or PoSe banned";
-        if (mnList.IsMNValid(dmn) && UpdateFinalizedBudget(vote, pfrom, strError)) {
-            vote.Relay();
-            const uint256& voteID = vote.GetHash();
-            masternodeSync.AddedBudgetItem(voteID);
-            LogPrint(BCLog::MNBUDGET, "fbvote - new vote (%s) for budget %s from dmn %s\n",
-                    voteID.ToString(), vote.GetBudgetHash().ToString(), dmn->proTxHash.ToString());
-        } else {
-            LogPrint(BCLog::MNBUDGET, "fbvote - error: %s", strError);
+        strError = "masternode not valid or PoSe banned";
+        if (!mnList.IsMNValid(dmn) || !UpdateFinalizedBudget(vote, pfrom, strError)) {
+            LogPrint(BCLog::MNBUDGET, "fbvote - error: %s\n", strError);
+            return false;
         }
-        return 0;
+
+        vote.Relay();
+        masternodeSync.AddedBudgetItem(voteID);
+        LogPrint(BCLog::MNBUDGET, "fbvote - new vote (%s) for budget %s from dmn %s\n",
+                voteID.ToString(), vote.GetBudgetHash().ToString(), dmn->proTxHash.ToString());
+        return true;
     }
 
     // -- Legacy System (!TODO: remove after enforcement) --
     CMasternode* pmn = mnodeman.Find(voteVin.prevout);
     if (!pmn) {
-        LogPrint(BCLog::MNBUDGET, "fbvote - unknown masternode - vin: %s\n", voteVin.prevout.hash.ToString());
+        strError = strprintf("unknown masternode - vin: %s", voteVin.prevout.ToString());
+        LogPrint(BCLog::MNBUDGET, "fbvote - error: %s\n", strError);
         mnodeman.AskForMN(pfrom, voteVin);
-        return 0;
+        return false;
     }
 
     AddSeenFinalizedBudgetVote(vote);
 
     if (!vote.CheckSignature(pmn->pubKeyMasternode.GetID())) {
         if (masternodeSync.IsSynced()) {
-            LogPrint(BCLog::MNBUDGET, "fbvote - signature from masternode %s invalid\n", HexStr(pmn->pubKeyMasternode));
-            return 20;
+            strError = strprintf("signature from masternode %s invalid", voteVin.prevout.ToString());
+            LogPrint(BCLog::MNBUDGET, "fbvote - error: %s\n", strError);
+            nDos = 20;
+        } else {
+            // it could just be a non-synced masternode
+            mnodeman.AskForMN(pfrom, voteVin);
         }
-        // it could just be a non-synced masternode
-        mnodeman.AskForMN(pfrom, voteVin);
-        return 0;
+        return false;
     }
 
-    std::string strError;
-    if (UpdateFinalizedBudget(vote, pfrom, strError)) {
-        vote.Relay();
-        masternodeSync.AddedBudgetItem(vote.GetHash());
-        LogPrint(BCLog::MNBUDGET, "fbvote - new finalized budget vote - %s from masternode %s\n", vote.GetHash().ToString(), HexStr(pmn->pubKeyMasternode));
-    } else {
-        LogPrint(BCLog::MNBUDGET, "fbvote - rejected finalized budget vote - %s from masternode %s - %s\n", vote.GetHash().ToString(), HexStr(pmn->pubKeyMasternode), strError);
+    strError = "masternode not valid";
+    if (!pmn->IsEnabled() || !UpdateFinalizedBudget(vote, pfrom, strError)) {
+        LogPrint(BCLog::MNBUDGET, "mvote error: %s", strError);
+        return false;
     }
-    return 0;
+
+    vote.Relay();
+    masternodeSync.AddedBudgetItem(voteID);
+    LogPrint(BCLog::MNBUDGET, "fbvote - new vote (%s) for budget %s from mn %s\n",
+            voteID.ToString(), vote.GetBudgetHash().ToString(), voteVin.prevout.ToString());
+    return true;
 }
 
 void CBudgetManager::ProcessMessage(CNode* pfrom, std::string& strCommand, CDataStream& vRecv)
@@ -1166,7 +1188,9 @@ int CBudgetManager::ProcessMessageInner(CNode* pfrom, std::string& strCommand, C
         CBudgetVote vote;
         vRecv >> vote;
         vote.SetValid(true);
-        return ProcessProposalVote(vote, pfrom);
+        int nDos = 0; std::string strError;
+        ProcessProposalVote(vote, pfrom, nDos, strError);
+        return nDos;
     }
 
     if (strCommand == NetMsgType::FINALBUDGET) {
@@ -1182,7 +1206,9 @@ int CBudgetManager::ProcessMessageInner(CNode* pfrom, std::string& strCommand, C
         CFinalizedBudgetVote vote;
         vRecv >> vote;
         vote.SetValid(true);
-        return ProcessFinalizedBudgetVote(vote, pfrom);
+        int nDos = 0; std::string strError;
+        ProcessFinalizedBudgetVote(vote, pfrom, nDos, strError);
+        return nDos;
     }
 
     // nothing was done
