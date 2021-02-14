@@ -4,11 +4,11 @@
 
 #include "masternode-sync.h"
 
-#include "spork.h"  // for sporkManager
-#include "masternodeman.h" // for mnodeman
+#include "masternodeman.h"          // for mnodeman
 #include "netmessagemaker.h"
-#include "net_processing.h" // for Misbehaving
-#include "streams.h"  // for CDataStream
+#include "net_processing.h"         // for Misbehaving
+#include "spork.h"                  // for sporkManager
+#include "streams.h"                // for CDataStream
 
 
 // Update in-flight message status if needed
@@ -71,7 +71,7 @@ bool CMasternodeSync::MessageDispatcher(CNode* pfrom, std::string& strCommand, C
             return true;
         }
         // All good, Update in-flight message status if needed
-        if (!UpdatePeerSyncState(pfrom->GetId(), NetMsgType::GETSPORKS, MASTERNODE_SYNC_LIST)) {
+        if (!UpdatePeerSyncState(pfrom->GetId(), NetMsgType::GETSPORKS, GetNextAsset(MASTERNODE_SYNC_SPORKS))) {
             // This could happen because of the message thread is requesting the sporks alone..
             // So.. for now, can just update the peer status and move it to the next state if the end message arrives
             if (spork.nSporkID == SPORK_INVALID) {
@@ -96,17 +96,17 @@ bool CMasternodeSync::MessageDispatcher(CNode* pfrom, std::string& strCommand, C
         // this means we will receive no further communication on the first sync
         switch (nItemID) {
             case MASTERNODE_SYNC_LIST: {
-                UpdatePeerSyncState(pfrom->GetId(), NetMsgType::GETMNLIST, MASTERNODE_SYNC_MNW);
+                UpdatePeerSyncState(pfrom->GetId(), NetMsgType::GETMNLIST, GetNextAsset(nItemID));
                 return true;
             }
             case MASTERNODE_SYNC_MNW: {
-                UpdatePeerSyncState(pfrom->GetId(), NetMsgType::GETMNWINNERS, MASTERNODE_SYNC_BUDGET);
+                UpdatePeerSyncState(pfrom->GetId(), NetMsgType::GETMNWINNERS, GetNextAsset(nItemID));
                 return true;
             }
             case MASTERNODE_SYNC_BUDGET_PROP: {
                 // TODO: This could be a MASTERNODE_SYNC_BUDGET_FIN as well, possibly should decouple the finalization budget sync
                 //  from the MASTERNODE_SYNC_BUDGET_PROP (both are under the BUDGETVOTESYNC message)
-                UpdatePeerSyncState(pfrom->GetId(), NetMsgType::BUDGETVOTESYNC, MASTERNODE_SYNC_FINISHED);
+                UpdatePeerSyncState(pfrom->GetId(), NetMsgType::BUDGETVOTESYNC, GetNextAsset(nItemID));
                 return true;
             }
             case MASTERNODE_SYNC_BUDGET_FIN: {

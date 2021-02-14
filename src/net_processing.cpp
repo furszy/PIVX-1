@@ -8,6 +8,7 @@
 
 #include "budget/budgetmanager.h"
 #include "chain.h"
+#include "evo/deterministicmns.h"
 #include "masternodeman.h"
 #include "masternode-payments.h"
 #include "masternode-sync.h"
@@ -854,7 +855,8 @@ bool static PushTierTwoGetDataRequest(const CInv& inv,
         }
     }
 
-    if (inv.type == MSG_MASTERNODE_WINNER) {
+    // !TODO: remove when transition to DMN is complete
+    if (inv.type == MSG_MASTERNODE_WINNER && !deterministicMNManager->LegacyMNObsolete()) {
         if (masternodePayments.mapMasternodePayeeVotes.count(inv.hash)) {
             CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
             ss.reserve(1000);
@@ -892,7 +894,8 @@ bool static PushTierTwoGetDataRequest(const CInv& inv,
         }
     }
 
-    if (inv.type == MSG_MASTERNODE_ANNOUNCE) {
+    // !TODO: remove when transition to DMN is complete
+    if (inv.type == MSG_MASTERNODE_ANNOUNCE && !deterministicMNManager->LegacyMNObsolete()) {
         if (mnodeman.mapSeenMasternodeBroadcast.count(inv.hash)) {
             CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
             ss.reserve(1000);
@@ -902,7 +905,8 @@ bool static PushTierTwoGetDataRequest(const CInv& inv,
         }
     }
 
-    if (inv.type == MSG_MASTERNODE_PING) {
+    // !TODO: remove when transition to DMN is complete
+    if (inv.type == MSG_MASTERNODE_PING && !deterministicMNManager->LegacyMNObsolete()) {
         if (mnodeman.mapSeenMasternodePing.count(inv.hash)) {
             CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
             ss.reserve(1000);

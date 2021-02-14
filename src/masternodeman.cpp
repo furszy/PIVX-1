@@ -657,6 +657,12 @@ std::vector<std::pair<int64_t, MasternodeRef>> CMasternodeMan::GetMasternodeRank
 
 int CMasternodeMan::ProcessMNBroadcast(CNode* pfrom, CMasternodeBroadcast& mnb)
 {
+    // Skip after legacy obsolete. !TODO: remove when transition to DMN is complete
+    if (deterministicMNManager->LegacyMNObsolete()) {
+        LogPrint(BCLog::MASTERNODE, "mnb - skip obsolete message\n");
+        return 0;
+    }
+
     const uint256& mnbHash = mnb.GetHash();
     if (mapSeenMasternodeBroadcast.count(mnbHash)) { //seen
         masternodeSync.AddedMasternodeList(mnbHash);
@@ -694,6 +700,12 @@ int CMasternodeMan::ProcessMNBroadcast(CNode* pfrom, CMasternodeBroadcast& mnb)
 
 int CMasternodeMan::ProcessMNPing(CNode* pfrom, CMasternodePing& mnp)
 {
+    // Skip after legacy obsolete. !TODO: remove when transition to DMN is complete
+    if (deterministicMNManager->LegacyMNObsolete()) {
+        LogPrint(BCLog::MASTERNODE, "mnb - skip obsolete message\n");
+        return 0;
+    }
+
     const uint256& mnpHash = mnp.GetHash();
     if (mapSeenMasternodePing.count(mnpHash)) return 0; //seen
 

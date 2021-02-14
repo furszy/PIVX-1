@@ -77,7 +77,7 @@ public:
     void AddedMasternodeList(const uint256& hash);
     void AddedMasternodeWinner(const uint256& hash);
     void AddedBudgetItem(const uint256& hash);
-    void GetNextAsset();
+    void SwitchToNextAsset();
     std::string GetSyncStatus();
     void ProcessMessage(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
     bool IsBudgetFinEmpty();
@@ -108,6 +108,7 @@ private:
     // Tier two sync node state
     // map of nodeID --> TierTwoPeerData
     std::map<NodeId, TierTwoPeerData> peersSyncState;
+    static int GetNextAsset(int currentAsset);
 
     void SyncRegtest(CNode* pnode);
 
