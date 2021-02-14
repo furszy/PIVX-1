@@ -8,6 +8,7 @@
 
 #include "init.h"
 #include "key.h"
+#include "evo/deterministicmns.h"
 #include "masternode.h"
 #include "net.h"
 #include "operationresult.h"
@@ -60,6 +61,9 @@ public:
     void Reset(masternode_state_t _state);
     // Sets the Deterministic Masternode Operator's private/public key
     OperationResult SetOperatorKey(const std::string& strMNOperatorPrivKey);
+    // If the active masternode is ready, and the keyID matches with the registered one,
+    // return private key, keyID, and pointer to dmn.
+    OperationResult GetOperatorKey(CKey& key, CKeyID& keyID, CDeterministicMNCPtr& dmn) const;
     void SetNullProTx() { info.proTxHash = UINT256_ZERO; }
 
     const CActiveMasternodeInfo* GetInfo() const { return &info; }

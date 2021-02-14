@@ -7,7 +7,6 @@
 
 #include "addrman.h"
 #include "evo/providertx.h"
-#include "evo/deterministicmns.h"
 #include "masternode-sync.h"
 #include "masternode.h"
 #include "masternodeconfig.h"
@@ -67,6 +66,24 @@ OperationResult CActiveDeterministicMasternodeManager::SetOperatorKey(const std:
     return OperationResult(true);
 }
 
+OperationResult CActiveDeterministicMasternodeManager::GetOperatorKey(CKey& key, CKeyID& keyID, CDeterministicMNCPtr& dmn) const
+{
+    if (!IsReady()) {
+        return errorOut("Active masternode not ready");
+    }
+    dmn = deterministicMNManager->GetListAtChainTip().GetValidMN(info.proTxHash);
+    if (!dmn) {
+        return errorOut(strprintf("Active masternode %s not registered or PoSe banned", info.proTxHash.ToString()));
+    }
+    if (info.keyIDOperator != dmn->pdmnState->keyIDOperator) {
+        return errorOut("Active masternode operator key changed or revoked");
+    }
+    // return keys
+    key = info.keyOperator;
+    keyID = info.keyIDOperator;
+    return OperationResult(true);
+}
+
 void CActiveDeterministicMasternodeManager::Init()
 {
     // set masternode arg if called from RPC
@@ -119,6 +136,8 @@ void CActiveDeterministicMasternodeManager::Init()
 
     LogPrintf("%s: proTxHash=%s, proTx=%s\n", __func__, dmn->proTxHash.ToString(), dmn->ToString());
 
+    info.proTxHash = dmn->proTxHash;
+
     if (info.service != dmn->pdmnState->addr) {
         state = MASTERNODE_ERROR;
         strError = strprintf("Local address %s does not match the address from ProTx (%s)",
@@ -142,7 +161,6 @@ void CActiveDeterministicMasternodeManager::Init()
         }
     }
 
-    info.proTxHash = dmn->proTxHash;
     state = MASTERNODE_READY;
 }
 
