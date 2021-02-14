@@ -23,6 +23,17 @@ Test checking:
 
 class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
 
+    def check_mns_status_legacy(self, node, txhash):
+        status = node.getmasternodestatus()
+        assert_equal(status["txhash"], txhash)
+        assert_equal(status["message"], "Masternode successfully started")
+
+    def check_mns_status(self, node, txhash):
+        status = node.getmasternodestatus()
+        assert_equal(status["proTxHash"], txhash)
+        assert_equal(status["dmnstate"]["PoSePenalty"], 0)
+        assert_equal(status["status"], "Ready")
+
     def check_budget_finalization_sync(self, votesCount, status):
         for i in range(0, len(self.nodes)):
             node = self.nodes[i]
@@ -97,6 +108,14 @@ class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
     def run_test(self):
         self.enable_mocktime()
         self.setup_3_masternodes_network()
+
+        # check status of masternodes
+        self.check_mns_status_legacy(self.remoteOne, self.mnOneTxHash)
+        self.log.info("MN1 active")
+        self.check_mns_status_legacy(self.remoteTwo, self.mnTwoTxHash)
+        self.log.info("MN2 active")
+        self.check_mns_status(self.remoteDMN, self.proRegTx)
+        self.log.info("DMN1 active")
 
         # Prepare the proposal
         self.log.info("preparing budget proposal..")

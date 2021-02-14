@@ -632,7 +632,7 @@ UniValue getmasternodestatus (const JSONRPCRequest& request)
             "getmasternodestatus\n"
             "\nPrint masternode status\n"
 
-            "\nResult:\n"
+            "\nResult (if legacy masternode):\n"
             "{\n"
             "  \"txhash\": \"xxxx\",      (string) Collateral transaction hash\n"
             "  \"outputidx\": n,          (numeric) Collateral transaction output index number\n"
@@ -641,6 +641,11 @@ UniValue getmasternodestatus (const JSONRPCRequest& request)
             "  \"status\": \"xxxx\",      (string) Masternode status\n"
             "  \"message\": \"xxxx\"      (string) Masternode status message\n"
             "}\n"
+            "\n"
+            "\nResult (if deterministic masternode):\n"
+            "{\n"
+            "... !TODO ...\n"
+            "}\n"
 
             "\nExamples:\n" +
             HelpExampleCli("getmasternodestatus", "") + HelpExampleRpc("getmasternodestatus", ""));
@@ -648,8 +653,33 @@ UniValue getmasternodestatus (const JSONRPCRequest& request)
     if (!fMasterNode)
         throw JSONRPCError(RPC_MISC_ERROR, _("This is not a masternode."));
 
-    if (activeMasternode.vin == nullopt)
+    bool fLegacyMN = (activeMasternode.vin != nullopt);
+    bool fDeterministicMN = (activeMasternodeManager != nullptr);
+
+    if (!fLegacyMN && !fDeterministicMN) {
         throw JSONRPCError(RPC_MISC_ERROR, _("Active Masternode not initialized."));
+    }
+
+    if (fDeterministicMN) {
+        if (!deterministicMNManager->IsDIP3Enforced()) {
+            // this should never happen as ProTx transactions are not accepted yet
+            throw JSONRPCError(RPC_MISC_ERROR, _("Deterministic masternodes are not enforced yet"));
+        }
+        const CActiveMasternodeInfo* amninfo = activeMasternodeManager->GetInfo();
+        UniValue mnObj(UniValue::VOBJ);
+        auto dmn = deterministicMNManager->GetListAtChainTip().GetMNByOperatorKey(amninfo->keyIDOperator);
+        if (dmn) {
+            dmn->ToJson(mnObj);
+        }
+        mnObj.pushKV("netaddr", amninfo->service.ToString());
+        mnObj.pushKV("status", activeMasternodeManager->GetStatus());
+        return mnObj;
+    }
+
+    // Legacy code !TODO: remove when transition to DMN is complete
+    if (deterministicMNManager->LegacyMNObsolete()) {
+        throw JSONRPCError(RPC_MISC_ERROR, _("Legacy Masternode is obsolete."));
+    }
 
     CMasternode* pmn = mnodeman.Find(activeMasternode.vin->prevout);
 
