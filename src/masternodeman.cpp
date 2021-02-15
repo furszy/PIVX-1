@@ -196,6 +196,12 @@ bool CMasternodeMan::Add(CMasternode& mn)
         return false;
     }
 
+    if (deterministicMNManager->GetListAtChainTip().HasMNByCollateral(mn.vin.prevout)) {
+        LogPrint(BCLog::MASTERNODE, "ERROR: Not Adding Masternode %s as the collateral is already registered with a DMN\n",
+                mn.vin.prevout.ToString());
+        return false;
+    }
+
     LOCK(cs);
 
     if (!mn.IsAvailableState())
@@ -244,7 +250,7 @@ int CMasternodeMan::CheckAndRemove(bool forceExpiredRemoval)
         return 0;
     }
 
-    //remove inactive and outdated
+    //remove inactive and outdated (or replaced by DMN)
     auto it = mapMasternodes.begin();
     while (it != mapMasternodes.end()) {
         MasternodeRef& mn = it->second;
@@ -253,8 +259,7 @@ int CMasternodeMan::CheckAndRemove(bool forceExpiredRemoval)
             activeState == CMasternode::MASTERNODE_VIN_SPENT ||
             (forceExpiredRemoval && activeState == CMasternode::MASTERNODE_EXPIRED) ||
             mn->protocolVersion < ActiveProtocol()) {
-            LogPrint(BCLog::MASTERNODE, "Removing inactive Masternode %s\n", it->first.ToString());
-
+            LogPrint(BCLog::MASTERNODE, "Removing inactive (legacy) Masternode %s\n", it->first.ToString());
             //erase all of the broadcasts we've seen from this vin
             // -- if we missed a few pings and the node was removed, this will allow is to get it back without them
             //    sending a brand new mnb

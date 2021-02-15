@@ -11,6 +11,7 @@
 #include "evo/specialtx.h"
 #include "guiinterface.h"
 #include "masternode.h" // for MN_COLL_AMT, MasternodeCollateralMinConf
+#include "masternodeman.h" // for mnodeman (!TODO: remove)
 #include "script/standard.h"
 #include "spork.h"
 #include "sync.h"
@@ -651,6 +652,14 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, const C
             // collateralOutpoint is either pointing to an external collateral or to the ProRegTx itself
             dmn->collateralOutpoint = pl.collateralOutpoint.hash.IsNull() ? COutPoint(tx.GetHash(), pl.collateralOutpoint.n)
                                                                           : pl.collateralOutpoint;
+
+            // if the collateral outpoint appears in the legacy masternode list, remove the old node
+            // !TODO: remove this when the transition to DMN is complete
+            CMasternode* old_mn = mnodeman.Find(dmn->collateralOutpoint);
+            if (old_mn) {
+                old_mn->SetSpent();
+                mnodeman.CheckAndRemove();
+            }
 
             Coin coin;
             if (!pl.collateralOutpoint.hash.IsNull() && (!GetUTXOCoin(pl.collateralOutpoint, coin) || coin.out.nValue != MN_COLL_AMT)) {

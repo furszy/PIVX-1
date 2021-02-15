@@ -262,6 +262,17 @@ void CActiveMasternode::ManageStatus()
 
     LogPrint(BCLog::MASTERNODE, "CActiveMasternode::ManageStatus() - Begin\n");
 
+    // If a DMN has been registered with same collateral, disable me.
+    CMasternode* pmn;
+    pmn = mnodeman.Find(pubKeyMasternode);
+    if (pmn && deterministicMNManager->GetListAtChainTip().HasMNByCollateral(pmn->vin.prevout)) {
+        LogPrintf("%s: Disabling active legacy Masternode %s as the collateral is now registered with a DMN\n",
+                         __func__, pmn->vin.prevout.ToString());
+        status = ACTIVE_MASTERNODE_NOT_CAPABLE;
+        notCapableReason = "Collateral registered with DMN";
+        return;
+    }
+
     //need correct blocks to send ping
     if (!Params().IsRegTestNet() && !masternodeSync.IsBlockchainSynced()) {
         status = ACTIVE_MASTERNODE_SYNC_IN_PROCESS;
@@ -272,8 +283,6 @@ void CActiveMasternode::ManageStatus()
     if (status == ACTIVE_MASTERNODE_SYNC_IN_PROCESS) status = ACTIVE_MASTERNODE_INITIAL;
 
     if (status == ACTIVE_MASTERNODE_INITIAL) {
-        CMasternode* pmn;
-        pmn = mnodeman.Find(pubKeyMasternode);
         if (pmn != nullptr) {
             if (pmn->IsEnabled() && pmn->protocolVersion == PROTOCOL_VERSION)
                 EnableHotColdMasterNode(pmn->vin, pmn->addr);
