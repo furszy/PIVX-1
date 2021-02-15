@@ -34,6 +34,13 @@ class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
         assert_equal(status["dmnstate"]["PoSePenalty"], 0)
         assert_equal(status["status"], "Ready")
 
+    def check_mn_list(self, node, txHashSet):
+        # check masternode list from node
+        mnlist = node.listmasternodes()
+        assert_equal(len(mnlist), 3)
+        foundHashes = set([mn["txhash"] for mn in mnlist if mn["txhash"] in txHashSet])
+        assert_equal(len(foundHashes), len(txHashSet))
+
     def check_budget_finalization_sync(self, votesCount, status):
         for i in range(0, len(self.nodes)):
             node = self.nodes[i]
@@ -108,6 +115,9 @@ class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
     def run_test(self):
         self.enable_mocktime()
         self.setup_3_masternodes_network()
+        txHashSet = set([self.mnOneTxHash, self.mnTwoTxHash, self.proRegTx])
+        # check mn list from miner
+        self.check_mn_list(self.miner, txHashSet)
 
         # check status of masternodes
         self.check_mns_status_legacy(self.remoteOne, self.mnOneTxHash)
