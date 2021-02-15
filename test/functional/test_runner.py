@@ -142,6 +142,7 @@ BASE_SCRIPTS= [
 TIERTWO_SCRIPTS = [
     # Longest test should go first, to favor running tests in parallel
     'tiertwo_governance_sync_basic.py',
+    'tiertwo_mn_compatibility.py',
     'tiertwo_masternode_activation.py',
     'tiertwo_masternode_ping.py',
 ]

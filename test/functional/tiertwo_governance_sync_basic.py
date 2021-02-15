@@ -115,16 +115,16 @@ class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
     def run_test(self):
         self.enable_mocktime()
         self.setup_3_masternodes_network()
-        txHashSet = set([self.mnOneTxHash, self.mnTwoTxHash, self.proRegTx])
+        txHashSet = set([self.mnOneCollateral.hash, self.mnTwoCollateral.hash, self.proRegTx1.hash])
         # check mn list from miner
         self.check_mn_list(self.miner, txHashSet)
 
         # check status of masternodes
-        self.check_mns_status_legacy(self.remoteOne, self.mnOneTxHash)
+        self.check_mns_status_legacy(self.remoteOne, self.mnOneCollateral.hash)
         self.log.info("MN1 active")
-        self.check_mns_status_legacy(self.remoteTwo, self.mnTwoTxHash)
+        self.check_mns_status_legacy(self.remoteTwo, self.mnTwoCollateral.hash)
         self.log.info("MN2 active")
-        self.check_mns_status(self.remoteDMN, self.proRegTx)
+        self.check_mns_status(self.remoteDMN1, self.proRegTx1.hash)
         self.log.info("DMN1 active")
 
         # Prepare the proposal
@@ -182,7 +182,7 @@ class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
 
         # check that the vote was accepted everywhere
         self.stake(1, [self.remoteOne, self.remoteTwo])
-        self.check_vote_existence(firstProposalName, self.mnOneTxHash, "YES")
+        self.check_vote_existence(firstProposalName, self.mnOneCollateral.hash, "YES")
         self.log.info("all good, MN1 vote accepted everywhere!")
 
         # now let's vote for the proposal with the second MN
@@ -192,18 +192,18 @@ class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
 
         # check that the vote was accepted everywhere
         self.stake(1, [self.remoteOne, self.remoteTwo])
-        self.check_vote_existence(firstProposalName, self.mnTwoTxHash, "YES")
+        self.check_vote_existence(firstProposalName, self.mnTwoCollateral.hash, "YES")
         self.log.info("all good, MN2 vote accepted everywhere!")
 
         # now let's vote for the proposal with the first DMN
-        self.log.info("Voting with DMN...")
-        voteResult = self.ownerOne.mnbudgetvote("alias", proposalHash, "yes", self.proRegTx)
+        self.log.info("Voting with DMN1...")
+        voteResult = self.ownerOne.mnbudgetvote("alias", proposalHash, "yes", self.proRegTx1.hash)
         assert_equal(voteResult["detail"][0]["result"], "success")
 
         # check that the vote was accepted everywhere
         self.stake(1, [self.remoteOne, self.remoteTwo])
-        self.check_vote_existence(firstProposalName, self.proRegTx, "YES")
-        self.log.info("all good, DM1 vote accepted everywhere!")
+        self.check_vote_existence(firstProposalName, self.proRegTx1.hash, "YES")
+        self.log.info("all good, DMN1 vote accepted everywhere!")
 
         # Now check the budget
         blockStart = nextSuperBlockHeight
@@ -245,7 +245,7 @@ class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
         voteResult = self.ownerTwo.mnfinalbudget("vote-many", budgetFinHash, True)
         assert_equal(voteResult["detail"][0]["result"], "success")
         self.log.info("Remote Two voted successfully.")
-        voteResult = self.remoteDMN.mnfinalbudget("vote", budgetFinHash)
+        voteResult = self.remoteDMN1.mnfinalbudget("vote", budgetFinHash)
         assert_equal(voteResult["detail"][0]["result"], "success")
         self.log.info("DMN voted successfully.")
         self.stake(2, [self.remoteOne, self.remoteTwo])

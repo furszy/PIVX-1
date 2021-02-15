@@ -1069,34 +1069,67 @@ class PivxTestFramework():
                 self.send_pings(with_ping_mns)
 
 
-
     def setupDMN(self,
                  mnOwner,
                  miner,
-                 mnRemotePos):
-        self.log.info("Creating proRegTx for deterministic masternode...")
-        collateralAdd = mnOwner.getnewaddress("dmn1")
-        # send to the owner the collateral tx cost + some dust for the ProReg and fee
-        fundingTxId = miner.sendtoaddress(collateralAdd, Decimal('10001'))
-        # confirm and verify reception
-        self.stake_and_sync(self.nodes.index(miner), 1)
-        assert_greater_than(mnOwner.getrawtransaction(fundingTxId, 1)["confirmations"], 0)
-        # create and send the ProRegTx funding the collateral
-        operatorAdd = self.nodes[mnRemotePos].getnewaddress("dmn_operator")
-        ipport = "127.0.0.1:"+str(p2p_port(mnRemotePos))
+                 mnRemotePos,
+                 strType,           # "fund"|"internal"|"external"
+                 outpoint=None):    # COutPoint, only for "external"
+        self.log.info("Creating%s proRegTx for deterministic masternode..." % (
+                      " and funding" if strType == "fFund" else ""))
+        collateralAdd = mnOwner.getnewaddress("dmn")
+        ipport = "127.0.0.1:" + str(p2p_port(mnRemotePos))
         ownerAdd = mnOwner.getnewaddress("dmn_owner")
+        operatorAdd = mnOwner.getnewaddress("dmn_operator")
+        operatorKey = mnOwner.dumpprivkey(operatorAdd)
         votingAdd = mnOwner.getnewaddress("dmn_voting")
-        proTxId = mnOwner.protx_register_fund(collateralAdd, ipport, ownerAdd, operatorAdd, votingAdd, collateralAdd)
+        if strType == "fund":
+            # send to the owner the collateral tx cost + some dust for the ProReg and fee
+            fundingTxId = miner.sendtoaddress(collateralAdd, Decimal('101'))
+            # confirm and verify reception
+            self.stake_and_sync(self.nodes.index(miner), 1)
+            assert_greater_than(mnOwner.getrawtransaction(fundingTxId, 1)["confirmations"], 0)
+            # create and send the ProRegTx funding the collateral
+            proTxId = mnOwner.protx_register_fund(collateralAdd, ipport, ownerAdd,
+                                                  operatorAdd, votingAdd, collateralAdd)
+        elif strType == "internal":
+            mnOwner.getnewaddress("dust")
+            # send to the owner the collateral tx cost + some dust for the ProReg and fee
+            collateralTxId = miner.sendtoaddress(collateralAdd, Decimal('100'))
+            miner.sendtoaddress(collateralAdd, Decimal('1'))
+            # confirm and verify reception
+            self.stake_and_sync(self.nodes.index(miner), 1)
+            json_tx = mnOwner.getrawtransaction(collateralTxId, True)
+            collateralTxId_n = -1
+            for o in json_tx["vout"]:
+                if o["value"] == Decimal('100'):
+                    collateralTxId_n = o["n"]
+                    break
+            assert_greater_than(collateralTxId_n, -1)
+            assert_greater_than(json_tx["confirmations"], 0)
+            proTxId = mnOwner.protx_register(collateralTxId, collateralTxId_n, ipport, ownerAdd,
+                                             operatorAdd, votingAdd, collateralAdd)
+        elif strType == "external":
+            self.log.info("Setting up ProRegTx with collateral externally-signed...")
+            # send the tx from the miner
+            payoutAdd = mnOwner.getnewaddress("payout")
+            register_res = miner.protx_register_prepare(outpoint.hash, outpoint.n, ipport, ownerAdd,
+                                                        operatorAdd, votingAdd, payoutAdd)
+            self.log.info("ProTx prepared")
+            message_to_sign = register_res["signMessage"]
+            collateralAdd = register_res["collateralAddress"]
+            signature = mnOwner.signmessage(collateralAdd, message_to_sign)
+            self.log.info("ProTx signed")
+            proTxId = miner.protx_register_submit(register_res["tx"], signature)
+        else:
+            raise Exception("Type %s not available" % strType)
+
         self.sync_mempools([mnOwner, miner])
         # confirm and verify inclusion in list
         self.stake_and_sync(self.nodes.index(miner), 1)
         assert_greater_than(self.nodes[mnRemotePos].getrawtransaction(proTxId, 1)["confirmations"], 0)
         assert proTxId in self.nodes[mnRemotePos].protx_list(False)
-        return (
-            proTxId,
-            self.nodes[mnRemotePos].dumpprivkey(operatorAdd)
-        )
-
+        return COutPoint(proTxId, 0), operatorKey
 
     def setupMasternode(self,
                         mnOwner,
@@ -1134,8 +1167,8 @@ class PivxTestFramework():
         # lock collateral
         mnOwner.lockunspent(False, [{"txid": collateralTxId, "vout": collateralTxId_n}])
 
-        # return the collateral id
-        return collateralTxId
+        # return the collateral outpoint
+        return COutPoint(collateralTxId, collateralTxId_n)
 
 ### ------------------------------------------------------
 
@@ -1190,10 +1223,10 @@ class PivxTier2TestFramework(PivxTestFramework):
         self.ownerTwoPos = 2
         self.remoteTwoPos = 3
         self.minerPos = 4
-        self.remoteDMNPos = 5
+        self.remoteDMN1Pos = 5
 
         self.extra_args = [["-nuparams=v5_shield:249", "-nuparams=v6_evo:250"]] * self.num_nodes
-        for i in [self.remoteOnePos, self.remoteTwoPos, self.remoteDMNPos]:
+        for i in [self.remoteOnePos, self.remoteTwoPos, self.remoteDMN1Pos]:
             self.extra_args[i] += ["-listen", "-externalip=127.0.0.1"]
         self.extra_args[self.minerPos].append("-sporkkey=932HEevBSujW2ud7RfB1YF91AFygbBRQj3de3LyaCRqNzKKgWXi")
 
@@ -1209,10 +1242,10 @@ class PivxTier2TestFramework(PivxTestFramework):
         self.ownerTwo = None        # self.nodes[self.ownerTwoPos]
         self.remoteTwo = None       # self.nodes[self.remoteTwoPos]
         self.miner = None           # self.nodes[self.minerPos]
-        self.remoteDMN = None       # self.nodes[self.remoteDMNPos]
-        self.mnOneTxHash = ""
-        self.mnTwoTxHash = ""
-        self.proRegTx = ""
+        self.remoteDMN1 = None       # self.nodes[self.remoteDMN1Pos]
+        self.mnOneCollateral = COutPoint()
+        self.mnTwoCollateral = COutPoint()
+        self.proRegTx1 = COutPoint()
 
 
     def send_3_pings(self):
@@ -1230,12 +1263,12 @@ class PivxTier2TestFramework(PivxTestFramework):
     def controller_start_all_masternodes(self):
         self.controller_start_masternode(self.ownerOne, self.masternodeOneAlias)
         self.controller_start_masternode(self.ownerTwo, self.masternodeTwoAlias)
-        self.wait_until_mn_preenabled(self.mnOneTxHash, 40)
-        self.wait_until_mn_preenabled(self.mnTwoTxHash, 40)
+        self.wait_until_mn_preenabled(self.mnOneCollateral.hash, 40)
+        self.wait_until_mn_preenabled(self.mnTwoCollateral.hash, 40)
         self.log.info("masternodes started, waiting until both get enabled..")
         self.send_3_pings()
-        self.wait_until_mn_enabled(self.mnOneTxHash, 120, [self.remoteOne, self.remoteTwo])
-        self.wait_until_mn_enabled(self.mnTwoTxHash, 120, [self.remoteOne, self.remoteTwo])
+        self.wait_until_mn_enabled(self.mnOneCollateral.hash, 120, [self.remoteOne, self.remoteTwo])
+        self.wait_until_mn_enabled(self.mnTwoCollateral.hash, 120, [self.remoteOne, self.remoteTwo])
         self.log.info("masternodes enabled and running properly!")
 
     def advance_mocktime_and_stake(self, secs_to_add):
@@ -1249,9 +1282,9 @@ class PivxTier2TestFramework(PivxTestFramework):
         self.ownerTwo = self.nodes[self.ownerTwoPos]
         self.remoteTwo = self.nodes[self.remoteTwoPos]
         self.miner = self.nodes[self.minerPos]
-        self.remoteDMN = self.nodes[self.remoteDMNPos]
-        ownerOneDir = os.path.join(self.options.tmpdir, "node0")
-        ownerTwoDir = os.path.join(self.options.tmpdir, "node2")
+        self.remoteDMN1 = self.nodes[self.remoteDMN1Pos]
+        ownerOneDir = os.path.join(self.options.tmpdir, "node%d" % self.ownerOnePos)
+        ownerTwoDir = os.path.join(self.options.tmpdir, "node%d" % self.ownerTwoPos)
 
         self.log.info("generating 256 blocks..")
         # First mine 250 PoW blocks
@@ -1263,7 +1296,7 @@ class PivxTier2TestFramework(PivxTestFramework):
 
         self.log.info("masternodes setup..")
         # setup first masternode node, corresponding to nodeOne
-        self.mnOneTxHash = self.setupMasternode(
+        self.mnOneCollateral = self.setupMasternode(
             self.ownerOne,
             self.miner,
             self.masternodeOneAlias,
@@ -1271,7 +1304,7 @@ class PivxTier2TestFramework(PivxTestFramework):
             self.remoteOnePos,
             self.mnOnePrivkey)
         # setup second masternode node, corresponding to nodeTwo
-        self.mnTwoTxHash = self.setupMasternode(
+        self.mnTwoCollateral = self.setupMasternode(
             self.ownerTwo,
             self.miner,
             self.masternodeTwoAlias,
@@ -1279,10 +1312,11 @@ class PivxTier2TestFramework(PivxTestFramework):
             self.remoteTwoPos,
             self.mnTwoPrivkey)
         # setup deterministic masternode
-        self.proRegTx, self.dmnPrivkey = self.setupDMN(
+        self.proRegTx1, self.dmn1Privkey = self.setupDMN(
             self.ownerOne,
             self.miner,
-            self.remoteDMNPos
+            self.remoteDMN1Pos,
+            "fund"
         )
 
         self.log.info("masternodes setup completed, initializing them..")
@@ -1295,7 +1329,7 @@ class PivxTier2TestFramework(PivxTestFramework):
         remoteTwoPort = p2p_port(self.remoteTwoPos)
         self.remoteOne.initmasternode(self.mnOnePrivkey, "127.0.0.1:"+str(remoteOnePort))
         self.remoteTwo.initmasternode(self.mnTwoPrivkey, "127.0.0.1:"+str(remoteTwoPort))
-        self.remoteDMN.initmasternode(self.dmnPrivkey, "", True)
+        self.remoteDMN1.initmasternode(self.dmn1Privkey, "", True)
 
         # wait until mnsync complete on all nodes
         self.stake(1)

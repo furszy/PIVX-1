@@ -44,15 +44,8 @@ class MasternodeActivationTest(PivxTier2TestFramework):
         self.controller_start_all_masternodes()
 
     def spend_collateral(self):
-        mnCollateralOutputs = self.ownerOne.getmasternodeoutputs()
-        mnCollateralOutputIndex = -1
-        for x in mnCollateralOutputs:
-            if x["txhash"] == self.mnOneTxHash:
-                mnCollateralOutputIndex = x["outputidx"]
-                break
-        assert_greater_than_or_equal(mnCollateralOutputIndex, 0)
         send_value = satoshi_round(100 - 0.001)
-        inputs = [{'txid' : self.mnOneTxHash, 'vout' : mnCollateralOutputIndex}]
+        inputs = [{'txid': self.mnOneCollateral.hash, 'vout': self.mnOneCollateral.n}]
         outputs = {}
         outputs[self.ownerOne.getnewaddress()] = float(send_value)
         rawtx = self.ownerOne.createrawtransaction(inputs, outputs)
@@ -66,8 +59,8 @@ class MasternodeActivationTest(PivxTier2TestFramework):
     # Similar to base class wait_until_mn_status but skipping the disconnected nodes
     def wait_until_mn_expired(self, _timeout, removed=False):
         collaterals = {
-            self.remoteOnePos: self.mnOneTxHash,
-            self.remoteTwoPos: self.mnTwoTxHash
+            self.remoteOnePos: self.mnOneCollateral.hash,
+            self.remoteTwoPos: self.mnTwoCollateral.hash
         }
         for k in collaterals:
             for i in range(self.num_nodes):
@@ -116,7 +109,7 @@ class MasternodeActivationTest(PivxTier2TestFramework):
         self.sync_blocks()
         self.log.info("checking mn status..")
         time.sleep(3)           # wait a little bit
-        self.wait_until_mn_vinspent(self.mnOneTxHash, 30, [self.remoteTwo])
+        self.wait_until_mn_vinspent(self.mnOneCollateral.hash, 30, [self.remoteTwo])
         self.log.info("masternode list updated successfully, vin spent")
 
 
