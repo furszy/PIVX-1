@@ -10,7 +10,7 @@
 #include "core_io.h"
 #include "evo/specialtx.h"
 #include "guiinterface.h"
-#include "masternode.h" // for MN_COLL_AMT, MasternodeCollateralMinConf
+#include "masternode.h" // for MasternodeCollateralMinConf
 #include "masternodeman.h" // for mnodeman (!TODO: remove)
 #include "script/standard.h"
 #include "spork.h"
@@ -662,7 +662,8 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, const C
             }
 
             Coin coin;
-            if (!pl.collateralOutpoint.hash.IsNull() && (!GetUTXOCoin(pl.collateralOutpoint, coin) || coin.out.nValue != MN_COLL_AMT)) {
+            const CAmount collAmt = Params().GetConsensus().nMNCollateralAmt;
+            if (!pl.collateralOutpoint.hash.IsNull() && (!GetUTXOCoin(pl.collateralOutpoint, coin) || coin.out.nValue != collAmt)) {
                 // should actually never get to this point as CheckProRegTx should have handled this case.
                 // We do this additional check nevertheless to be 100% sure
                 return _state.DoS(100, false, REJECT_INVALID, "bad-protx-collateral");

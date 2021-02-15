@@ -432,7 +432,7 @@ static UniValue ProTxRegister(const JSONRPCRequest& request, bool fSignAndSend)
             throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("collateral not found: %s-%d", collateralHash.ToString(), collateralIndex));
         }
     }
-    if (coin.out.nValue != MN_COLL_AMT) {
+    if (coin.out.nValue != Params().GetConsensus().nMNCollateralAmt) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("collateral %s-%d with invalid value %d", collateralHash.ToString(), collateralIndex, coin.out.nValue));
     }
     CTxDestination txDest;
@@ -555,6 +555,7 @@ UniValue protx_register_fund(const JSONRPCRequest& request)
 
     const CTxDestination& collateralDest(ParsePubKeyIDFromAddress(request.params[0].get_str()));
     const CScript& collateralScript = GetScriptForDestination(collateralDest);
+    const CAmount collAmt = Params().GetConsensus().nMNCollateralAmt;
 
     ProRegPL pl = ParseProRegPLParams(request.params, 1);
     pl.nVersion = ProRegPL::CURRENT_VERSION;
@@ -562,12 +563,12 @@ UniValue protx_register_fund(const JSONRPCRequest& request)
     CMutableTransaction tx;
     tx.nVersion = CTransaction::TxVersion::SAPLING;
     tx.nType = CTransaction::TxType::PROREG;
-    tx.vout.emplace_back(MN_COLL_AMT, collateralScript);
+    tx.vout.emplace_back(collAmt, collateralScript);
 
     FundSpecialTx(pwalletMain, tx, pl);
 
     for (uint32_t i = 0; i < tx.vout.size(); i++) {
-        if (tx.vout[i].nValue == MN_COLL_AMT && tx.vout[i].scriptPubKey == collateralScript) {
+        if (tx.vout[i].nValue == collAmt && tx.vout[i].scriptPubKey == collateralScript) {
             pl.collateralOutpoint.n = i;
             break;
         }

@@ -77,7 +77,7 @@ static bool CheckCollateralOut(const CTxOut& out, const ProRegPL& pl, CValidatio
         return state.DoS(10, false, REJECT_INVALID, "bad-protx-collateral-reuse");
     }
     // check collateral amount
-    if (out.nValue != MN_COLL_AMT) {
+    if (out.nValue != Params().GetConsensus().nMNCollateralAmt) {
         return state.DoS(100, false, REJECT_INVALID, "bad-protx-collateral-amount");
     }
     return true;

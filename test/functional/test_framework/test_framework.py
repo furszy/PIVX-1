@@ -1079,28 +1079,31 @@ class PivxTestFramework():
         self.log.info("adding balance to the mn owner for " + masternodeAlias + "..")
         mnAddress = mnOwner.getnewaddress(masternodeAlias)
         # send to the owner the collateral tx cost
-        collateralTxId = miner.sendtoaddress(mnAddress, Decimal('10000'))
+        collateralTxId = miner.sendtoaddress(mnAddress, Decimal('100'))
         # confirm and verify reception
         self.stake_and_sync(self.nodes.index(miner), 1)
-        assert_equal(mnOwner.getbalance(), Decimal('10000'))
-        assert_greater_than(mnOwner.getrawtransaction(collateralTxId, 1)["confirmations"], 0)
-
-        self.log.info("all good, creating masternode " + masternodeAlias + "..")
-
-        # get the collateral output using the RPC command
-        mnCollateralOutput = mnOwner.getmasternodeoutputs()[0]
-        assert_equal(mnCollateralOutput["txhash"], collateralTxId)
-        mnCollateralOutputIndex = mnCollateralOutput["outputidx"]
-
-        self.log.info("collateral accepted for "+ masternodeAlias +". Updating masternode.conf...")
-
-        # verify collateral confirmed
-        confData = masternodeAlias + " 127.0.0.1:" + str(p2p_port(mnRemotePos)) + " " + str(masternodePrivKey) + " " + str(mnCollateralOutput["txhash"]) + " " + str(mnCollateralOutputIndex)
-        destinationDirPath = mnOwnerDirPath
-        destPath = os.path.join(destinationDirPath, "masternode.conf")
+        json_tx = mnOwner.getrawtransaction(collateralTxId, True)
+        collateralTxId_n = -1
+        for o in json_tx["vout"]:
+            if o["value"] == Decimal('100'):
+                collateralTxId_n = o["n"]
+                break
+        assert_greater_than(collateralTxId_n, -1)
+        assert_greater_than(json_tx["confirmations"], 0)
+        # update masternode file
+        self.log.info("collateral accepted for " + masternodeAlias + ". Updating masternode.conf...")
+        confData = "%s 127.0.0.1:%d %s %s %d" % (masternodeAlias,
+                                                 p2p_port(mnRemotePos),
+                                                 masternodePrivKey,
+                                                 collateralTxId,
+                                                 collateralTxId_n)
+        destPath = os.path.join(mnOwnerDirPath, "masternode.conf")
         with open(destPath, "a+") as file_object:
             file_object.write("\n")
             file_object.write(confData)
+
+        # lock collateral
+        mnOwner.lockunspent(False, [{"txid": collateralTxId, "vout": collateralTxId_n}])
 
         # return the collateral id
         return collateralTxId

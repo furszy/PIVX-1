@@ -43,12 +43,12 @@ class MasternodePingTest(PivxTestFramework):
         self.log.info("funding masternode controller...")
         masternodeAlias = "mnode"
         mnAddress = owner.getnewaddress(masternodeAlias)
-        collateralTxId = miner.sendtoaddress(mnAddress, Decimal('10000'))
+        collateralTxId = miner.sendtoaddress(mnAddress, Decimal('100'))
         miner.generate(2)
         self.sync_blocks()
         time.sleep(1)
         collateral_rawTx = owner.getrawtransaction(collateralTxId, 1)
-        assert_equal(owner.getbalance(), Decimal('10000'))
+        assert_equal(owner.getbalance(), Decimal('100'))
         assert_greater_than(collateral_rawTx["confirmations"], 0)
 
         # Block time can be up to median time past +1. We might need to wait...

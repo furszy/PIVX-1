@@ -1714,6 +1714,7 @@ CAmount CWalletTx::GetLockedCredit() const
 
     CAmount nCredit = 0;
     uint256 hashTx = GetHash();
+    const CAmount collAmt = Params().GetConsensus().nMNCollateralAmt;
     for (unsigned int i = 0; i < tx->vout.size(); i++) {
         const CTxOut& txout = tx->vout[i];
 
@@ -1726,7 +1727,7 @@ CAmount CWalletTx::GetLockedCredit() const
         }
 
         // Add masternode collaterals which are handled like locked coins
-        else if (fMasterNode && tx->vout[i].nValue == MN_COLL_AMT) {
+        else if (fMasterNode && tx->vout[i].nValue == collAmt) {
             nCredit += pwallet->GetCredit(txout, ISMINE_SPENDABLE);
         }
 
@@ -2467,7 +2468,7 @@ bool CWallet::GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& 
     CTxOut txOut = wtx->tx->vout[nOutputIndex];
 
     // Masternode collateral value
-    if (txOut.nValue != MN_COLL_AMT) {
+    if (txOut.nValue != Params().GetConsensus().nMNCollateralAmt) {
         strError = "Invalid collateral tx value, must be 10,000 PIV";
         return error("%s: tx %s, index %d not a masternode collateral", __func__, strTxHash, nOutputIndex);
     }
@@ -2522,7 +2523,7 @@ CWallet::OutputAvailabilityResult CWallet::CheckOutputAvailability(
     OutputAvailabilityResult res;
 
     // Check for only 10k utxo
-    if (nCoinType == ONLY_10000 && output.nValue != MN_COLL_AMT) return res;
+    if (nCoinType == ONLY_10000 && output.nValue != Params().GetConsensus().nMNCollateralAmt) return res;
 
     // Check for stakeable utxo
     if (nCoinType == STAKEABLE_COINS && output.IsZerocoinMint()) return res;

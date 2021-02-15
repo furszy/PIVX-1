@@ -8,7 +8,6 @@
 #include "evo/specialtx.h"
 #include "evo/providertx.h"
 #include "evo/deterministicmns.h"
-#include "masternode.h"
 #include "messagesigner.h"
 #include "netbase.h"
 #include "policy/policy.h"
@@ -119,7 +118,7 @@ static CMutableTransaction CreateProRegTx(Optional<COutPoint> optCollateralOut, 
     tx.nType = CTransaction::TxType::PROREG;
     FundTransaction(tx, utxos, scriptPayout,
                     GetScriptForDestination(coinbaseKey.GetPubKey().GetID()),
-                    (optCollateralOut ? 0 : MN_COLL_AMT));
+                    (optCollateralOut ? 0 : Params().GetConsensus().nMNCollateralAmt));
 
     pl.inputsHash = CalcTxInputsHash(tx);
     SetTxPayload(tx, pl);
