@@ -90,14 +90,15 @@ void CDeterministicMN::ToJson(UniValue& obj) const
     obj.pushKV("collateralHash", collateralOutpoint.hash.ToString());
     obj.pushKV("collateralIndex", (int)collateralOutpoint.n);
 
+    std::string collateralAddressStr = "";
     Coin coin;
     if (GetUTXOCoin(collateralOutpoint, coin)) {
         CTxDestination dest;
         if (ExtractDestination(coin.out.scriptPubKey, dest)) {
-            obj.pushKV("collateralAddress", EncodeDestination(dest));
+            collateralAddressStr = EncodeDestination(dest);
         }
     }
-
+    obj.pushKV("collateralAddress", collateralAddressStr);
     obj.pushKV("operatorReward", (double)nOperatorReward / 100);
     obj.pushKV("dmnstate", stateObj);
 }

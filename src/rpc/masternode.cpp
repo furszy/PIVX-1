@@ -100,12 +100,25 @@ UniValue getcachedblockhashes(const JSONRPCRequest& request)
     return ret;
 }
 
+static inline bool filter(const std::string& str, const std::string& strFilter)
+{
+    return str.find(strFilter) != std::string::npos;
+}
+
+static inline bool filterMasternode(const UniValue& dmno, const std::string& strFilter, bool fEnabled)
+{
+    return strFilter.empty() || (filter("ENABLED", strFilter) && fEnabled)
+                             || (filter("POSE_BANNED", strFilter) && !fEnabled)
+                             || (filter(dmno["proTxHash"].get_str(), strFilter))
+                             || (filter(dmno["collateralHash"].get_str(), strFilter))
+                             || (filter(dmno["collateralAddress"].get_str(), strFilter))
+                             || (filter(dmno["dmnstate"]["ownerAddress"].get_str(), strFilter))
+                             || (filter(dmno["dmnstate"]["operatorAddress"].get_str(), strFilter))
+                             || (filter(dmno["dmnstate"]["votingAddress"].get_str(), strFilter));
+}
+
 UniValue listmasternodes(const JSONRPCRequest& request)
 {
-    std::string strFilter = "";
-
-    if (request.params.size() == 1) strFilter = request.params[0].get_str();
-
     if (request.fHelp || (request.params.size() > 1))
         throw std::runtime_error(
             "listmasternodes ( \"filter\" )\n"
@@ -114,6 +127,7 @@ UniValue listmasternodes(const JSONRPCRequest& request)
             "\nArguments:\n"
             "1. \"filter\"    (string, optional) Filter search text. Partial match by txhash, status, or addr.\n"
 
+            // !TODO: update for DMNs
             "\nResult:\n"
             "[\n"
             "  {\n"
@@ -134,7 +148,25 @@ UniValue listmasternodes(const JSONRPCRequest& request)
             "\nExamples:\n" +
             HelpExampleCli("listmasternodes", "") + HelpExampleRpc("listmasternodes", ""));
 
+
+    const std::string& strFilter = request.params.size() > 0 ? request.params[0].get_str() : "";
     UniValue ret(UniValue::VARR);
+
+    auto mnList = deterministicMNManager->GetListAtChainTip();
+    mnList.ForEachMN(false, [&](const CDeterministicMNCPtr& dmn) {
+        UniValue obj(UniValue::VOBJ);
+        dmn->ToJson(obj);
+        bool fEnabled = dmn->pdmnState->nPoSeBanHeight == -1;
+        if (filterMasternode(obj, strFilter, fEnabled)) {
+            // Added for backward compatibility. can be removed later.
+            obj.pushKV("txhash", obj["proTxHash"].get_str());
+
+            obj.pushKV("status", fEnabled ? "ENABLED" : "POSE_BANNED");
+            ret.push_back(obj);
+        }
+    });
+
+    // Legacy masternodes (!TODO: remove when transition to dmn is complete)
     const CBlockIndex* chainTip = GetChainTip();
     if (!chainTip) return "[]";
     int nHeight = chainTip->nHeight;
