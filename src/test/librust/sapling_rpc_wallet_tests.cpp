@@ -85,10 +85,19 @@ BOOST_AUTO_TEST_CASE(rpc_wallet_sapling_validateaddress)
 
 BOOST_AUTO_TEST_CASE(rpc_wallet_getbalance)
 {
+    std::cout << "test 1" << std::endl;
     SelectParams(CBaseChainParams::TESTNET);
 
+    {
+        LOCK(pwalletMain->cs_wallet);
+        pwalletMain->SetMinVersion(FEATURE_SAPLING);
+        pwalletMain->SetupSPKM(false);
+    }
+
     BOOST_CHECK_THROW(CallRPC("getshieldbalance too many args"), std::runtime_error);
+    std::cout << "test 2" << std::endl;
     BOOST_CHECK_THROW(CallRPC("getshieldbalance invalidaddress"), std::runtime_error);
+    std::cout << "test 3" << std::endl;
     BOOST_CHECK_THROW(CallRPC("getshieldbalance tmC6YZnCUhm19dEXxh3Jb7srdBJxDawaCab"), std::runtime_error);
     BOOST_CHECK_NO_THROW(CallRPC("getshieldbalance ptestsapling1h0w73csah2aq0a32h42kr7tq4htlt5wfn4ejxfnm56f6ehjvek7k4e244g6v8v3pgylmz5ea8jh"));
     BOOST_CHECK_THROW(CallRPC("getshieldbalance ptestsapling1h0w73csah2aq0a32h42kr7tq4htlt5wfn4ejxfnm56f6ehjvek7k4e244g6v8v3pgylmz5ea8jh -1"), std::runtime_error);
@@ -105,6 +114,8 @@ BOOST_AUTO_TEST_CASE(rpc_wallet_getbalance)
     BOOST_CHECK_THROW(CallRPC("listreceivedbyshieldaddress yBYhwgzufrZ6F5VVuK9nEChENArq934mqC 0"), std::runtime_error);
     // don't have the spending key
     BOOST_CHECK_THROW(CallRPC("listreceivedbyshieldaddress ptestsapling1nrn6exksuqtpld9gu6fwdz4hwg54h2x37gutdds89pfyg6mtjf63km45a8eare5qla45cj75vs8 1"), std::runtime_error);
+
+    std::cout << "test end" << std::endl;
 }
 
 BOOST_AUTO_TEST_CASE(rpc_wallet_sapling_importkey_paymentaddress) {
