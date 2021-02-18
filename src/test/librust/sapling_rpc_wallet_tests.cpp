@@ -99,14 +99,16 @@ BOOST_AUTO_TEST_CASE(rpc_wallet_getbalance)
     BOOST_CHECK_THROW(CallRPC("getshieldbalance invalidaddress"), std::runtime_error);
     std::cout << "test 3" << std::endl;
     BOOST_CHECK_THROW(CallRPC("getshieldbalance tmC6YZnCUhm19dEXxh3Jb7srdBJxDawaCab"), std::runtime_error);
+    std::cout << "test 4" << std::endl;
     BOOST_CHECK_NO_THROW(CallRPC("getshieldbalance ptestsapling1h0w73csah2aq0a32h42kr7tq4htlt5wfn4ejxfnm56f6ehjvek7k4e244g6v8v3pgylmz5ea8jh"));
     BOOST_CHECK_THROW(CallRPC("getshieldbalance ptestsapling1h0w73csah2aq0a32h42kr7tq4htlt5wfn4ejxfnm56f6ehjvek7k4e244g6v8v3pgylmz5ea8jh -1"), std::runtime_error);
     BOOST_CHECK_NO_THROW(CallRPC("getshieldbalance ptestsapling1nrn6exksuqtpld9gu6fwdz4hwg54h2x37gutdds89pfyg6mtjf63km45a8eare5qla45cj75vs8 0"));
     BOOST_CHECK_THROW(CallRPC("getshieldbalance tnRZ8bPq2pff3xBWhTJhNkVUkm2uhzksDeW5PvEa7aFKGT9Qi3YgTALZfjaY4jU3HLVKBtHdSXxoPoLA3naMPcHBcY88FcF 1"), std::runtime_error);
+    std::cout << "test 5" << std::endl;
     BOOST_CHECK_NO_THROW(CallRPC("getshieldbalance *"));
     BOOST_CHECK_NO_THROW(CallRPC("getshieldbalance * 6"));
     BOOST_CHECK_THROW(CallRPC("getshieldbalance * -1"), std::runtime_error);
-
+    std::cout << "test 6" << std::endl;
     BOOST_CHECK_THROW(CallRPC("listreceivedbyshieldaddress too many args"), std::runtime_error);
     // negative minconf not allowed
     BOOST_CHECK_THROW(CallRPC("listreceivedbyshieldaddress yBYhwgzufrZ6F5VVuK9nEChENArq934mqC -1"), std::runtime_error);
