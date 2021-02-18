@@ -87,8 +87,6 @@ BOOST_AUTO_TEST_CASE(rpc_wallet_getbalance)
 {
     SelectParams(CBaseChainParams::TESTNET);
 
-    LOCK2(cs_main, pwalletMain->cs_wallet);
-
     BOOST_CHECK_THROW(CallRPC("getshieldbalance too many args"), std::runtime_error);
     BOOST_CHECK_THROW(CallRPC("getshieldbalance invalidaddress"), std::runtime_error);
     BOOST_CHECK_THROW(CallRPC("getshieldbalance tmC6YZnCUhm19dEXxh3Jb7srdBJxDawaCab"), std::runtime_error);
@@ -249,7 +247,11 @@ BOOST_AUTO_TEST_CASE(rpc_shieldsendmany_parameters)
 {
     SelectParams(CBaseChainParams::TESTNET);
 
-    LOCK2(cs_main, pwalletMain->cs_wallet);
+    {
+        LOCK(pwalletMain->cs_wallet);
+        pwalletMain->SetMinVersion(FEATURE_SAPLING);
+        pwalletMain->SetupSPKM(false);
+    }
 
     BOOST_CHECK_THROW(CallRPC("shieldsendmany"), std::runtime_error);
     BOOST_CHECK_THROW(CallRPC("shieldsendmany toofewargs"), std::runtime_error);
@@ -299,7 +301,6 @@ BOOST_AUTO_TEST_CASE(rpc_shieldsendmany_parameters)
     std::vector<char> v (2 * (ZC_MEMO_SIZE+1));     // x2 for hexadecimal string format
     std::fill(v.begin(),v.end(), 'A');
     std::string badmemo(v.begin(), v.end());
-    pwalletMain->SetupSPKM(false);
     auto pa = pwalletMain->GenerateNewSaplingZKey();
     std::string zaddr1 = KeyIO::EncodePaymentAddress(pa);
     BOOST_CHECK_THROW(CallRPC(std::string("shieldsendmany yBYhwgzufrZ6F5VVuK9nEChENArq934mqC ")
@@ -541,8 +542,10 @@ BOOST_AUTO_TEST_CASE(rpc_listshieldunspent_parameters)
 {
     SelectParams(CBaseChainParams::TESTNET);
 
-    LOCK2(cs_main, pwalletMain->cs_wallet);
-    pwalletMain->SetupSPKM(false);
+    {
+        LOCK(pwalletMain->cs_wallet);
+        pwalletMain->SetupSPKM(false);
+    }
 
     UniValue retValue;
 
