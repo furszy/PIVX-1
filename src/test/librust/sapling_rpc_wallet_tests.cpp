@@ -110,11 +110,14 @@ BOOST_AUTO_TEST_CASE(rpc_wallet_getbalance)
     BOOST_CHECK_THROW(CallRPC("getshieldbalance * -1"), std::runtime_error);
     std::cout << "test 6" << std::endl;
     BOOST_CHECK_THROW(CallRPC("listreceivedbyshieldaddress too many args"), std::runtime_error);
+    std::cout << "test 7" << std::endl;
     // negative minconf not allowed
     BOOST_CHECK_THROW(CallRPC("listreceivedbyshieldaddress yBYhwgzufrZ6F5VVuK9nEChENArq934mqC -1"), std::runtime_error);
     // invalid zaddr, taddr not allowed
+    std::cout << "test 8" << std::endl;
     BOOST_CHECK_THROW(CallRPC("listreceivedbyshieldaddress yBYhwgzufrZ6F5VVuK9nEChENArq934mqC 0"), std::runtime_error);
     // don't have the spending key
+    std::cout << "test 9" << std::endl;
     BOOST_CHECK_THROW(CallRPC("listreceivedbyshieldaddress ptestsapling1nrn6exksuqtpld9gu6fwdz4hwg54h2x37gutdds89pfyg6mtjf63km45a8eare5qla45cj75vs8 1"), std::runtime_error);
 
     std::cout << "test end" << std::endl;

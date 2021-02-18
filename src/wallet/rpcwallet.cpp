@@ -2535,6 +2535,7 @@ UniValue listreceivedbyshieldaddress(const JSONRPCRequest& request)
     if (!sspkm->PaymentAddressBelongsToWallet(shieldAddr)) {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "From address does not belong to this node, shield addr spending key or viewing key not found.");
     }
+    std::cout << "half listreceivedbyshieldaddress" << std::endl;
 
     UniValue result(UniValue::VARR);
     std::vector<SaplingNoteEntry> saplingEntries;
