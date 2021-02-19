@@ -76,7 +76,7 @@ class WalletUpgradeTest (PivxTestFramework):
         self.setup_clean_chain = True
         self.num_nodes = 1
 
-    def check_keys(self, addrs, mined_blocks = 0):
+    def check_keys(self, addrs, mined_blocks, generated_addresses):
         self.log.info("Checking old keys existence in the upgraded wallet..")
         # Now check that all of the pre upgrade addresses are still in the wallet
         for addr in addrs:
@@ -93,7 +93,9 @@ class WalletUpgradeTest (PivxTestFramework):
         self.log.info("All pre-upgrade keys should have been marked as used by now, creating new HD keys")
 
         # Try generating 10 new addresses and verify that those are HD now
-        for i in range(0, 10):
+        # Starting from the last generated address index
+        rangeStart = generated_addresses
+        for i in range(rangeStart, 10):
             addrHD = self.nodes[0].getnewaddress()
             vaddrHD = self.nodes[0].getaddressinfo(addrHD)  # required to get hd keypath
             assert_equal('hdseedid' in vaddrHD, True)
@@ -126,7 +128,7 @@ class WalletUpgradeTest (PivxTestFramework):
         self.start_node(0, ["-upgradewallet"])
 
         # Now check if the upgrade went fine
-        self.check_keys(addrs)
+        self.check_keys(addrs, 0, 0)
         self.log.info("New HD addresses created successfully")
 
         # Now test the upgrade at runtime using the JSON-RPC upgradewallet command
@@ -135,7 +137,7 @@ class WalletUpgradeTest (PivxTestFramework):
         copyPreHDWallet(self.options.tmpdir, False)
         self.start_node(0)
 
-        # Generating a block to not be in IBD
+        # Generating a block to not be in IBD, here we create a new key for the coinbase script
         self.nodes[0].generate(1)
 
         self.log.info("Upgrading wallet..")
@@ -143,7 +145,7 @@ class WalletUpgradeTest (PivxTestFramework):
 
         self.log.info("upgrade completed, checking keys now..")
         # Now check if the upgrade went fine
-        self.check_keys(addrs, 1)
+        self.check_keys(addrs, 1, 1)
 
         self.log.info("Upgrade via RPC completed, all good :)")
 
