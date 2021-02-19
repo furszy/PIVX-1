@@ -54,10 +54,15 @@ TestingSetup::TestingSetup()
         fs::create_directories(pathTemp);
         gArgs.ForceSetArg("-datadir", pathTemp.string());
 
+        // Start the lightweight task scheduler thread
+        CScheduler::Function serviceLoop = std::bind(&CScheduler::serviceQueue, &scheduler);
+        threadGroup.create_thread(std::bind(&TraceThread<CScheduler::Function>, "scheduler", serviceLoop));
+
         // Note that because we don't bother running a scheduler thread here,
         // callbacks via CValidationInterface are unreliable, but that's OK,
         // our unit tests aren't testing multiple parts of the code at once.
         GetMainSignals().RegisterBackgroundSignalScheduler(scheduler);
+        GetMainSignals().RegisterWithMempoolSignals(mempool);
 
         // Ideally we'd move all the RPC tests to the functional testing framework
         // instead of unit tests, but for now we need these here.
@@ -87,7 +92,9 @@ TestingSetup::~TestingSetup()
         threadGroup.interrupt_all();
         threadGroup.join_all();
         GetMainSignals().FlushBackgroundCallbacks();
+        UnregisterAllValidationInterfaces();
         GetMainSignals().UnregisterBackgroundSignalScheduler();
+        GetMainSignals().UnregisterWithMempoolSignals(mempool);
         UnloadBlockIndex();
         delete pcoinsTip;
         delete pcoinsdbview;
