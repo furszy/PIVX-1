@@ -102,7 +102,7 @@ class WalletDumpTest(PivxTestFramework):
         found_addr, found_addr_chg, found_addr_rsv, hd_master_addr_unenc = \
             read_dump(dumpUnencrypted, addrs, None)
         assert_equal(found_addr, test_addr_count)  # all keys must be in the dump
-        assert_equal(found_addr_chg, 0)  # 0 blocks where mined
+        assert_equal(found_addr_chg, 50)  # 50 blocks where mined
         assert_equal(found_addr_rsv, 90 * 3)  # 90 keys external plus 100% internal keys plus 100% staking keys
 
         #encrypt wallet, restart, unlock and dump
@@ -117,7 +117,7 @@ class WalletDumpTest(PivxTestFramework):
         found_addr, found_addr_chg, found_addr_rsv, hd_master_addr_enc = \
             read_dump(dumpEncrypted, addrs, hd_master_addr_unenc)
         assert_equal(found_addr, test_addr_count)
-        assert_equal(found_addr_chg, 90 * 3 + 1)  # old reserve keys are marked as change now. todo: The +1 needs to be removed once this is updated (master seed taken as an internal key)
+        assert_equal(found_addr_chg, 90 * 3 + 1 + 50)  # old reserve keys are marked as change now. todo: The +1 needs to be removed once this is updated (master seed taken as an internal key)
         assert_equal(found_addr_rsv, 90 * 3) # 90 external + 90 internal + 90 staking
 
         # Overwriting should fail
