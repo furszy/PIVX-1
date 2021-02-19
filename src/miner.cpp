@@ -39,10 +39,10 @@
 double dHashesPerSec = 0.0;
 int64_t nHPSTimerStart = 0;
 
-std::unique_ptr<CBlockTemplate> CreateNewBlockWithKey(CReserveKey& reservekey, CWallet* pwallet)
+std::unique_ptr<CBlockTemplate> CreateNewBlockWithKey(CReserveKey* reservekey, CWallet* pwallet)
 {
     CPubKey pubkey;
-    if (!reservekey.GetReservedKey(pubkey))
+    if (!reservekey->GetReservedKey(pubkey))
         return nullptr;
 
     const int nHeightNext = chainActive.Tip()->nHeight + 1;
@@ -169,7 +169,7 @@ void BitcoinMiner(CWallet* pwallet, bool fProofOfStake)
 
         std::unique_ptr<CBlockTemplate> pblocktemplate((fProofOfStake ?
                                                         BlockAssembler(Params(), DEFAULT_PRINTPRIORITY).CreateNewBlock(CScript(), pwallet, true, &availableCoins) :
-                                                        CreateNewBlockWithKey(*opReservekey, pwallet)));
+                                                        CreateNewBlockWithKey(opReservekey.get_ptr(), pwallet)));
         if (!pblocktemplate) continue;
         std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>(pblocktemplate->block);
 

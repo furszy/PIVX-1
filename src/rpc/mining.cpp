@@ -61,14 +61,17 @@ UniValue generate(const JSONRPCRequest& request)
 
     const Consensus::Params& consensus = Params().GetConsensus();
     bool fPoS = consensus.NetworkUpgradeActive(nHeight + 1, Consensus::UPGRADE_POS);
+    std::unique_ptr<CReserveKey> reservekey;
 
     if (fPoS) {
         // If we are in PoS, wallet must be unlocked.
         EnsureWalletIsUnlocked();
+    } else {
+        // Coinbase key
+        reservekey = MakeUnique<CReserveKey>(pwalletMain);
     }
 
     UniValue blockHashes(UniValue::VARR);
-    CReserveKey reservekey(pwalletMain);
     unsigned int nExtraNonce = 0;
 
     while (nHeight < nHeightEnd && !ShutdownRequested()) {
@@ -81,7 +84,7 @@ UniValue generate(const JSONRPCRequest& request)
 
         std::unique_ptr<CBlockTemplate> pblocktemplate((fPoS ?
                                                         BlockAssembler(Params(), DEFAULT_PRINTPRIORITY).CreateNewBlock(CScript(), pwalletMain, true, &availableCoins) :
-                                                        CreateNewBlockWithKey(reservekey, pwalletMain)));
+                                                        CreateNewBlockWithKey(reservekey.get(), pwalletMain)));
         if (!pblocktemplate.get()) break;
         std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>(pblocktemplate->block);
 
@@ -113,6 +116,12 @@ UniValue generate(const JSONRPCRequest& request)
     const int nGenerated = blockHashes.size();
     if (nGenerated == 0 || (!fPoS && nGenerated < nGenerate))
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new blocks");
+
+    // mark key as used, only for PoW coinbases
+    if (reservekey) {
+        // Remove key from key pool
+        reservekey->KeepKey();
+    }
 
     return blockHashes;
 }
