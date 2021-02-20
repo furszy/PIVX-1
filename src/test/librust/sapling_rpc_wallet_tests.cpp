@@ -259,10 +259,11 @@ BOOST_AUTO_TEST_CASE(rpc_shieldsendmany_parameters)
         pwalletMain->SetupSPKM(false);
     }
 
+    std::cout << "test uno" << std::endl;
     BOOST_CHECK_THROW(CallRPC("shieldsendmany"), std::runtime_error);
     BOOST_CHECK_THROW(CallRPC("shieldsendmany toofewargs"), std::runtime_error);
     BOOST_CHECK_THROW(CallRPC("shieldsendmany just too many args here"), std::runtime_error);
-
+    std::cout << "test dos" << std::endl;
     // bad from address
     BOOST_CHECK_THROW(CallRPC("shieldsendmany "
                               "INVALIDyBYhwgzufrZ6F5VVuK9nEChENArq934mqC []"), std::runtime_error);
@@ -281,7 +282,7 @@ BOOST_AUTO_TEST_CASE(rpc_shieldsendmany_parameters)
                               "[{\"address\":\"yAJ4bGeDFcEtx24kbr413fBLpWQcdR5F2z\", \"amount\":50.0},"
                               " {\"address\":\"yAJ4bGeDFcEtx24kbr413fBLpWQcdR5F2z\", \"amount\":12.0} ]"
     ), std::runtime_error);
-
+    std::cout << "test tres" << std::endl;
     // invalid fee amount, cannot be negative
     BOOST_CHECK_THROW(CallRPC("shieldsendmany "
                               "yBYhwgzufrZ6F5VVuK9nEChENArq934mqC "
@@ -295,14 +296,14 @@ BOOST_AUTO_TEST_CASE(rpc_shieldsendmany_parameters)
                               "[{\"address\":\"yAJ4bGeDFcEtx24kbr413fBLpWQcdR5F2z\", \"amount\":50.0}] "
                               "1 21000001"
     ), std::runtime_error);
-
+    std::cout << "test cuatro" << std::endl;
     // fee amount is bigger than sum of outputs
     BOOST_CHECK_THROW(CallRPC("shieldsendmany "
                               "yBYhwgzufrZ6F5VVuK9nEChENArq934mqC "
                               "[{\"address\":\"yAJ4bGeDFcEtx24kbr413fBLpWQcdR5F2z\", \"amount\":50.0}] "
                               "1 50.00000001"
     ), std::runtime_error);
-
+    std::cout << "test cinco" << std::endl;
     // memo bigger than allowed length of ZC_MEMO_SIZE
     std::vector<char> v (2 * (ZC_MEMO_SIZE+1));     // x2 for hexadecimal string format
     std::fill(v.begin(),v.end(), 'A');
