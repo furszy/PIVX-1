@@ -1272,7 +1272,7 @@ DisconnectResult DisconnectBlock(CBlock& block, const CBlockIndex* pindex, CCoin
 
     // undo transactions in reverse order
     for (int i = block.vtx.size() - 1; i >= 0; i--) {
-        const CTransaction& tx = *block.vtx[i];
+        const CTransaction& tx = *block.vtx.at(i);
 
         if (!DisconnectZerocoinTx(tx, zerocoinDB))
             return DISCONNECT_FAILED;
@@ -1480,7 +1480,7 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
     bool fZerocoinMaintenance =  (block.nTime > sporkManager.GetSporkValue(SPORK_16_ZEROCOIN_MAINTENANCE_MODE));
     bool fSaplingMaintenance =  (block.nTime > sporkManager.GetSporkValue(SPORK_20_SAPLING_MAINTENANCE));
     for (unsigned int i = 0; i < block.vtx.size(); i++) {
-        const CTransaction& tx = *block.vtx[i];
+        const CTransaction& tx = *block.vtx.at(i);
 
         nInputs += tx.vin.size();
         nSigOps += GetLegacySigOpCount(tx);
@@ -2426,7 +2426,7 @@ CBlockIndex* AddToBlockIndex(const CBlock& block)
 
         } else {
             // compute and set new V2 stake modifier (hash of prevout and prevModifier)
-            pindexNew->SetNewStakeModifier(block.vtx[1]->vin[0].prevout.hash);
+            pindexNew->SetNewStakeModifier(block.vtx.at(1)->vin[0].prevout.hash);
         }
     }
     pindexNew->nChainWork = (pindexNew->pprev ? pindexNew->pprev->nChainWork : 0) + GetBlockProof(*pindexNew);
@@ -2681,22 +2681,22 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
         return state.DoS(100, false, REJECT_INVALID, "bad-blk-shielded-size", false, "shielded size limits failed");
 
     // First transaction must be coinbase, the rest must not be
-    if (block.vtx.empty() || !block.vtx[0]->IsCoinBase())
+    if (block.vtx.empty() || !block.vtx.at(0)->IsCoinBase())
         return state.DoS(100, false, REJECT_INVALID, "bad-cb-missing", false, "first tx is not coinbase");
     for (unsigned int i = 1; i < block.vtx.size(); i++)
-        if (block.vtx[i]->IsCoinBase())
+        if (block.vtx.at(i)->IsCoinBase())
             return state.DoS(100, false, REJECT_INVALID, "bad-cb-multiple", false, "more than one coinbase");
 
     if (IsPoS) {
         // Coinbase output should be empty if proof-of-stake block
-        if (block.vtx[0]->vout.size() != 1 || !block.vtx[0]->vout[0].IsEmpty())
+        if (block.vtx.at(0)->vout.size() != 1 || !block.vtx.at(0)->vout[0].IsEmpty())
             return state.DoS(100, false, REJECT_INVALID, "bad-cb-pos", false, "coinbase output not empty for proof-of-stake block");
 
         // Second transaction must be coinstake, the rest must not be
-        if (block.vtx.empty() || !block.vtx[1]->IsCoinStake())
+        if (block.vtx.empty() || !block.vtx.at(1)->IsCoinStake())
             return state.DoS(100, false, REJECT_INVALID, "bad-cs-missing", false, "second tx is not coinstake");
         for (unsigned int i = 2; i < block.vtx.size(); i++)
-            if (block.vtx[i]->IsCoinStake())
+            if (block.vtx.at(i)->IsCoinStake())
                 return state.DoS(100, false, REJECT_INVALID, "bad-cs-multiple", false, "more than one coinstake");
     }
 
@@ -2726,7 +2726,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
         // that this block is invalid, so don't issue an outright ban.
         if (nHeight != 0 && !IsInitialBlockDownload()) {
             // Last output of Cold-Stake is not abused
-            if (IsPoS && !CheckColdStakeFreeOutput(*(block.vtx[1]), nHeight)) {
+            if (IsPoS && !CheckColdStakeFreeOutput(*(block.vtx.at(1)), nHeight)) {
                 mapRejectedBlocks.emplace(block.GetHash(), GetTime());
                 return state.DoS(0, false, REJECT_INVALID, "bad-p2cs-outs", false, "invalid cold-stake output");
             }
@@ -2937,8 +2937,8 @@ bool ContextualCheckBlock(const CBlock& block, CValidationState& state, CBlockIn
     // Enforce block.nVersion=2 rule that the coinbase starts with serialized block height
     if (pindexPrev) { // pindexPrev is only null on the first block which is a version 1 block.
         CScript expect = CScript() << nHeight;
-        if (block.vtx[0]->vin[0].scriptSig.size() < expect.size() ||
-            !std::equal(expect.begin(), expect.end(), block.vtx[0]->vin[0].scriptSig.begin())) {
+        if (block.vtx.at(0)->vin[0].scriptSig.size() < expect.size() ||
+            !std::equal(expect.begin(), expect.end(), block.vtx.at(0)->vin[0].scriptSig.begin())) {
             return state.DoS(100, false, REJECT_INVALID, "bad-cb-height", false, "block height mismatch in coinbase");
         }
     }
@@ -3064,7 +3064,7 @@ bool AcceptBlock(const CBlock& block, CValidationState& state, CBlockIndex** ppi
         bool isBlockFromFork = pindexPrev != nullptr && chainActive.Tip() != pindexPrev;
 
         // Coin stake
-        const CTransaction &stakeTxIn = *block.vtx[1];
+        const CTransaction &stakeTxIn = *block.vtx.at(1);
 
         // Inputs
         std::vector<CTxIn> pivInputs;

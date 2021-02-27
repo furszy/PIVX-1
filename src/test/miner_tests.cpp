@@ -97,16 +97,16 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     // Therefore, load 100 blocks :)
     std::vector<CTransactionRef>txFirst;
     std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>(pblocktemplate->block); // pointer for convenience
-    for (unsigned int i = 0; i < sizeof(blockinfo)/sizeof(*blockinfo); ++i) {
+    for (auto& info : blockinfo) {
         CBlockIndex* pindexPrev = WITH_LOCK(cs_main, return chainActive.Tip());
         assert(pindexPrev);
         pblock->nTime = pindexPrev->GetMedianTimePast() + 60;
         pblock->vtx.clear(); // Update coinbase input height manually
         CreateCoinbaseTx(pblock.get(), CScript(), pindexPrev);
         if (txFirst.size() < 2)
-            txFirst.emplace_back(pblock->vtx[0]);
+            txFirst.emplace_back(pblock->vtx.at(0));
         pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
-        pblock->nNonce = blockinfo[i].nonce;
+        pblock->nNonce = info.nonce;
         CValidationState state;
         BOOST_CHECK(ProcessNewBlock(state, nullptr, pblock, nullptr));
         BOOST_CHECK(state.IsValid());

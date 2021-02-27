@@ -1283,8 +1283,8 @@ void CWallet::BlockConnected(const std::shared_ptr<const CBlock>& pblock, const 
         TransactionRemovedFromMempool(ptx);
     }
     for (size_t i = 0; i < pblock->vtx.size(); i++) {
-        SyncTransaction(pblock->vtx[i], pindex, i);
-        TransactionRemovedFromMempool(pblock->vtx[i]);
+        SyncTransaction(pblock->vtx.at(i), pindex, i);
+        TransactionRemovedFromMempool(pblock->vtx.at(i));
     }
 
     // Sapling: notify about the connected block
@@ -1814,7 +1814,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate, b
             }
             int posInBlock;
             for (posInBlock = 0; posInBlock < (int)block.vtx.size(); posInBlock++) {
-                const auto& tx = block.vtx[posInBlock];
+                const auto& tx = block.vtx.at(posInBlock);
                 if (AddToWalletIfInvolvingMe(tx, pindex->GetBlockHash(), posInBlock, fUpdate)) {
                     myTxHashes.push_back(tx->GetHash());
                     ret++;

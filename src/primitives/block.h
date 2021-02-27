@@ -113,7 +113,7 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(*static_cast<CBlockHeader*>(this));
         READWRITE(vtx);
-        if(vtx.size() > 1 && vtx[1]->IsCoinStake())
+        if(vtx.size() > 1 && vtx.at(1)->IsCoinStake())
             READWRITE(vchBlockSig);
     }
 
@@ -143,7 +143,7 @@ public:
 
     bool IsProofOfStake() const
     {
-        return (vtx.size() > 1 && vtx[1]->IsCoinStake());
+        return (vtx.size() > 1 && vtx.at(1)->IsCoinStake());
     }
 
     bool IsProofOfWork() const

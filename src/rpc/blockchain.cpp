@@ -1353,7 +1353,7 @@ UniValue getblockindexstats(const JSONRPCRequest& request) {
 
         // loop through each tx in block and save size and fee (except for coinbase/coinstake)
         for (int idx = firstTxIndex; idx < ntx; idx++) {
-            const CTransaction& tx = *(block.vtx[idx]);
+            const CTransaction& tx = *(block.vtx.at(idx));
 
             // zerocoin txes have fixed fee, don't count them here.
             if (tx.ContainsZerocoins())

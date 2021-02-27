@@ -46,7 +46,7 @@ std::string CBlock::ToString() const
         vtx.size());
     for (unsigned int i = 0; i < vtx.size(); i++)
     {
-        s << "  " << vtx[i]->ToString() << "\n";
+        s << "  " << vtx.at(i)->ToString() << "\n";
     }
     return s.str();
 }

@@ -63,7 +63,7 @@ std::unique_ptr<CBlockTemplate> CreateNewBlockWithKey(CReserveKey* reservekey, C
 bool ProcessBlockFound(const std::shared_ptr<const CBlock>& pblock, CWallet& wallet, Optional<CReserveKey>& reservekey)
 {
     LogPrintf("%s\n", pblock->ToString());
-    LogPrintf("generated %s\n", FormatMoney(pblock->vtx[0]->vout[0].nValue));
+    LogPrintf("generated %s\n", FormatMoney(pblock->vtx.at(0)->vout[0].nValue));
 
     // Found a solution
     {

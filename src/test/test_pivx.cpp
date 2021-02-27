@@ -121,7 +121,7 @@ TestChainSetup::TestChainSetup(int blockCount)
     {
         std::vector<CMutableTransaction> noTxns;
         CBlock b = CreateAndProcessBlock(noTxns, scriptPubKey);
-        coinbaseTxns.push_back(*b.vtx[0]);
+        coinbaseTxns.push_back(*b.vtx.at(0));
     }
 }
 

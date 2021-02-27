@@ -193,7 +193,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     if (!fProofOfStake) {
         // Coinbase can get the fees.
-        CMutableTransaction txCoinbase(*pblock->vtx[0]);
+        CMutableTransaction txCoinbase(*pblock->vtx.at(0));
         txCoinbase.vout[0].nValue += nFees;
         pblock->vtx[0] = MakeTransactionRef(txCoinbase);
         pblocktemplate->vTxFees[0] = -nFees;
@@ -209,7 +209,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     if (!fProofOfStake) UpdateTime(pblock, consensus, pindexPrev);
     pblock->nBits = GetNextWorkRequired(pindexPrev, pblock);
     pblock->nNonce = 0;
-    pblocktemplate->vTxSigOps[0] = GetLegacySigOpCount(*(pblock->vtx[0]));
+    pblocktemplate->vTxSigOps[0] = GetLegacySigOpCount(*(pblock->vtx.at(0)));
     appendSaplingTreeRoot();
 
     if (fProofOfStake) { // this is only for PoS because the IncrementExtraNonce does it for PoW
@@ -483,7 +483,7 @@ void IncrementExtraNonce(std::shared_ptr<CBlock>& pblock, const CBlockIndex* pin
     }
     ++nExtraNonce;
     unsigned int nHeight = pindexPrev->nHeight + 1; // Height first in coinbase required for block.version=2
-    CMutableTransaction txCoinbase(*pblock->vtx[0]);
+    CMutableTransaction txCoinbase(*pblock->vtx.at(0));
     txCoinbase.vin[0].scriptSig = (CScript() << nHeight << CScriptNum(nExtraNonce)) + COINBASE_FLAGS;
     assert(txCoinbase.vin[0].scriptSig.size() <= 100);
 
