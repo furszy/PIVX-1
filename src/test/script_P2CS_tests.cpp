@@ -199,6 +199,79 @@ BOOST_AUTO_TEST_CASE(coldstake_lof_script)
     BOOST_CHECK(CheckP2CSScript(tx.vin[0].scriptSig, scriptP2CS, tx, err));
 }
 
+BOOST_AUTO_TEST_CASE(coldstake_script)
+{
+    SelectParams(CBaseChainParams::REGTEST);
+    CScript scriptP2CS;
+    CKey stakerKey, ownerKey;
+
+    // create unsigned coinstake transaction
+    CMutableTransaction good_tx = CreateNewColdStakeTx(scriptP2CS, stakerKey, ownerKey, false);
+
+    // sign the input with the staker key
+    SignColdStake(good_tx, 0, scriptP2CS, stakerKey, true);
+
+    // check the signature and script
+    ScriptError err = SCRIPT_ERR_OK;
+    CMutableTransaction tx(good_tx);
+    BOOST_CHECK(CheckP2CSScript(tx.vin[0].scriptSig, scriptP2CS, tx, err));
+
+    // pay less than expected
+    tx.vout[1].nValue -= 3 * COIN;
+    SignColdStake(tx, 0, scriptP2CS, stakerKey, true);
+    BOOST_CHECK(!CheckP2CSScript(tx.vin[0].scriptSig, scriptP2CS, tx, err));
+    BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_CHECKCOLDSTAKEVERIFY, ScriptErrorString(err));
+
+    // Add another p2cs out
+    tx.vout.emplace_back(3 * COIN, scriptP2CS);
+    SignColdStake(tx, 0, scriptP2CS, stakerKey, true);
+    BOOST_CHECK(CheckP2CSScript(tx.vin[0].scriptSig, scriptP2CS, tx, err));
+
+    const CKey& dummyKey = DecodeSecret("91t7cwPGevo885Uccg87nVjzUxKhXta9JprHM3R21PQkBFMFg2i");
+    const CKeyID& dummyKeyID = dummyKey.GetPubKey().GetID();
+    const CScript& dummyP2PKH = GetDummyP2PKH(dummyKeyID);
+
+    // Add a dummy P2PKH out at the end
+    tx.vout.emplace_back(3 * COIN, dummyP2PKH);
+    SignColdStake(tx, 0, scriptP2CS, stakerKey, true);
+    BOOST_CHECK(!CheckP2CSScript(tx.vin[0].scriptSig, scriptP2CS, tx, err));
+    BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_CHECKCOLDSTAKEVERIFY, ScriptErrorString(err));
+    // -- but the owner can
+    SignColdStake(tx, 0, scriptP2CS, ownerKey, false);
+    BOOST_CHECK(CheckP2CSScript(tx.vin[0].scriptSig, scriptP2CS, tx, err));
+
+    // Add a dummy P2PKH out at the beginning
+    tx = good_tx;
+    tx.vout[1] = CTxOut(3 * COIN, dummyP2PKH);
+    tx.vout.emplace_back(3 * COIN, scriptP2CS);
+    SignColdStake(tx, 0, scriptP2CS, stakerKey, true);
+    BOOST_CHECK(!CheckP2CSScript(tx.vin[0].scriptSig, scriptP2CS, tx, err));
+    BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_CHECKCOLDSTAKEVERIFY, ScriptErrorString(err));
+    // -- but the owner can
+    SignColdStake(tx, 0, scriptP2CS, ownerKey, false);
+    BOOST_CHECK(CheckP2CSScript(tx.vin[0].scriptSig, scriptP2CS, tx, err));
+
+    // Replace with new p2cs
+    tx = good_tx;
+    tx.vout[1].scriptPubKey = GetDummyP2CS(dummyKeyID);
+    SignColdStake(tx, 0, scriptP2CS, stakerKey, true);
+    BOOST_CHECK(!CheckP2CSScript(tx.vin[0].scriptSig, scriptP2CS, tx, err));
+    BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_CHECKCOLDSTAKEVERIFY, ScriptErrorString(err));
+    // -- but the owner can
+    SignColdStake(tx, 0, scriptP2CS, ownerKey, false);
+    BOOST_CHECK(CheckP2CSScript(tx.vin[0].scriptSig, scriptP2CS, tx, err));
+
+    // Replace with single dummy out
+    tx = good_tx;
+    tx.vout[1] = CTxOut(COIN, dummyP2PKH);
+    SignColdStake(tx, 0, scriptP2CS, stakerKey, true);
+    BOOST_CHECK(!CheckP2CSScript(tx.vin[0].scriptSig, scriptP2CS, tx, err));
+    BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_CHECKCOLDSTAKEVERIFY, ScriptErrorString(err));
+    // -- but the owner can
+    SignColdStake(tx, 0, scriptP2CS, ownerKey, false);
+    BOOST_CHECK(CheckP2CSScript(tx.vin[0].scriptSig, scriptP2CS, tx, err));
+}
+
 // Check that it's not possible to "fake" a P2CS script for the owner by splitting the locking
 // and unlocking parts. This particular script can be spent by any key, with a
 // unlocking script composed like: <sig> <pk> <DUP> <HASH160> <pkh>
@@ -206,7 +279,7 @@ static CScript GetFakeLockingScript(const CKeyID staker, const CKeyID& owner)
 {
     CScript script;
     script << opcodetype(0x2F) << opcodetype(0x01) << OP_ROT <<
-            OP_IF << OP_CHECKCOLDSTAKEVERIFY_LOF << ToByteVector(staker) <<
+            OP_IF << OP_CHECKCOLDSTAKEVERIFY << ToByteVector(staker) <<
             OP_ELSE << ToByteVector(owner) << OP_DROP <<
             OP_EQUALVERIFY << OP_CHECKSIG;
 
