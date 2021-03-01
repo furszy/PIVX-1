@@ -1147,12 +1147,16 @@ UniValue CreateColdStakeDelegation(const UniValue& params, CTransactionRef& txNe
         ownerAddressStr = EncodeDestination(ownerAddr);
     }
 
+    // Use new opcode after v6.0 enforcement (!TODO: remove after enforcement)
+    bool fV6Enforced = Params().GetConsensus().NetworkUpgradeActive(chainActive.Height(), Consensus::UPGRADE_V6_0);
+
     // Create the transaction
     const bool fUseShielded = (params.size() > 5) && params[5].get_bool();
     if (!fUseShielded) {
         // Delegate transparent coins
         CAmount nFeeRequired;
-        CScript scriptPubKey = GetScriptForStakeDelegation(*stakeKey, ownerKey);
+        CScript scriptPubKey = fV6Enforced ? GetScriptForStakeDelegation(*stakeKey, ownerKey)
+                                           : GetScriptForStakeDelegationLOF(*stakeKey, ownerKey);
         if (!pwalletMain->CreateTransaction(scriptPubKey, nValue, txNew, reservekey, nFeeRequired, strError, nullptr, ALL_COINS, (CAmount)0, fUseDelegated)) {
             if (nValue + nFeeRequired > currBalance)
                 strError = strprintf("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!", FormatMoney(nFeeRequired));
@@ -1167,7 +1171,7 @@ UniValue CreateColdStakeDelegation(const UniValue& params, CTransactionRef& txNe
         if (!consensus.NetworkUpgradeActive(nextBlockHeight, Consensus::UPGRADE_V5_0)) {
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, Sapling not active yet");
         }
-        std::vector<SendManyRecipient> recipients = {SendManyRecipient(ownerKey, *stakeKey, nValue)};
+        std::vector<SendManyRecipient> recipients = {SendManyRecipient(ownerKey, *stakeKey, nValue, fV6Enforced)};
         SaplingOperation operation(consensus, nextBlockHeight, pwalletMain);
         OperationResult res = operation.setSelectShieldedCoins(true)
                                        ->setRecipients(recipients)

@@ -51,8 +51,9 @@ struct SendManyRecipient
     {}
 
     // Transparent recipient: P2CS
-    SendManyRecipient(const CKeyID& ownerKey, const CKeyID& stakerKey, const CAmount& amount):
-        transparentRecipient(CTxOut(amount, GetScriptForStakeDelegation(stakerKey, ownerKey)))
+    SendManyRecipient(const CKeyID& ownerKey, const CKeyID& stakerKey, const CAmount& amount, bool fV6Enforced):
+        transparentRecipient(CTxOut(amount, fV6Enforced ? GetScriptForStakeDelegation(stakerKey, ownerKey)
+                                                        : GetScriptForStakeDelegationLOF(stakerKey, ownerKey)))
     {}
 
     // Transparent recipient: multisig
