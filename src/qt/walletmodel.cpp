@@ -90,6 +90,11 @@ bool WalletModel::isSaplingEnforced() const
     return Params().GetConsensus().NetworkUpgradeActive(cachedNumBlocks, Consensus::UPGRADE_V5_0);
 }
 
+bool WalletModel::isV6Enforced() const
+{
+    return Params().GetConsensus().NetworkUpgradeActive(cachedNumBlocks, Consensus::UPGRADE_V6_0);
+}
+
 bool WalletModel::isStakingStatusActive() const
 {
     return wallet && wallet->pStakerStatus && wallet->pStakerStatus->IsActive();
@@ -480,7 +485,8 @@ WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransact
                     return InvalidAddress;
                 }
 
-                scriptPubKey = GetScriptForStakeDelegation(*stakerId, *ownerId);
+                scriptPubKey = isV6Enforced() ? GetScriptForStakeDelegation(*stakerId, *ownerId)
+                                              : GetScriptForStakeDelegationLOF(*stakerId, *ownerId);
             } else {
                 // Regular P2PK or P2PKH
                 scriptPubKey = GetScriptForDestination(out);
