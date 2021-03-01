@@ -57,12 +57,12 @@ BOOST_AUTO_TEST_CASE(extract_cold_staking_destination_keys)
     CheckValidKeyId(destVector[1], ownerId);
 }
 
-static CScript GetNewP2CS(CKey& stakerKey, CKey& ownerKey)
+static CScript GetNewP2CS(CKey& stakerKey, CKey& ownerKey, bool fLastOutFree)
 {
     stakerKey = DecodeSecret("91yo52JPHDVUG3jXWLKGyzEdjn1a9nbnurLdmQEf2UzbgzkTc2c");
     ownerKey = DecodeSecret("92KgNFNfmVVJRQuzssETc7NhwufGuHsLvPQxW9Nwmxs7PB4ByWB");
-    return GetScriptForStakeDelegation(stakerKey.GetPubKey().GetID(),
-                                       ownerKey.GetPubKey().GetID());
+    return fLastOutFree ? GetScriptForStakeDelegationLOF(stakerKey.GetPubKey().GetID(), ownerKey.GetPubKey().GetID())
+                        : GetScriptForStakeDelegation(stakerKey.GetPubKey().GetID(), ownerKey.GetPubKey().GetID());
 }
 
 static CScript GetDummyP2CS(const CKeyID& dummyKeyID)
@@ -78,9 +78,9 @@ static CScript GetDummyP2PKH(const CKeyID& dummyKeyID)
 static const CAmount amtIn = 200 * COIN;
 static const unsigned int flags = STANDARD_SCRIPT_VERIFY_FLAGS;
 
-static CMutableTransaction CreateNewColdStakeTx(CScript& scriptP2CS, CKey& stakerKey, CKey& ownerKey)
+static CMutableTransaction CreateNewColdStakeTx(CScript& scriptP2CS, CKey& stakerKey, CKey& ownerKey, bool fLastOutFree)
 {
-    scriptP2CS = GetNewP2CS(stakerKey, ownerKey);
+    scriptP2CS = GetNewP2CS(stakerKey, ownerKey, fLastOutFree);
 
     // Create prev transaction:
     CMutableTransaction txFrom;
@@ -122,14 +122,14 @@ static bool CheckP2CSScript(const CScript& scriptSig, const CScript& scriptPubKe
     return VerifyScript(scriptSig, scriptPubKey, flags, MutableTransactionSignatureChecker(&tx, 0, amtIn), tx.GetRequiredSigVersion(), &err);
 }
 
-BOOST_AUTO_TEST_CASE(coldstake_script)
+BOOST_AUTO_TEST_CASE(coldstake_lof_script)
 {
     SelectParams(CBaseChainParams::REGTEST);
     CScript scriptP2CS;
     CKey stakerKey, ownerKey;
 
     // create unsigned coinstake transaction
-    CMutableTransaction good_tx = CreateNewColdStakeTx(scriptP2CS, stakerKey, ownerKey);
+    CMutableTransaction good_tx = CreateNewColdStakeTx(scriptP2CS, stakerKey, ownerKey, true);
 
     // sign the input with the staker key
     SignColdStake(good_tx, 0, scriptP2CS, stakerKey, true);
@@ -160,8 +160,8 @@ BOOST_AUTO_TEST_CASE(coldstake_script)
     BOOST_CHECK(CheckP2CSScript(tx.vin[0].scriptSig, scriptP2CS, tx, err));
 
     // Transfer more coins to the masternode
-    tx.vout[2].nValue -= 2 * COIN;
-    tx.vout[3].nValue += 2 * COIN;
+    tx.vout[2].nValue -= 3 * COIN;
+    tx.vout[3].nValue += 3 * COIN;
     SignColdStake(tx, 0, scriptP2CS, stakerKey, true);
     BOOST_CHECK(!CheckP2CSScript(tx.vin[0].scriptSig, scriptP2CS, tx, err));
     BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_CHECKCOLDSTAKEVERIFY, ScriptErrorString(err));

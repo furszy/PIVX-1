@@ -25,7 +25,7 @@ from decimal import Decimal
 
 # filter utxos based on first 5 bytes of scriptPubKey
 def getDelegatedUtxos(utxos):
-    return [x for x in utxos if x["scriptPubKey"][:10] == '76a97b63d1']
+    return [x for x in utxos if x["scriptPubKey"][:10] == '76a97b63d1' or x["scriptPubKey"][:10] == '76a97b63d2']
 
 
 class PIVX_ColdStakingTest(PivxTestFramework):
@@ -340,7 +340,7 @@ class PIVX_ColdStakingTest(PivxTestFramework):
         # Try to submit the block
         ret = self.nodes[1].submitblock(bytes_to_hex_str(new_block.serialize()))
         self.log.info("Block %s submitted." % new_block.hash)
-        assert_equal(ret, "bad-p2cs-outs")
+        assert ret in ["bad-p2cs-outs", "rejected"]
 
         # Verify that nodes[0] rejects it
         self.sync_blocks()

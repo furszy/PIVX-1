@@ -185,6 +185,7 @@ enum opcodetype
 
     // cold staking
     OP_CHECKCOLDSTAKEVERIFY_LOF = 0xd1,     // last output free for masternode/budget payments
+    OP_CHECKCOLDSTAKEVERIFY = 0xd2,
 
     OP_INVALIDOPCODE = 0xff,
 };
@@ -632,6 +633,7 @@ public:
     bool IsPayToPublicKeyHash() const;
     bool IsPayToScriptHash() const;
     bool IsPayToColdStaking() const;
+    bool IsPayToColdStakingLOF() const;
     bool StartsWithOpcode(const opcodetype opcode) const;
     bool IsZerocoinMint() const;
     bool IsZerocoinSpend() const;

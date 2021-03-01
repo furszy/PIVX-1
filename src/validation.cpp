@@ -2704,18 +2704,26 @@ bool FindUndoPos(CValidationState& state, int nFile, CDiskBlockPos& pos, unsigne
 
 bool CheckColdStakeFreeOutput(const CTransaction& tx, const int nHeight)
 {
-    if (!tx.HasP2CSOutputs())
+    assert(tx.IsCoinStake());
+    // This check applies only to coinstakes spending a P2CS_LOF script.
+    // The script-check ensures that all but the first and the last output
+    // (if the coinstake has more than 3 outputs) have the same scriptPubKey.
+    // If the second script is not a P2CS_LOF, then either this is a "regular"
+    // P2PKH stake, or it fails the script verification.
+    if (!tx.vout[1].scriptPubKey.IsPayToColdStakingLOF()) {
         return true;
-
+    }
+    // If the last output is different, then it can be either a masternode
+    // or a budget proposal payment
     const unsigned int outs = tx.vout.size();
     const CTxOut& lastOut = tx.vout[outs-1];
     if (outs >=3 && lastOut.scriptPubKey != tx.vout[outs-2].scriptPubKey) {
+        if (Params().GetConsensus().NetworkUpgradeActive(nHeight, Consensus::UPGRADE_V6_0)) {
+            // after v6.0, masternode and budgets are paid in the coinbase. No more free outputs allowed.
+            return false;
+        }
         if (lastOut.nValue == GetMasternodePayment())
             return true;
-
-        // This could be a budget block.
-        if (Params().IsRegTestNet())
-            return false;
 
         // if mnsync is incomplete, we cannot verify if this is a budget block.
         // so we check that the staker is not transferring value to the free output
