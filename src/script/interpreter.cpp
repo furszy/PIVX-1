@@ -960,7 +960,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                 }
                 break;
 
-                case OP_CHECKCOLDSTAKEVERIFY:
+                case OP_CHECKCOLDSTAKEVERIFY_LOF:
                 {
                     if (g_IsV6Active) {
                         // the stack can contain only <sig> <pk> <pkh> at this point

@@ -206,7 +206,7 @@ static CScript GetFakeLockingScript(const CKeyID staker, const CKeyID& owner)
 {
     CScript script;
     script << opcodetype(0x2F) << opcodetype(0x01) << OP_ROT <<
-            OP_IF << OP_CHECKCOLDSTAKEVERIFY << ToByteVector(staker) <<
+            OP_IF << OP_CHECKCOLDSTAKEVERIFY_LOF << ToByteVector(staker) <<
             OP_ELSE << ToByteVector(owner) << OP_DROP <<
             OP_EQUALVERIFY << OP_CHECKSIG;
 

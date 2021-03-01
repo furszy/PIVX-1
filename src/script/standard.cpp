@@ -299,7 +299,7 @@ CScript GetScriptForStakeDelegation(const CKeyID& stakingKey, const CKeyID& spen
 {
     CScript script;
     script << OP_DUP << OP_HASH160 << OP_ROT <<
-            OP_IF << OP_CHECKCOLDSTAKEVERIFY << ToByteVector(stakingKey) <<
+            OP_IF << OP_CHECKCOLDSTAKEVERIFY_LOF << ToByteVector(stakingKey) <<
             OP_ELSE << ToByteVector(spendingKey) << OP_ENDIF <<
             OP_EQUALVERIFY << OP_CHECKSIG;
     return script;

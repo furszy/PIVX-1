@@ -184,7 +184,7 @@ enum opcodetype
     OP_ZEROCOINPUBLICSPEND = 0xc3,
 
     // cold staking
-    OP_CHECKCOLDSTAKEVERIFY = 0xd1,
+    OP_CHECKCOLDSTAKEVERIFY_LOF = 0xd1,     // last output free for masternode/budget payments
 
     OP_INVALIDOPCODE = 0xff,
 };
