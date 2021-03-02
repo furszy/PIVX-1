@@ -163,7 +163,6 @@ bool CMasternodeSync::IsBudgetFinEmpty()
 
 int CMasternodeSync::GetNextAsset(int currentAsset)
 {
-    bool fSkipObsolete = deterministicMNManager->LegacyMNObsolete();
     if (currentAsset > MASTERNODE_SYNC_FINISHED) {
         LogPrintf("%s - invalid asset %d\n", __func__, currentAsset);
         return MASTERNODE_SYNC_FAILED;
@@ -173,9 +172,9 @@ int CMasternodeSync::GetNextAsset(int currentAsset)
     case (MASTERNODE_SYNC_FAILED):
         return MASTERNODE_SYNC_SPORKS;
     case (MASTERNODE_SYNC_SPORKS):
-        return fSkipObsolete ? MASTERNODE_SYNC_BUDGET : MASTERNODE_SYNC_LIST;
+        return deterministicMNManager->LegacyMNObsolete() ? MASTERNODE_SYNC_BUDGET : MASTERNODE_SYNC_LIST;
     case (MASTERNODE_SYNC_LIST):
-        return fSkipObsolete ? MASTERNODE_SYNC_BUDGET : MASTERNODE_SYNC_MNW;
+        return deterministicMNManager->LegacyMNObsolete() ? MASTERNODE_SYNC_BUDGET : MASTERNODE_SYNC_MNW;
     case (MASTERNODE_SYNC_MNW):
         return MASTERNODE_SYNC_BUDGET;
     case (MASTERNODE_SYNC_BUDGET):
@@ -297,6 +296,9 @@ void CMasternodeSync::Process()
     if (!IsBlockchainSynced() &&
         RequestedMasternodeAssets > MASTERNODE_SYNC_SPORKS) return;
 
+    // Skip after legacy obsolete. !TODO: remove when transition to DMN is complete
+    bool fLegacyMnObsolete = deterministicMNManager->LegacyMNObsolete();
+
     CMasternodeSync* sync = this;
 
     // New sync architecture, regtest only for now.
@@ -308,12 +310,12 @@ void CMasternodeSync::Process()
     }
 
     // Mainnet sync
-    g_connman->ForEachNodeContinueIf([sync](CNode* pnode){
-        return sync->SyncWithNode(pnode);
+    g_connman->ForEachNodeContinueIf([sync, fLegacyMnObsolete](CNode* pnode){
+        return sync->SyncWithNode(pnode, fLegacyMnObsolete);
     });
 }
 
-bool CMasternodeSync::SyncWithNode(CNode* pnode)
+bool CMasternodeSync::SyncWithNode(CNode* pnode, bool fLegacyMnObsolete)
 {
     CNetMsgMaker msgMaker(pnode->GetSendVersion());
 
@@ -330,7 +332,7 @@ bool CMasternodeSync::SyncWithNode(CNode* pnode)
 
     if (pnode->nVersion >= ActiveProtocol()) {
         if (RequestedMasternodeAssets == MASTERNODE_SYNC_LIST) {
-            if (deterministicMNManager->LegacyMNObsolete()) {
+            if (fLegacyMnObsolete) {
                 SwitchToNextAsset();
                 return false;
             }
@@ -367,7 +369,7 @@ bool CMasternodeSync::SyncWithNode(CNode* pnode)
         }
 
         if (RequestedMasternodeAssets == MASTERNODE_SYNC_MNW) {
-            if (deterministicMNManager->LegacyMNObsolete()) {
+            if (fLegacyMnObsolete) {
                 SwitchToNextAsset();
                 return false;
             }

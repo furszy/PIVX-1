@@ -90,7 +90,7 @@ public:
      * If it returns false, the Process() step is complete.
      * Otherwise Process() calls it again for a different node.
      */
-    bool SyncWithNode(CNode* pnode);
+    bool SyncWithNode(CNode* pnode, bool fLegacyMnObsolete);
     bool IsSynced();
     bool NotCompleted();
     bool IsSporkListSynced();
