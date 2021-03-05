@@ -327,7 +327,7 @@ bool CMasternodePayments::GetLegacyMasternodeTxOut(int nHeight, std::vector<CTxO
         //no masternode detected
         MasternodeRef winningNode = mnodeman.GetCurrentMasterNode(nHeight, UINT256_ZERO);
         if (winningNode) {
-            payee = GetScriptForDestination(winningNode->pubKeyCollateralAddress.GetID());
+            payee = winningNode->GetPayeeScript();
         } else {
             LogPrint(BCLog::MASTERNODE,"CreateNewBlock: Failed to detect masternode to pay\n");
             return false;
@@ -476,11 +476,6 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
             return;
         }
 
-        CTxDestination address1;
-        ExtractDestination(winner.payee, address1);
-
-        //   LogPrint(BCLog::MASTERNODE, "mnw - winning vote - Addr %s Height %d bestHeight %d - %s\n", address2.ToString().c_str(), winner.nBlockHeight, nHeight, winner.vinMasternode.prevout.ToStringShort());
-
         if (masternodePayments.AddWinningMasternode(winner)) {
             winner.Relay();
             masternodeSync.AddedMasternodeWinner(winner.GetHash());
@@ -506,9 +501,7 @@ bool CMasternodePayments::IsScheduled(const CMasternode& mn, int nNotBlockHeight
 
     int nHeight = mnodeman.GetBestHeight();
 
-    CScript mnpayee;
-    mnpayee = GetScriptForDestination(mn.pubKeyCollateralAddress.GetID());
-
+    const CScript& mnpayee = mn.GetPayeeScript();
     CScript payee;
     for (int64_t h = nHeight; h <= nHeight + 8; h++) {
         if (h == nNotBlockHeight) continue;
@@ -546,6 +539,9 @@ bool CMasternodePayments::AddWinningMasternode(CMasternodePaymentWinner& winnerI
         }
     }
 
+    CTxDestination addr;
+    ExtractDestination(winnerIn.payee, addr);
+    LogPrintf("mnw - Adding winner %s for block %d\n", EncodeDestination(addr), winnerIn.nBlockHeight);
     mapMasternodeBlocks[winnerIn.nBlockHeight].AddPayee(winnerIn.payee, 1);
 
     return true;
@@ -692,7 +688,6 @@ bool CMasternodePayments::ProcessBlock(int nBlockHeight)
         return false;
     }
 
-    CMasternodePaymentWinner newWinner(*(activeMasternode.vin), nBlockHeight);
     // pay to the oldest MN that still had no payment but its input is old enough and it was active long enough
     int nCount = 0;
     MasternodeRef pmn = mnodeman.GetNextMasternodeInQueueForPayment(nBlockHeight, true, nCount);
@@ -702,8 +697,8 @@ bool CMasternodePayments::ProcessBlock(int nBlockHeight)
         return false;
     }
 
-    const CScript& payee = GetScriptForDestination(pmn->pubKeyCollateralAddress.GetID());
-    newWinner.AddPayee(payee);
+    CMasternodePaymentWinner newWinner(*(activeMasternode.vin), nBlockHeight);
+    newWinner.AddPayee(pmn->GetPayeeScript());
 
     CPubKey pubKeyMasternode; CKey keyMasternode;
     activeMasternode.GetKeys(keyMasternode, pubKeyMasternode);

@@ -177,7 +177,7 @@ public:
         payee()
     {}
 
-    CMasternodePaymentWinner(CTxIn vinIn, int nHeight) :
+    CMasternodePaymentWinner(const CTxIn& vinIn, int nHeight):
         CSignedMessage(),
         vinMasternode(vinIn),
         nBlockHeight(nHeight),

@@ -147,13 +147,14 @@ UniValue listmasternodes(const JSONRPCRequest& request)
             "\nResult:\n"
             "[\n"
             "  {\n"
-            "    \"rank\": n,           (numeric) Masternode Rank (or 0 if not enabled)\n"
-            "    \"txhash\": \"hash\",    (string) Collateral transaction hash\n"
-            "    \"outidx\": n,         (numeric) Collateral transaction output index\n"
-            "    \"pubkey\": \"key\",   (string) Masternode public key used for message broadcasting\n"
-            "    \"status\": s,         (string) Status (ENABLED/EXPIRED/REMOVE/etc)\n"
-            "    \"addr\": \"addr\",      (string) Masternode PIVX address\n"
-            "    \"version\": v,        (numeric) Masternode protocol version\n"
+            "    \"rank\": n,                             (numeric) Masternode Rank (or 0 if not enabled)\n"
+            "    \"type\": \"legacy\"|\"deterministic\",  (string) type of masternode\n"
+            "    \"txhash\": \"hash\",                    (string) Collateral transaction hash\n"
+            "    \"outidx\": n,                           (numeric) Collateral transaction output index\n"
+            "    \"pubkey\": \"key\",                     (string) Masternode public key used for message broadcasting\n"
+            "    \"status\": s,                           (string) Status (ENABLED/EXPIRED/REMOVE/etc)\n"
+            "    \"addr\": \"addr\",                      (string) Masternode PIVX address\n"
+            "    \"version\": v,                          (numeric) Masternode protocol version\n"
             "    \"lastseen\": ttt,     (numeric) The time in seconds since epoch (Jan 1 1970 GMT) of the last seen\n"
             "    \"activetime\": ttt,   (numeric) The time in seconds since epoch (Jan 1 1970 GMT) masternode has been active\n"
             "    \"lastpaid\": ttt,     (numeric) The time in seconds since epoch (Jan 1 1970 GMT) masternode was last paid\n"
@@ -168,30 +169,50 @@ UniValue listmasternodes(const JSONRPCRequest& request)
     const std::string& strFilter = request.params.size() > 0 ? request.params[0].get_str() : "";
     UniValue ret(UniValue::VARR);
 
-    auto mnList = deterministicMNManager->GetListAtChainTip();
-    mnList.ForEachMN(false, [&](const CDeterministicMNCPtr& dmn) {
-        UniValue obj(UniValue::VOBJ);
-        dmn->ToJson(obj);
-        bool fEnabled = dmn->pdmnState->nPoSeBanHeight == -1;
-        if (filterMasternode(obj, strFilter, fEnabled)) {
-            // Added for backward compatibility. can be removed later.
-            obj.pushKV("txhash", obj["proTxHash"].get_str());
-
-            obj.pushKV("status", fEnabled ? "ENABLED" : "POSE_BANNED");
-            ret.push_back(obj);
-        }
-    });
+    if (deterministicMNManager->LegacyMNObsolete()) {
+        auto mnList = deterministicMNManager->GetListAtChainTip();
+        mnList.ForEachMN(false, [&](const CDeterministicMNCPtr& dmn) {
+            UniValue obj(UniValue::VOBJ);
+            dmn->ToJson(obj);
+            bool fEnabled = dmn->pdmnState->nPoSeBanHeight == -1;
+            if (filterMasternode(obj, strFilter, fEnabled)) {
+                ret.push_back(obj);
+            }
+        });
+        return ret;
+    }
 
     // Legacy masternodes (!TODO: remove when transition to dmn is complete)
     const CBlockIndex* chainTip = GetChainTip();
     if (!chainTip) return "[]";
     int nHeight = chainTip->nHeight;
+    auto mnList = deterministicMNManager->GetListAtChainTip();
 
     std::vector<std::pair<int64_t, MasternodeRef>> vMasternodeRanks = mnodeman.GetMasternodeRanks(nHeight);
     for (int pos=0; pos < (int) vMasternodeRanks.size(); pos++) {
         const auto& s = vMasternodeRanks[pos];
         UniValue obj(UniValue::VOBJ);
         const CMasternode& mn = *(s.second);
+
+        if (!mn.mnPayeeScript.empty()) {
+            // Deterministic masternode
+            auto dmn = mnList.GetMNByCollateral(mn.vin.prevout);
+            if (dmn) {
+                UniValue obj(UniValue::VOBJ);
+                dmn->ToJson(obj);
+                bool fEnabled = dmn->pdmnState->nPoSeBanHeight == -1;
+                if (filterMasternode(obj, strFilter, fEnabled)) {
+                    // Added for backward compatibility with legacy masternodes
+                    obj.pushKV("type", "deterministic");
+                    obj.pushKV("txhash", obj["proTxHash"].get_str());
+                    obj.pushKV("addr", obj["dmnstate"]["payoutAddress"].get_str());
+                    obj.pushKV("status", fEnabled ? "ENABLED" : "POSE_BANNED");
+                    obj.pushKV("rank", fEnabled ? pos : 0);
+                    ret.push_back(obj);
+                }
+            }
+            continue;
+        }
 
         std::string strVin = mn.vin.prevout.ToStringShort();
         std::string strTxHash = mn.vin.prevout.hash.ToString();
@@ -210,6 +231,7 @@ UniValue listmasternodes(const JSONRPCRequest& request)
         std::string strNetwork = GetNetworkName(node.GetNetwork());
 
         obj.pushKV("rank", (strStatus == "ENABLED" ? pos : 0));
+        obj.pushKV("type", "legacy");
         obj.pushKV("network", strNetwork);
         obj.pushKV("txhash", strTxHash);
         obj.pushKV("outidx", (uint64_t)oIdx);

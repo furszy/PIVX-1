@@ -6,11 +6,9 @@
 from test_framework.test_framework import PivxTier2TestFramework
 from test_framework.util import (
     assert_equal,
-    assert_true,
-    satoshi_round,
 )
 
-import time
+from decimal import Decimal
 
 """
 Test checking compatibility code between MN and DMN
@@ -66,9 +64,14 @@ class MasternodeCompatibilityTest(PivxTier2TestFramework):
         mnlist = node.listmasternodes()
         assert_equal(len(mnlist), len(txHashSet))
         foundHashes = set([mn["txhash"] for mn in mnlist if mn["txhash"] in txHashSet])
-        assert_equal(len(foundHashes), len(txHashSet))
+        if len(foundHashes) != len(txHashSet):
+            raise Exception(str(mnlist))
+        for x in mnlist:
+            self.mn_addresses.add(x["addr"])
+        self.log.info("MN address list has %d entries" % len(self.mn_addresses))
 
     def run_test(self):
+        self.mn_addresses = set()
         self.enable_mocktime()
         self.setup_3_masternodes_network()
 
@@ -103,6 +106,28 @@ class MasternodeCompatibilityTest(PivxTier2TestFramework):
         self.check_mn_list(self.miner, txHashSet)
         self.check_mns_status(self.remoteDMN2, self.proRegTx2.hash)
         self.log.info("DMN2 active")
+
+        # Check block version and coinbase payment
+        blk_count = self.miner.getblockcount()
+        self.log.info("Checking block version and coinbase payment...")
+        blk = self.miner.getblock(self.miner.getbestblockhash(), True)
+        assert_equal(blk['height'], blk_count)
+        assert_equal(blk['version'], 10)
+        cbase_tx = self.miner.getrawtransaction(blk['tx'][0], True)
+        assert_equal(len(cbase_tx['vin']), 1)
+        cbase_script = blk_count.to_bytes(1 + blk_count//256, byteorder="little")
+        cbase_script = len(cbase_script).to_bytes(1, byteorder="little") + cbase_script + bytearray(1)
+        assert_equal(cbase_tx['vin'][0]['coinbase'], cbase_script.hex())
+        assert_equal(len(cbase_tx['vout']), 1)
+        assert_equal(cbase_tx['vout'][0]['value'], Decimal("3.0"))
+        payee = cbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
+        if payee not in self.mn_addresses:
+            raise Exception("payee %s not found in expected list %s" % (payee, str(self.mn_addresses)))
+        cstake_tx = self.miner.getrawtransaction(blk['tx'][1], True)
+        assert_equal(len(cstake_tx['vin']), 1)
+        assert_equal(len(cstake_tx['vout']), 2)
+        assert_equal(cstake_tx['vout'][1]['value'], Decimal("497.0")) # 250 + 250 - 3
+        self.log.info("Block at height %d checks out" % blk_count)
 
         # Now create a DMN, reusing the collateral output of a legacy MN
         self.log.info("Creating a DMN reusing the collateral of a legacy MN...")

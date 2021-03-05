@@ -53,8 +53,6 @@ public:
     ReadResult Read(CMasternodeMan& mnodemanToLoad);
 };
 
-//
-typedef std::shared_ptr<CMasternode> MasternodeRef;
 
 class CMasternodeMan
 {

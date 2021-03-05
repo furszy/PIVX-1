@@ -22,6 +22,11 @@ class CMasternode;
 class CMasternodeBroadcast;
 class CMasternodePing;
 
+typedef std::shared_ptr<CMasternode> MasternodeRef;
+
+class CDeterministicMN;
+typedef std::shared_ptr<const CDeterministicMN> CDeterministicMNCPtr;
+
 int MasternodeMinPingSeconds();
 int MasternodeBroadcastSeconds();
 int MasternodeCollateralMinConf();
@@ -115,6 +120,9 @@ public:
 
     explicit CMasternode();
     CMasternode(const CMasternode& other);
+
+    // Initialize from DMN. Used by the compatibility code.
+    CMasternode(const CDeterministicMNCPtr& dmn, int64_t registeredTime, const uint256& registeredHash);
 
     // override CSignedMessage functions
     uint256 GetSignatureHash() const override;
@@ -233,6 +241,20 @@ public:
 
     /// Is the input associated with collateral public key? (and there is 10000 PIV - checking if valid masternode)
     bool IsInputAssociatedWithPubkey() const;
+
+    /*
+     * This is used only by the compatibility code for DMN, which don't share the public key (but the keyid).
+     * Used by the payment-logic to include the necessary information in a temporary MasternodeRef object
+     * (which is not indexed in the maps of the legacy manager).
+     * A non-empty mnPayeeScript identifies this object as a "deterministic" masternode.
+     * Note: this is the single payout for the masternode (if the dmn is configured to pay a portion of the reward
+     * to the operator, this is done only after the disabling of the legacy system).
+     */
+    CScript mnPayeeScript{};
+    CScript GetPayeeScript() const {
+        return mnPayeeScript.empty() ? GetScriptForDestination(pubKeyCollateralAddress.GetID())
+                                     : mnPayeeScript;
+    }
 };
 
 
@@ -280,5 +302,9 @@ public:
     static bool Create(const std::string& strService, const std::string& strKey, const std::string& strTxHash, const std::string& strOutputIndex, std::string& strErrorRet, CMasternodeBroadcast& mnbRet, bool fOffline = false);
     static bool CheckDefaultPort(CService service, std::string& strErrorRet, const std::string& strContext);
 };
+
+// Temporary function used for payment compatibility code.
+// Returns a shared pointer to a masternode object initialized from a DMN.
+MasternodeRef MakeMasternodeRefForDMN(const CDeterministicMNCPtr& dmn);
 
 #endif

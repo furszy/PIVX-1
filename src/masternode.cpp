@@ -77,6 +77,7 @@ CMasternode::CMasternode() :
     protocolVersion = PROTOCOL_VERSION;
     nScanningErrorCount = 0;
     nLastScanningErrorBlockHeight = 0;
+    mnPayeeScript.clear();
 }
 
 CMasternode::CMasternode(const CMasternode& other) :
@@ -92,6 +93,23 @@ CMasternode::CMasternode(const CMasternode& other) :
     protocolVersion = other.protocolVersion;
     nScanningErrorCount = other.nScanningErrorCount;
     nLastScanningErrorBlockHeight = other.nLastScanningErrorBlockHeight;
+    mnPayeeScript = other.mnPayeeScript;
+}
+
+CMasternode::CMasternode(const CDeterministicMNCPtr& dmn, int64_t registeredTime, const uint256& registeredHash) :
+        CSignedMessage()
+{
+    LOCK(cs);
+    vin = CTxIn(dmn->collateralOutpoint);
+    addr = dmn->pdmnState->addr;
+    pubKeyCollateralAddress = CPubKey();
+    pubKeyMasternode = CPubKey();
+    sigTime = registeredTime;
+    lastPing = CMasternodePing(vin, registeredHash, registeredTime);
+    protocolVersion = PROTOCOL_VERSION;
+    nScanningErrorCount = 0;
+    nLastScanningErrorBlockHeight = 0;
+    mnPayeeScript = dmn->pdmnState->scriptPayout;
 }
 
 uint256 CMasternode::GetSignatureHash() const
@@ -658,4 +676,12 @@ void CMasternodePing::Relay()
 {
     CInv inv(MSG_MASTERNODE_PING, GetHash());
     g_connman->RelayInv(inv);
+}
+
+MasternodeRef MakeMasternodeRefForDMN(const CDeterministicMNCPtr& dmn)
+{
+    // create legacy masternode for DMN
+    int refHeight = std::max(dmn->pdmnState->nRegisteredHeight, dmn->pdmnState->nPoSeRevivedHeight);
+    const CBlockIndex* pindex = WITH_LOCK(cs_main, return mapBlockIndex.at(chainActive[refHeight]->GetBlockHash()); );
+    return std::make_shared<CMasternode>(CMasternode(dmn, pindex->GetBlockTime(), pindex->GetBlockHash()));
 }
