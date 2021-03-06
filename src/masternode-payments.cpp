@@ -464,15 +464,31 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, std::st
             return;
         }
 
-        const CMasternode* pmn = mnodeman.Find(winner.vinMasternode.prevout);
-        if (!pmn || !winner.CheckSignature(pmn->pubKeyMasternode.GetID())) {
+        // See if this winner was signed with a dmn or a legacy masternode
+        bool fDeterministic{false};
+        Optional<CKeyID> mnKeyID = nullopt;
+        auto mnList = deterministicMNManager->GetListAtChainTip();
+        auto dmn = mnList.GetMNByCollateral(winner.vinMasternode.prevout);
+        if (dmn) {
+            fDeterministic = true;
+            mnKeyID = Optional<CKeyID>(dmn->pdmnState->keyIDOperator);
+        } else {
+            const CMasternode* pmn = mnodeman.Find(winner.vinMasternode.prevout);
+            if (pmn) {
+                mnKeyID = Optional<CKeyID>(pmn->pubKeyMasternode.GetID());
+            }
+        }
+
+        if (mnKeyID == nullopt || !winner.CheckSignature(*mnKeyID)) {
             if (masternodeSync.IsSynced()) {
                 LogPrintf("CMasternodePayments::ProcessMessageMasternodePayments() : mnw - invalid signature\n");
                 LOCK(cs_main);
                 Misbehaving(pfrom->GetId(), 20);
             }
             // it could just be a non-synced masternode
-            mnodeman.AskForMN(pfrom, winner.vinMasternode);
+            if (!fDeterministic) {
+                mnodeman.AskForMN(pfrom, winner.vinMasternode);
+            }
             return;
         }
 
@@ -663,13 +679,20 @@ void CMasternodePayments::CleanPaymentList(int mnCount, int nHeight)
 
 bool CMasternodePayments::ProcessBlock(int nBlockHeight)
 {
+    // No more mnw messages after transition to DMN
+    if (deterministicMNManager->LegacyMNObsolete()) {
+        return false;
+    }
     if (!fMasterNode) return false;
 
-    if (activeMasternode.vin == nullopt)
-        return error("%s: Active Masternode not initialized.", __func__);
+    // Get the active masternode (operator) key
+    CKey mnKey; CKeyID mnKeyID; CTxIn mnVin;
+    if (!GetActiveMasternodeKeys(mnKey, mnKeyID, mnVin)) {
+        return false;
+    }
 
     //reference node - hybrid mode
-    int n = mnodeman.GetMasternodeRank(*(activeMasternode.vin), nBlockHeight - 100);
+    int n = mnodeman.GetMasternodeRank(mnVin, nBlockHeight - 100);
 
     if (n == -1) {
         LogPrint(BCLog::MASTERNODE, "CMasternodePayments::ProcessBlock - Unknown Masternode\n");
@@ -697,12 +720,9 @@ bool CMasternodePayments::ProcessBlock(int nBlockHeight)
         return false;
     }
 
-    CMasternodePaymentWinner newWinner(*(activeMasternode.vin), nBlockHeight);
+    CMasternodePaymentWinner newWinner(mnVin, nBlockHeight);
     newWinner.AddPayee(pmn->GetPayeeScript());
-
-    CPubKey pubKeyMasternode; CKey keyMasternode;
-    activeMasternode.GetKeys(keyMasternode, pubKeyMasternode);
-    if (!newWinner.Sign(keyMasternode, pubKeyMasternode.GetID())) {
+    if (!newWinner.Sign(mnKey, mnKeyID)) {
         LogPrintf("%s: Failed to sign masternode winner\n", __func__);
         return false;
     }
