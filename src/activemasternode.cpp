@@ -457,3 +457,28 @@ void CActiveMasternode::GetKeys(CKey& _privKeyMasternode, CPubKey& _pubKeyMaster
     _pubKeyMasternode = pubKeyMasternode;
 }
 
+bool GetActiveMasternodeKeys(CKey& key, CKeyID& keyID, CTxIn& vin)
+{
+    if (activeMasternodeManager != nullptr) {
+        // deterministic mn
+        CDeterministicMNCPtr dmn;
+        auto res = activeMasternodeManager->GetOperatorKey(key, keyID, dmn);
+        if (!res) {
+            LogPrint(BCLog::MNBUDGET,"%s: %s\n", __func__, res.getError());
+            return false;
+        }
+        vin = CTxIn(dmn->collateralOutpoint);
+        return true;
+    }
+
+    // legacy mn
+    if (activeMasternode.vin == nullopt) {
+        LogPrint(BCLog::MNBUDGET,"%s: Active Masternode not initialized\n", __func__);
+        return false;
+    }
+    CPubKey mnPubKey;
+    activeMasternode.GetKeys(key, mnPubKey);
+    keyID = mnPubKey.GetID();
+    vin = *activeMasternode.vin;
+    return true;
+}

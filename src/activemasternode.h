@@ -116,4 +116,7 @@ public:
     void GetKeys(CKey& privKeyMasternode, CPubKey& pubKeyMasternode);
 };
 
+// Compatibility code: get keys for either legacy or deterministic masternode
+bool GetActiveMasternodeKeys(CKey& key, CKeyID& keyID, CTxIn& vin);
+
 #endif
