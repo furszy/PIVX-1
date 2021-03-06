@@ -165,24 +165,9 @@ std::string CMasternodePaymentWinner::GetStrMessage() const
 
 bool CMasternodePaymentWinner::IsValid(CNode* pnode, std::string& strError)
 {
-    CMasternode* pmn = mnodeman.Find(vinMasternode.prevout);
-
-    if (!pmn) {
-        strError = strprintf("Unknown Masternode %s", vinMasternode.prevout.hash.ToString());
-        LogPrint(BCLog::MASTERNODE,"CMasternodePaymentWinner::IsValid - %s\n", strError);
-        mnodeman.AskForMN(pnode, vinMasternode);
-        return false;
-    }
-
-    if (pmn->protocolVersion < ActiveProtocol()) {
-        strError = strprintf("Masternode protocol too old %d - req %d", pmn->protocolVersion, ActiveProtocol());
-        LogPrint(BCLog::MASTERNODE,"CMasternodePaymentWinner::IsValid - %s\n", strError);
-        return false;
-    }
-
     int n = mnodeman.GetMasternodeRank(vinMasternode, nBlockHeight - 100);
 
-    if (n > MNPAYMENTS_SIGNATURES_TOTAL) {
+    if (n < 1 || n > MNPAYMENTS_SIGNATURES_TOTAL) {
         //It's common to have masternodes mistakenly think they are in the top 10
         // We don't want to print all of these messages, or punish them unless they're way off
         if (n > MNPAYMENTS_SIGNATURES_TOTAL * 2) {
@@ -677,18 +662,18 @@ void CMasternodePayments::CleanPaymentList(int mnCount, int nHeight)
     }
 }
 
-bool CMasternodePayments::ProcessBlock(int nBlockHeight)
+void CMasternodePayments::ProcessBlock(int nBlockHeight)
 {
     // No more mnw messages after transition to DMN
     if (deterministicMNManager->LegacyMNObsolete()) {
-        return false;
+        return;
     }
-    if (!fMasterNode) return false;
+    if (!fMasterNode) return;
 
     // Get the active masternode (operator) key
     CKey mnKey; CKeyID mnKeyID; CTxIn mnVin;
     if (!GetActiveMasternodeKeys(mnKey, mnKeyID, mnVin)) {
-        return false;
+        return;
     }
 
     //reference node - hybrid mode
@@ -696,19 +681,19 @@ bool CMasternodePayments::ProcessBlock(int nBlockHeight)
 
     if (n == -1) {
         LogPrint(BCLog::MASTERNODE, "CMasternodePayments::ProcessBlock - Unknown Masternode\n");
-        return false;
+        return;
     }
 
     if (n > MNPAYMENTS_SIGNATURES_TOTAL) {
         LogPrint(BCLog::MASTERNODE, "CMasternodePayments::ProcessBlock - Masternode not in the top %d (%d)\n", MNPAYMENTS_SIGNATURES_TOTAL, n);
-        return false;
+        return;
     }
 
-    if (nBlockHeight <= nLastBlockHeight) return false;
+    if (nBlockHeight <= nLastBlockHeight) return;
 
     if (g_budgetman.IsBudgetPaymentBlock(nBlockHeight)) {
         //is budget payment block -- handled by the budgeting software
-        return false;
+        return;
     }
 
     // pay to the oldest MN that still had no payment but its input is old enough and it was active long enough
@@ -717,21 +702,20 @@ bool CMasternodePayments::ProcessBlock(int nBlockHeight)
 
     if (pmn == nullptr) {
         LogPrint(BCLog::MASTERNODE,"%s: Failed to find masternode to pay\n", __func__);
-        return false;
+        return;
     }
 
     CMasternodePaymentWinner newWinner(mnVin, nBlockHeight);
     newWinner.AddPayee(pmn->GetPayeeScript());
     if (!newWinner.Sign(mnKey, mnKeyID)) {
         LogPrintf("%s: Failed to sign masternode winner\n", __func__);
-        return false;
+        return;
     }
     if (!AddWinningMasternode(newWinner)) {
-        return false;
+        return;
     }
     newWinner.Relay();
     nLastBlockHeight = nBlockHeight;
-    return true;
 }
 
 void CMasternodePayments::Sync(CNode* node, int nCountNeeded)
