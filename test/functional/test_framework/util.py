@@ -16,7 +16,7 @@ import re
 from subprocess import CalledProcessError
 import time
 
-from . import coverage
+from . import coverage, messages
 from .authproxy import AuthServiceProxy, JSONRPCException
 
 logger = logging.getLogger("TestFramework.utils")
@@ -581,3 +581,39 @@ def get_coinstake_address(node, expected_utxos=None):
     addrs = [a for a in set(addrs) if addrs.count(a) == expected_utxos]
     assert(len(addrs) > 0)
     return addrs[0]
+
+# Deterministic masternodes
+
+def lock_utxo(node, outpoint):
+    node.lockunspent(False, [{"txid": "%064x" % outpoint.hash, "vout": outpoint.n}])
+
+def get_collateral_vout(json_tx):
+    funding_txidn = -1
+    for o in json_tx["vout"]:
+        if o["value"] == Decimal('100'):
+            funding_txidn = o["n"]
+            break
+    assert_greater_than(funding_txidn, -1)
+    return funding_txidn
+
+# owner and voting keys are created from controller node.
+# operator key and address are created, if operator_addr_and_key is None.
+def create_new_dmn(idx, controller, payout_addr, operator_addr_and_key):
+    ipport = "127.0.0.1:" + str(p2p_port(idx))
+    print(str(ipport))
+    owner_addr = controller.getnewaddress("mnowner-%d" % idx)
+    voting_addr = controller.getnewaddress("mnvoting-%d" % idx)
+    if operator_addr_and_key is None:
+        operator_addr = controller.getnewaddress("mnoperator-%d" % idx)
+        operator_key = controller.dumpprivkey(operator_addr)
+    else:
+        operator_addr = operator_addr_and_key[0]
+        operator_key = operator_addr_and_key[1]
+    return messages.Masternode(idx, owner_addr, operator_addr, voting_addr, ipport, payout_addr, operator_key)
+
+def spend_mn_collateral(spender, dmn):
+    inputs = [{"txid": "%064x" % dmn.collateral.hash, "vout": dmn.collateral.n}]
+    outputs = {spender.getnewaddress(): Decimal('99.99')}
+    sig_res = spender.signrawtransaction(spender.createrawtransaction(inputs, outputs))
+    assert_equal(sig_res['complete'], True)
+    return spender.sendrawtransaction(sig_res['hex'])

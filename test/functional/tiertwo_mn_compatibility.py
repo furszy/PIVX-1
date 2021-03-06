@@ -6,6 +6,7 @@
 from test_framework.test_framework import PivxTier2TestFramework
 from test_framework.util import (
     assert_equal,
+    connect_nodes,
 )
 
 from decimal import Decimal
@@ -62,22 +63,28 @@ class MasternodeCompatibilityTest(PivxTier2TestFramework):
     def check_mn_list(self, node, txHashSet):
         # check masternode list from node
         mnlist = node.listmasternodes()
-        assert_equal(len(mnlist), len(txHashSet))
+        if len(mnlist) != len(txHashSet):
+            raise Exception(str(mnlist))
         foundHashes = set([mn["txhash"] for mn in mnlist if mn["txhash"] in txHashSet])
         if len(foundHashes) != len(txHashSet):
             raise Exception(str(mnlist))
         for x in mnlist:
-            self.mn_addresses.add(x["addr"])
-        self.log.info("MN address list has %d entries" % len(self.mn_addresses))
+            self.mn_addresses[x["txhash"]] = x["addr"]
+        self.log.info("MN address list has %d entries" % len(mnlist))
 
     def run_test(self):
-        self.mn_addresses = set()
+        self.mn_addresses = {}
         self.enable_mocktime()
         self.setup_3_masternodes_network()
 
         # add two more nodes to the network
         self.remoteDMN2 = self.nodes[self.remoteDMN2Pos]
         self.remoteDMN3 = self.nodes[self.remoteDMN3Pos]
+        # add more direct connections to the miner
+        connect_nodes(self.miner, 2)
+        connect_nodes(self.remoteTwo, 0)
+        connect_nodes(self.remoteDMN2, 0)
+        self.sync_all()
 
         # check mn list from miner
         txHashSet = set([self.mnOneCollateral.hash, self.mnTwoCollateral.hash, self.proRegTx1.hash])
@@ -85,11 +92,11 @@ class MasternodeCompatibilityTest(PivxTier2TestFramework):
 
         # check status of masternodes
         self.check_mns_status_legacy(self.remoteOne, self.mnOneCollateral.hash)
-        self.log.info("MN1 active")
+        self.log.info("MN1 active. Pays %s" % self.mn_addresses[self.mnOneCollateral.hash])
         self.check_mns_status_legacy(self.remoteTwo, self.mnTwoCollateral.hash)
-        self.log.info("MN2 active")
+        self.log.info("MN2 active Pays %s" % self.mn_addresses[self.mnTwoCollateral.hash])
         self.check_mns_status(self.remoteDMN1, self.proRegTx1.hash)
-        self.log.info("DMN1 active")
+        self.log.info("DMN1 active Pays %s" % self.mn_addresses[self.proRegTx1.hash])
 
         # Create another DMN, this time without funding the collateral.
         # ProTx references another transaction in the owner's wallet
@@ -105,7 +112,7 @@ class MasternodeCompatibilityTest(PivxTier2TestFramework):
         txHashSet.add(self.proRegTx2.hash)
         self.check_mn_list(self.miner, txHashSet)
         self.check_mns_status(self.remoteDMN2, self.proRegTx2.hash)
-        self.log.info("DMN2 active")
+        self.log.info("DMN2 active Pays %s" % self.mn_addresses[self.proRegTx2.hash])
 
         # Check block version and coinbase payment
         blk_count = self.miner.getblockcount()
@@ -121,7 +128,7 @@ class MasternodeCompatibilityTest(PivxTier2TestFramework):
         assert_equal(len(cbase_tx['vout']), 1)
         assert_equal(cbase_tx['vout'][0]['value'], Decimal("3.0"))
         payee = cbase_tx['vout'][0]['scriptPubKey']['addresses'][0]
-        if payee not in self.mn_addresses:
+        if payee not in [self.mn_addresses[k] for k in self.mn_addresses]:
             raise Exception("payee %s not found in expected list %s" % (payee, str(self.mn_addresses)))
         cstake_tx = self.miner.getrawtransaction(blk['tx'][1], True)
         assert_equal(len(cstake_tx['vin']), 1)
@@ -138,13 +145,10 @@ class MasternodeCompatibilityTest(PivxTier2TestFramework):
             "external",
             self.mnOneCollateral,
         )
-        self.remoteDMN3.initmasternode(self.dmn3Privkey, "", True)
-
         # The remote node is shutting down the pinging service
-        try:
-            self.send_3_pings()
-        except:
-            pass
+        self.send_3_pings()
+
+        self.remoteDMN3.initmasternode(self.dmn3Privkey, "", True)
 
         # The legacy masternode must no longer be in the list
         # and the DMN must have taken its place
@@ -154,20 +158,33 @@ class MasternodeCompatibilityTest(PivxTier2TestFramework):
             self.check_mn_list(node, txHashSet)
         self.log.info("Masternode list correctly updated by all nodes.")
         self.check_mns_status(self.remoteDMN3, self.proRegTx3.hash)
-        self.log.info("DMN3 active")
+        self.log.info("DMN3 active Pays %s" % self.mn_addresses[self.proRegTx3.hash])
 
         # Now try to start a legacy MN with a collateral used by a DMN
         self.log.info("Now trying to start a legacy MN with a collateral of a DMN...")
         self.controller_start_masternode(self.ownerOne, self.masternodeOneAlias)
-        try:
-            self.send_3_pings()
-        except:
-            pass
+        self.send_3_pings()
 
         # the masternode list hasn't changed
         for node in self.nodes:
             self.check_mn_list(node, txHashSet)
         self.log.info("Masternode list correctly unchanged in all nodes.")
+
+        # stake 20 blocks, sync tiertwo data, and check winners
+        self.log.info("Staking 20 blocks...")
+        self.stake(20, [self.remoteTwo])
+        self.sync_blocks()
+        self.wait_until_mnsync_finished()
+        self.log.info("Checking winners...")
+        winners = set([x['winner']['address'] for x in self.miner.getmasternodewinners()
+                       if x['winner']['address'] != "Unknown"])
+        # all except mn1 must be scheduled
+        mn_addresses = set([self.mn_addresses[k] for k in self.mn_addresses
+                            if k != self.mnOneCollateral.hash])
+        assert_equal(winners, mn_addresses)
+        self.log.info("All good.")
+
+
 
 if __name__ == '__main__':
     MasternodeCompatibilityTest().main()

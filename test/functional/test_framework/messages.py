@@ -1372,3 +1372,25 @@ class msg_witness_blocktxn(msg_blocktxn):
         r += self.block_transactions.serialize(with_witness=True)
         return r
 
+
+# PIVX Classes
+class Masternode(object):
+    def __init__(self, idx, owner_addr, operator_addr, voting_addr, ipport, payout_addr, operator_key):
+        self.idx = idx
+        self.owner = owner_addr
+        self.operator = operator_addr
+        self.voting = voting_addr
+        self.ipport = ipport
+        self.payee = payout_addr
+        self.operator_key = operator_key
+        self.proTx = None
+        self.collateral = None
+
+    def __repr__(self):
+        return "Masternode(idx=%d, owner=%s, operator=%s, voting=%s, ip=%s, payee=%s, opkey=%s, protx=%s, collateral=%s)" % (
+            self.idx, str(self.owner), str(self.operator), str(self.voting), str(self.ipport),
+            str(self.payee), str(self.operator_key), str(self.proTx), str(self.collateral)
+        )
+
+    def __str__(self):
+        return self.__repr__()

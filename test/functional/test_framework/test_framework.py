@@ -47,18 +47,19 @@ from .util import (
     connect_nodes,
     connect_nodes_clique,
     disconnect_nodes,
+    get_collateral_vout,
+    lock_utxo,
     Decimal,
     DEFAULT_FEE,
     get_datadir_path,
     hex_str_to_bytes,
     bytes_to_hex_str,
     initialize_datadir,
+    create_new_dmn,
     p2p_port,
     set_node_times,
     SPORK_ACTIVATION_TIME,
     SPORK_DEACTIVATION_TIME,
-    vZC_DENOMS,
-    wait_until,
 )
 
 class TestStatus(Enum):
@@ -1048,9 +1049,10 @@ class PivxTestFramework():
 
     def send_pings(self, mnodes):
         for node in mnodes:
-            sent = node.mnping()["sent"]
-            if sent != "YES" and "Too early to send Masternode Ping" not in sent:
-                raise AssertionError("Unable to send ping: \"sent\" = %s" % sent)
+            try:
+                node.mnping()["sent"]
+            except:
+                pass
             time.sleep(1)
 
 
@@ -1068,7 +1070,7 @@ class PivxTestFramework():
             if len(with_ping_mns) > 0:
                 self.send_pings(with_ping_mns)
 
-
+    # !TODO: remove after obsoleting legacy system
     def setupDMN(self,
                  mnOwner,
                  miner,
@@ -1170,6 +1172,148 @@ class PivxTestFramework():
         # return the collateral outpoint
         return COutPoint(collateralTxId, collateralTxId_n)
 
+### ----------------------
+### ----- DMN setup ------
+### ----------------------
+
+    def connect_to_all(self, nodePos):
+        for i in range(self.num_nodes):
+            if i != nodePos and self.nodes[i] is not None:
+                connect_nodes(self.nodes[i], nodePos)
+
+    def assert_equal_for_all(self, expected, func_name, *args):
+        def not_found():
+            raise Exception("function %s not found!" % func_name)
+
+        assert_equal([getattr(x, func_name, not_found)(*args) for x in self.nodes],
+                     [expected] * self.num_nodes)
+
+    """
+    Create a ProReg tx, which has the collateral as one of its outputs
+    """
+    def protx_register_fund(self, miner, controller, dmn, collateral_addr, lock=True):
+        # send to the owner the collateral tx + some dust for the ProReg and fee
+        funding_txid = miner.sendtoaddress(collateral_addr, Decimal('101'))
+        # confirm and verify reception
+        miner.generate(1)
+        self.sync_blocks([miner, controller])
+        assert_greater_than(controller.getrawtransaction(funding_txid, True)["confirmations"], 0)
+        # create and send the ProRegTx funding the collateral
+        print("Before RPC: %s" % str(dmn.ipport))
+        dmn.proTx = controller.protx_register_fund(collateral_addr, dmn.ipport, dmn.owner,
+                                                   dmn.operator, dmn.voting, dmn.payee)
+        dmn.collateral = COutPoint(int(dmn.proTx, 16),
+                                   get_collateral_vout(controller.getrawtransaction(dmn.proTx, True)))
+        if lock:
+            lock_utxo(controller, dmn.collateral)
+
+    """
+    Create a ProReg tx, which references an 100 PIV UTXO as collateral.
+    The controller node owns the collateral and creates the ProReg tx.
+    """
+    def protx_register(self, miner, controller, dmn, collateral_addr, fLock):
+        # send to the owner the exact collateral tx amount
+        funding_txid = miner.sendtoaddress(collateral_addr, Decimal('100'))
+        # send another output to be used for the fee of the proReg tx
+        miner.sendtoaddress(collateral_addr, Decimal('1'))
+        # confirm and verify reception
+        miner.generate(1)
+        self.sync_blocks([miner, controller])
+        json_tx = controller.getrawtransaction(funding_txid, True)
+        assert_greater_than(json_tx["confirmations"], 0)
+        # create and send the ProRegTx
+        dmn.collateral = COutPoint(int(funding_txid, 16), get_collateral_vout(json_tx))
+        dmn.proTx = controller.protx_register(funding_txid, dmn.collateral.n, dmn.ipport, dmn.owner,
+                                              dmn.operator, dmn.voting, dmn.payee)
+        if fLock:
+            lock_utxo(controller, dmn.collateral)
+
+    """
+    Create a ProReg tx, referencing a collateral signed externally (eg. HW wallets).
+    Here the controller node owns the collateral (and signs), but the miner creates the ProReg tx.
+    """
+    def protx_register_ext(self, miner, controller, dmn, outpoint, fSubmit, fLock):
+        # send to the owner the collateral tx if the outpoint is not specified
+        if outpoint is None:
+            funding_txid = miner.sendtoaddress(controller.getnewaddress("collateral"), Decimal('100'))
+            # confirm and verify reception
+            miner.generate(1)
+            self.sync_blocks([miner, controller])
+            json_tx = controller.getrawtransaction(funding_txid, True)
+            assert_greater_than(json_tx["confirmations"], 0)
+            outpoint = COutPoint(int(funding_txid, 16), get_collateral_vout(json_tx))
+        dmn.collateral = outpoint
+        # Prepare the message to be signed externally by the owner of the collateral (the controller)
+        reg_tx = miner.protx_register_prepare("%064x" % outpoint.hash, outpoint.n, dmn.ipport, dmn.owner,
+                                              dmn.operator, dmn.voting, dmn.payee)
+        sig = controller.signmessage(reg_tx["collateralAddress"], reg_tx["signMessage"])
+        if fSubmit:
+            if fLock:
+                lock_utxo(controller, dmn.collateral)
+            dmn.proTx = miner.protx_register_submit(reg_tx["tx"], sig)
+        else:
+            return reg_tx["tx"], sig
+
+    """ Create and register new deterministic masternode
+    :param   idx:              (int) index of the (remote) node in self.nodes
+             miner_idx:        (int) index of the miner in self.nodes
+             controller_idx:   (int) index of the controller in self.nodes
+             strType:          (string) "fund"|"internal"|"external"
+             payout_addr:      (string) payee address. If not specified, reuse the collateral address.
+             outpoint:         (COutPoint) collateral outpoint to be used with "external".
+                                 It must be owned by the controller (proTx is sent from the miner).
+                                 If not provided, a new utxo is created, sending it from the miner.
+             op_addr_and_key:  (list of strings) List with two entries, operator address (0) and private key (1).
+                                 If not provided, a new address-key pair is generated.
+             fLock:            (boolean) lock the collateral output
+    :return: dmn:              (Masternode) the deterministic masternode object
+    """
+    def register_new_dmn(self, idx, miner_idx, controller_idx, strType,
+                         payout_addr=None, outpoint=None, op_addr_and_key=None, fLock=True):
+        # Prepare remote node
+        assert idx != miner_idx
+        assert idx != controller_idx
+        miner_node = self.nodes[miner_idx]
+        controller_node = self.nodes[controller_idx]
+        mn_node = self.nodes[idx]
+
+        # Generate ip and addresses/keys
+        collateral_addr = controller_node.getnewaddress("mncollateral-%d" % idx)
+        if payout_addr is None:
+            payout_addr = collateral_addr
+        dmn = create_new_dmn(idx, controller_node, payout_addr, op_addr_and_key)
+
+        # Create ProRegTx
+        self.log.info("Creating%s proRegTx for deterministic masternode idx=%d..." % (
+            " and funding" if strType == "fund" else "", idx))
+        if strType == "fund":
+            self.protx_register_fund(miner_node, controller_node, dmn, collateral_addr, fLock)
+        elif strType == "internal":
+            self.protx_register(miner_node, controller_node, dmn, collateral_addr, fLock)
+        elif strType == "external":
+            self.protx_register_ext(miner_node, controller_node, dmn, outpoint, True, fLock)
+        else:
+            raise Exception("Type %s not available" % strType)
+        time.sleep(1)
+        self.sync_mempools([miner_node, controller_node])
+
+        # confirm and verify inclusion in list
+        miner_node.generate(1)
+        self.sync_blocks(self.nodes)
+        assert_greater_than(mn_node.getrawtransaction(dmn.proTx, 1)["confirmations"], 0)
+        assert dmn.proTx in mn_node.protx_list(False)
+        return dmn
+
+    def check_mn_list_on_node(self, idx, mns):
+        mnlist = self.nodes[idx].listmasternodes()
+        if len(mnlist) != len(mns):
+            raise Exception("Invalid mn list on node %d:\n%s\nExpected:%s" % (idx, str(mnlist), str(mns)))
+        protxs = [x["proTxHash"] for x in mnlist]
+        for mn in mns:
+            if mn.proTx not in protxs:
+                raise Exception("ProTx for mn %d (%s) not found in the list of node %d", mn.idx, mn.proTx, idx)
+
+
 ### ------------------------------------------------------
 
 class ComparisonTestFramework(PivxTestFramework):
@@ -1210,7 +1354,7 @@ class SkipTest(Exception):
 '''
 PivxTestFramework extensions
 '''
-
+# !TODO: remove after obsoleting legacy system
 class PivxTier2TestFramework(PivxTestFramework):
 
     def set_test_params(self):
