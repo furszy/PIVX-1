@@ -87,7 +87,7 @@ class MasternodeActivationTest(PivxTier2TestFramework):
 
         # check masternode expiration
         self.log.info("testing expiration now.")
-        expiration_time = 180  # regtest expiration time
+        expiration_time = 12 * 60  # regtest expiration time
         self.log.info("disconnect remote and move time %d seconds in the future..." % expiration_time)
         self.disconnect_remotes()
         self.advance_mocktime_and_stake(expiration_time)
@@ -96,7 +96,7 @@ class MasternodeActivationTest(PivxTier2TestFramework):
 
         # check masternode removal
         self.log.info("testing removal now.")
-        removal_time = 200  # regtest removal time
+        removal_time = 13 * 60  # regtest removal time
         self.advance_mocktime_and_stake(removal_time - expiration_time)
         self.wait_until_mn_expired(30, removed=True)
         self.log.info("masternodes removed successfully")
