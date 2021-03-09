@@ -11,8 +11,11 @@
 #include "masternode.h"
 #include "messagesigner.h"
 #include "netbase.h"
+#include "operationresult.h"
+#include "policy/policy.h"
 #include "pubkey.h" // COMPACT_SIGNATURE_SIZE
 #include "rpc/server.h"
+#include "script/sign.h"
 #include "utilmoneystr.h"
 #include "validation.h"
 
@@ -21,8 +24,8 @@
 #include "wallet/wallet.h"
 #include "wallet/rpcwallet.h"
 
-extern UniValue signrawtransaction(const JSONRPCRequest& request);
-extern UniValue sendrawtransaction(const JSONRPCRequest& request);
+extern void TryATMP(const CMutableTransaction& mtx, bool fOverrideFees);
+extern void RelayTx(const uint256& hashTx);
 #endif//ENABLE_WALLET
 
 enum ProRegParam {
@@ -264,6 +267,34 @@ static void SignSpecialTxPayloadByString(SpecialTxPayload& payload, const CKey& 
     }
 }
 
+static std::string TxInErrorToString(int i, const CTxIn& txin, const std::string& strError)
+{
+    return strprintf("Input %d (%s): %s", i, txin.prevout.ToStringShort(), strError);
+}
+
+static OperationResult SignTransaction(CMutableTransaction& tx)
+{
+    EnsureWalletIsUnlocked();
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+    const CTransaction txConst(tx);
+    for (unsigned int i = 0; i < tx.vin.size(); i++) {
+        CTxIn& txin = tx.vin[i];
+        const Coin& coin = pcoinsTip->AccessCoin(txin.prevout);
+        if (coin.IsSpent()) {
+            return errorOut(TxInErrorToString(i, txin, "not found or already spent"));
+        }
+        SigVersion sv = tx.GetRequiredSigVersion();
+        txin.scriptSig.clear();
+        SignatureData sigdata;
+        if (!ProduceSignature(MutableTransactionSignatureCreator(pwalletMain, &tx, i, coin.out.nValue, SIGHASH_ALL),
+                              coin.out.scriptPubKey, sigdata, sv, false)) {
+            return errorOut(TxInErrorToString(i, txin, "signature failed"));
+        }
+        UpdateTransaction(tx, i, sigdata);
+    }
+    return OperationResult(true);
+}
+
 static std::string SignAndSendSpecialTx(CMutableTransaction& tx, const ProRegPL& pl)
 {
     EnsureWallet();
@@ -273,32 +304,18 @@ static std::string SignAndSendSpecialTx(CMutableTransaction& tx, const ProRegPL&
 
     CValidationState state;
     if (!CheckSpecialTx(tx, GetChainTip(), state)) {
-        throw std::runtime_error(FormatStateMessage(state));
+        throw JSONRPCError(RPC_MISC_ERROR, FormatStateMessage(state));
     }
 
-    CDataStream ds(SER_NETWORK, PROTOCOL_VERSION);
-    ds << tx;
-
-    JSONRPCRequest signRequest;
-    signRequest.params.setArray();
-    signRequest.params.push_back(HexStr(ds.begin(), ds.end()));
-    UniValue signResult = signrawtransaction(signRequest);
-
-    if (!signResult["complete"].get_bool()) {
-        std::ostringstream ss;
-        ss << "failed to sign special tx: ";
-        UniValue errors = signResult["errors"].get_array();
-        for (unsigned int i = 0; i < errors.size(); i++) {
-            if (i > 0) ss << " - ";
-            ss << errors[i].get_str();
-        }
-        throw JSONRPCError(RPC_INTERNAL_ERROR, ss.str());
+    const OperationResult& sigRes = SignTransaction(tx);
+    if (!sigRes) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, sigRes.getError());
     }
 
-    JSONRPCRequest sendRequest;
-    sendRequest.params.setArray();
-    sendRequest.params.push_back(signResult["hex"].get_str());
-    return sendrawtransaction(sendRequest).get_str();
+    TryATMP(tx, false);
+    const uint256& hashTx = tx.GetHash();
+    RelayTx(hashTx);
+    return hashTx.GetHex();
 }
 
 // Parses inputs (starting from index paramIdx) and returns ProReg payload
