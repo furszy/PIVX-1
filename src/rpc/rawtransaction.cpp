@@ -7,6 +7,8 @@
 
 #include "base58.h"
 #include "core_io.h"
+#include "evo/specialtx.h"
+#include "evo/providertx.h"
 #include "init.h"
 #include "keystore.h"
 #include "validationinterface.h"
@@ -31,6 +33,27 @@
 
 #include <univalue.h>
 
+template <typename Payload>
+static void PayloadToJSON(const CTransaction& tx, Payload& pl, UniValue& entry)
+{
+    if (GetTxPayload(tx, pl)) {
+        UniValue payloadObj;
+        pl.ToJson(payloadObj);
+        entry.pushKV("payload", payloadObj);
+    }
+}
+
+static void PayloadToJSON(const CTransaction& tx, UniValue& entry)
+{
+    switch(tx.nType) {
+        case CTransaction::TxType::PROREG: {
+            ProRegPL pl;
+            PayloadToJSON(tx, pl, entry);
+            break;
+        }
+    }
+}
+
 void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry)
 {
     // Call into TxToUniv() in bitcoin-common to decode the transaction hex.
@@ -52,6 +75,11 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry)
             }
             entry.pushKV("shielded_addresses", addrs);
         }
+    }
+
+    // Special txes
+    if (tx.IsSpecialTx()) {
+        PayloadToJSON(tx, entry);
     }
 
     if (!hashBlock.IsNull()) {
