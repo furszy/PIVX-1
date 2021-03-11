@@ -202,9 +202,9 @@ void CSporkManager::ProcessGetSporks(CNode* pfrom, std::string& strCommand, CDat
 
 bool CSporkManager::UpdateSpork(SporkId nSporkID, int64_t nValue)
 {
-    CSporkMessage spork = CSporkMessage(nSporkID, nValue, GetTime());
+    CSporkMessage spork(nSporkID, nValue, GetTime());
 
-    if(spork.Sign(strMasterPrivKey)){
+    if (spork.Sign(strMasterPrivKey)) {
         spork.Relay();
         AddOrUpdateSporkMessage(spork);
         return true;

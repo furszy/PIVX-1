@@ -13,6 +13,7 @@
 #include "policy/policy.h"
 #include "primitives/transaction.h"
 #include "script/sign.h"
+#include "spork.h"
 #include "validation.h"
 
 #include <boost/test/unit_test.hpp>
@@ -161,6 +162,24 @@ static bool CheckTransactionSignature(const CMutableTransaction& tx)
     return true;
 }
 
+static bool IsMNPayeeInBlock(const CBlock& block, const CScript& expected)
+{
+    for (const auto& txout : block.vtx[0]->vout) {
+        if (txout.scriptPubKey == expected) return true;
+    }
+    return false;
+}
+
+static void CheckPayments(std::map<uint256, int> mp, size_t mapSize, int minCount)
+{
+    BOOST_CHECK_EQUAL(mp.size(), mapSize);
+    for (const auto& it : mp) {
+        BOOST_CHECK_MESSAGE(it.second >= minCount,
+                strprintf("MN %s didn't receive expected num of payments (%d<%d)",it.first.ToString(), it.second, minCount)
+        );
+    }
+}
+
 BOOST_AUTO_TEST_SUITE(deterministicmns_tests)
 
 BOOST_FIXTURE_TEST_CASE(dip3_protx, TestChain400Setup)
@@ -172,7 +191,6 @@ BOOST_FIXTURE_TEST_CASE(dip3_protx, TestChain400Setup)
     UpdateNetworkUpgradeParameters(Consensus::UPGRADE_V6_0, nHeight);
     int port = 1;
 
-    // these maps are only populated, but not used for now. They will be needed later on, in the next commits.
     std::vector<uint256> dmnHashes;
     std::map<uint256, CKey> ownerKeys;
     std::map<uint256, CKey> operatorKeys;
@@ -215,48 +233,57 @@ BOOST_FIXTURE_TEST_CASE(dip3_protx, TestChain400Setup)
 
         nHeight++;
     }
-    // Mine 30 more blocks
-    for (size_t i = 0; i < 30; i++) {
-        CreateAndProcessBlock({}, coinbaseKey);
+
+    // enable SPORK_21
+    const CSporkMessage& spork = CSporkMessage(SPORK_21_LEGACY_MNS_MAX_HEIGHT, nHeight, GetTime());
+    sporkManager.AddOrUpdateSporkMessage(spork);
+    BOOST_CHECK(deterministicMNManager->LegacyMNObsolete(nHeight + 1));
+
+    // Mine 20 blocks, checking MN reward payments
+    std::map<uint256, int> mapPayments;
+    for (size_t i = 0; i < 20; i++) {
+        auto dmnExpectedPayee = deterministicMNManager->GetListAtChainTip().GetMNPayee();
+        CBlock block = CreateAndProcessBlock({}, coinbaseKey);
         chainTip = chainActive.Tip();
-        BOOST_CHECK_EQUAL(chainTip->nHeight, ++nHeight);
         deterministicMNManager->UpdatedBlockTip(chainTip);
+        BOOST_ASSERT(!block.vtx.empty());
+        BOOST_CHECK(IsMNPayeeInBlock(block, dmnExpectedPayee->pdmnState->scriptPayout));
+        mapPayments[dmnExpectedPayee->proTxHash]++;
+        BOOST_CHECK_EQUAL(chainTip->nHeight, ++nHeight);
     }
+    // 20 blocks, 6 masternodes. Must have been paid at least 3 times each.
+    CheckPayments(mapPayments, 6, 3);
 
     // Try to register used owner key
     {
-        SimpleUTXOMap utxos_copy(utxos);
         const CKey& ownerKey = ownerKeys.at(dmnHashes[InsecureRandRange(dmnHashes.size())]);
-        auto tx = CreateProRegTx(nullopt, utxos_copy, port, GenerateRandomAddress(), coinbaseKey, ownerKey, GetRandomKey());
+        auto tx = CreateProRegTx(nullopt, utxos, port, GenerateRandomAddress(), coinbaseKey, ownerKey, GetRandomKey());
         CValidationState state;
         BOOST_CHECK(!CheckSpecialTx(tx, chainTip, state));
         BOOST_CHECK_EQUAL(state.GetRejectReason(), "bad-protx-dup-owner-key");
     }
     // Try to register used operator key
     {
-        SimpleUTXOMap utxos_copy(utxos);
         const CKey& operatorKey = operatorKeys.at(dmnHashes[InsecureRandRange(dmnHashes.size())]);
-        auto tx = CreateProRegTx(nullopt, utxos_copy, port, GenerateRandomAddress(), coinbaseKey, GetRandomKey(), operatorKey);
+        auto tx = CreateProRegTx(nullopt, utxos, port, GenerateRandomAddress(), coinbaseKey, GetRandomKey(), operatorKey);
         CValidationState state;
         BOOST_CHECK(!CheckSpecialTx(tx, chainTip, state));
         BOOST_CHECK_EQUAL(state.GetRejectReason(), "bad-protx-dup-operator-key");
     }
     // Try to register used IP address
     {
-        SimpleUTXOMap utxos_copy(utxos);
-        auto tx = CreateProRegTx(nullopt, utxos_copy, 1 + InsecureRandRange(port-1), GenerateRandomAddress(), coinbaseKey, GetRandomKey(), GetRandomKey());
+        auto tx = CreateProRegTx(nullopt, utxos, 1 + InsecureRandRange(port-1), GenerateRandomAddress(), coinbaseKey, GetRandomKey(), GetRandomKey());
         CValidationState state;
         BOOST_CHECK(!CheckSpecialTx(tx, chainTip, state));
         BOOST_CHECK_EQUAL(state.GetRejectReason(), "bad-protx-dup-IP-address");
     }
     // Block with two ProReg txes using same owner key
     {
-        SimpleUTXOMap utxos_copy(utxos);
         const CKey& ownerKey = GetRandomKey();
         const CKey& operatorKey1 = GetRandomKey();
         const CKey& operatorKey2 = GetRandomKey();
-        auto tx1 = CreateProRegTx(nullopt, utxos_copy, port, GenerateRandomAddress(), coinbaseKey, ownerKey, operatorKey1);
-        auto tx2 = CreateProRegTx(nullopt, utxos_copy, (port+1), GenerateRandomAddress(), coinbaseKey, ownerKey, operatorKey2);
+        auto tx1 = CreateProRegTx(nullopt, utxos, port, GenerateRandomAddress(), coinbaseKey, ownerKey, operatorKey1);
+        auto tx2 = CreateProRegTx(nullopt, utxos, (port+1), GenerateRandomAddress(), coinbaseKey, ownerKey, operatorKey2);
         CBlock block = CreateBlock({tx1, tx2}, coinbaseKey);
         CBlockIndex indexFake(block);
         indexFake.nHeight = nHeight;
@@ -269,12 +296,11 @@ BOOST_FIXTURE_TEST_CASE(dip3_protx, TestChain400Setup)
     }
     // Block with two ProReg txes using same operator key
     {
-        SimpleUTXOMap utxos_copy(utxos);
         const CKey& ownerKey1 = GetRandomKey();
         const CKey& ownerKey2 = GetRandomKey();
         const CKey& operatorKey = GetRandomKey();
-        auto tx1 = CreateProRegTx(nullopt, utxos_copy, port, GenerateRandomAddress(), coinbaseKey, ownerKey1, operatorKey);
-        auto tx2 = CreateProRegTx(nullopt, utxos_copy, (port+1), GenerateRandomAddress(), coinbaseKey, ownerKey2, operatorKey);
+        auto tx1 = CreateProRegTx(nullopt, utxos, port, GenerateRandomAddress(), coinbaseKey, ownerKey1, operatorKey);
+        auto tx2 = CreateProRegTx(nullopt, utxos, (port+1), GenerateRandomAddress(), coinbaseKey, ownerKey2, operatorKey);
         CBlock block = CreateBlock({tx1, tx2}, coinbaseKey);
         CBlockIndex indexFake(block);
         indexFake.nHeight = nHeight;
@@ -287,9 +313,8 @@ BOOST_FIXTURE_TEST_CASE(dip3_protx, TestChain400Setup)
     }
     // Block with two ProReg txes using ip address
     {
-        SimpleUTXOMap utxos_copy(utxos);
-        auto tx1 = CreateProRegTx(nullopt, utxos_copy, port, GenerateRandomAddress(), coinbaseKey, GetRandomKey(), GetRandomKey());
-        auto tx2 = CreateProRegTx(nullopt, utxos_copy, port, GenerateRandomAddress(), coinbaseKey, GetRandomKey(), GetRandomKey());
+        auto tx1 = CreateProRegTx(nullopt, utxos, port, GenerateRandomAddress(), coinbaseKey, GetRandomKey(), GetRandomKey());
+        auto tx2 = CreateProRegTx(nullopt, utxos, port, GenerateRandomAddress(), coinbaseKey, GetRandomKey(), GetRandomKey());
         CBlock block = CreateBlock({tx1, tx2}, coinbaseKey);
         CBlockIndex indexFake(block);
         indexFake.nHeight = nHeight;
@@ -300,6 +325,52 @@ BOOST_FIXTURE_TEST_CASE(dip3_protx, TestChain400Setup)
         ProcessNewBlock(state, nullptr, std::make_shared<const CBlock>(block), nullptr);
         BOOST_CHECK_EQUAL(chainActive.Height(), nHeight);   // bad block not connected
     }
+
+    // register multiple MNs per block
+    for (size_t i = 0; i < 3; i++) {
+        std::vector<CMutableTransaction> txns;
+        for (size_t j = 0; j < 3; j++) {
+            const CKey& ownerKey = GetRandomKey();
+            const CKey& operatorKey = GetRandomKey();
+            auto tx = CreateProRegTx(nullopt, utxos, port++, GenerateRandomAddress(), coinbaseKey, ownerKey, operatorKey);
+            const uint256& txid = tx.GetHash();
+            dmnHashes.emplace_back(txid);
+            ownerKeys.emplace(txid, ownerKey);
+            operatorKeys.emplace(txid, operatorKey);
+
+            CValidationState dummyState;
+            BOOST_CHECK(CheckSpecialTx(tx, chainActive.Tip(), dummyState));
+            BOOST_CHECK(CheckTransactionSignature(tx));
+            txns.emplace_back(tx);
+        }
+        CreateAndProcessBlock(txns, coinbaseKey);
+        chainTip = chainActive.Tip();
+        BOOST_CHECK_EQUAL(chainTip->nHeight, nHeight + 1);
+
+        deterministicMNManager->UpdatedBlockTip(chainTip);
+        auto mnList = deterministicMNManager->GetListAtChainTip();
+        for (size_t j = 0; j < 3; j++) {
+            BOOST_CHECK(mnList.HasMN(txns[j].GetHash()));
+        }
+
+        nHeight++;
+    }
+
+    // Mine 30 blocks, checking MN reward payments
+    mapPayments.clear();
+    for (size_t i = 0; i < 30; i++) {
+        auto dmnExpectedPayee = deterministicMNManager->GetListAtChainTip().GetMNPayee();
+        CBlock block = CreateAndProcessBlock({}, coinbaseKey);
+        chainTip = chainActive.Tip();
+        deterministicMNManager->UpdatedBlockTip(chainTip);
+        BOOST_ASSERT(!block.vtx.empty());
+        BOOST_CHECK(IsMNPayeeInBlock(block, dmnExpectedPayee->pdmnState->scriptPayout));
+        mapPayments[dmnExpectedPayee->proTxHash]++;
+
+        nHeight++;
+    }
+    // 30 blocks, 15 masternodes. Must have been paid exactly 2 times each.
+    CheckPayments(mapPayments, 15, 2);
 
     UpdateNetworkUpgradeParameters(Consensus::UPGRADE_V6_0, Consensus::NetworkUpgrade::NO_ACTIVATION_HEIGHT);
 }
