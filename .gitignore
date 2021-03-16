@@ -13,6 +13,7 @@ src/pivx-cli
 src/pivx-tx
 src/bench/bench_pivx
 src/test/test_pivx
+src/test/test_pivx_fuzzy
 src/qt/test/test_pivx-qt
 
 # autoreconf
