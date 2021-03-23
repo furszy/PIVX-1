@@ -596,6 +596,12 @@ void CWallet::SyncMetaData(std::pair<typename TxSpendMap<T>::iterator, typename 
     int nMinOrderPos = std::numeric_limits<int>::max();
     const CWalletTx* copyFrom = nullptr;
     for (typename TxSpendMap<T>::iterator it = range.first; it != range.second; ++it) {
+        auto it2 = mapWallet.find(it->second);
+        if (it2 == mapWallet.end()) {
+            LogPrintf("ERROR: in SyncMetaData one, no tx in wallet\n");
+        }
+
+
         const CWalletTx* wtx = &mapWallet.at(it->second);
         int n = wtx->nOrderPos;
         if (n < nMinOrderPos) {
@@ -611,6 +617,10 @@ void CWallet::SyncMetaData(std::pair<typename TxSpendMap<T>::iterator, typename 
     // Now copy data from copyFrom to rest:
     for (auto it = range.first; it != range.second; ++it) {
         const uint256& hash = it->second;
+        auto it2 = mapWallet.find(hash);
+        if (it2 == mapWallet.end()) {
+            LogPrintf("ERROR: in SyncMetaData two, no tx in wallet\n");
+        }
         CWalletTx* copyTo = &mapWallet.at(hash);
         if (copyFrom == copyTo) continue;
         assert(copyFrom && "Oldest wallet transaction in range assumed to have been found.");
@@ -1913,6 +1923,10 @@ CBlockIndex* CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, CBlock
         // Do not flush the wallet here for performance reasons.
         CWalletDB walletdb(*dbw, "r+", false);
         for (const auto& hash : myTxHashes) {
+            auto it2 = mapWallet.find(hash);
+            if (it2 == mapWallet.end()) {
+                LogPrintf("ERROR: in ScanForWalletTransactions, no tx in wallet\n");
+            }
             CWalletTx& wtx = mapWallet.at(hash);
             if (!wtx.mapSaplingNoteData.empty()) {
                 if (!walletdb.WriteTx(wtx)) {
@@ -3326,6 +3340,10 @@ CWallet::CommitResult CWallet::CommitTransaction(CTransactionRef tx, CReserveKey
                     // notify only once
                     if (updated_hashes.find(txin.prevout.hash) != updated_hashes.end()) continue;
 
+                    auto it2 = mapWallet.find(txin.prevout.hash);
+                    if (it2 == mapWallet.end()) {
+                        LogPrintf("ERROR: in CommitTransaction, no tx in wallet\n");
+                    }
                     CWalletTx& coin = mapWallet.at(txin.prevout.hash);
                     coin.BindWallet(this);
                     NotifyTransactionChanged(this, txin.prevout.hash, CT_UPDATED);
@@ -3336,6 +3354,10 @@ CWallet::CommitResult CWallet::CommitTransaction(CTransactionRef tx, CReserveKey
 
         res.hashTx = wtxNew.GetHash();
 
+        auto it2 = mapWallet.find(wtxNew.GetHash());
+        if (it2 == mapWallet.end()) {
+            LogPrintf("ERROR: in CommitTransaction, getting the new transaction, no tx in wallet\n");
+        }
         // Get the inserted-CWalletTx from mapWallet so that the
         // fInMempool flag is cached properly
         CWalletTx& wtx = mapWallet.at(wtxNew.GetHash());
