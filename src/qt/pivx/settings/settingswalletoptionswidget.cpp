@@ -57,19 +57,16 @@ SettingsWalletOptionsWidget::SettingsWalletOptionsWidget(PIVXGUI* _window, QWidg
     connect(ui->pushButtonClean, &QPushButton::clicked, [this] { Q_EMIT discardSettings(); });
 }
 
-void SettingsWalletOptionsWidget::onResetClicked(){
-    if (clientModel) {
-        OptionsModel *optionsModel = clientModel->getOptionsModel();
-        QSettings settings;
-        optionsModel->setWalletDefaultOptions(settings, true);
-        optionsModel->setNetworkDefaultOptions(settings, true);
-        inform(tr("Options reset succeed"));
-    }
+void SettingsWalletOptionsWidget::onResetClicked()
+{
+    QSettings settings;
+    walletModel->resetWalletOptions(settings);
+    clientModel->getOptionsModel()->setNetworkDefaultOptions(settings, true);
+    inform(tr("Options reset succeed"));
 }
 
 void SettingsWalletOptionsWidget::setMapper(QDataWidgetMapper *mapper){
     mapper->addMapping(ui->radioButtonSpend, OptionsModel::SpendZeroConfChange);
-    mapper->addMapping(ui->spinBoxStakeSplitThreshold, OptionsModel::StakeSplitThreshold);
 
     // Network
     mapper->addMapping(ui->checkBoxMap, OptionsModel::MapPortUPnP);
@@ -79,9 +76,25 @@ void SettingsWalletOptionsWidget::setMapper(QDataWidgetMapper *mapper){
     mapper->addMapping(ui->lineEditPort, OptionsModel::ProxyPort);
 }
 
+void SettingsWalletOptionsWidget::setWalletModel(WalletModel* model)
+{
+    PWidget::setWalletModel(model);
+    reloadWalletOptions();
+}
+
+void SettingsWalletOptionsWidget::reloadWalletOptions()
+{
+    setSpinBoxStakeSplitThreshold(static_cast<double>(walletModel->getWalletStakeSplitThreshold()) / COIN);
+}
+
 void SettingsWalletOptionsWidget::setSpinBoxStakeSplitThreshold(double val)
 {
     ui->spinBoxStakeSplitThreshold->setValue(val);
+}
+
+double SettingsWalletOptionsWidget::getSpinBoxStakeSplitThreshold() const
+{
+    return ui->spinBoxStakeSplitThreshold->value();
 }
 
 SettingsWalletOptionsWidget::~SettingsWalletOptionsWidget(){

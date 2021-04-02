@@ -842,6 +842,12 @@ public:
     bool IsAbortingRescan() { return fAbortRescan; }
     bool IsScanning() { return fScanningWallet; }
 
+    /*
+     * Stake Split threshold
+     */
+    bool SetStakeSplitThreshold(const CAmount sst);
+    CAmount GetStakeSplitThreshold() const { LOCK(cs_wallet); return nStakeSplitThreshold; }
+
     //  keystore implementation
     PairResult getNewAddress(CTxDestination& ret, const std::string addressLabel, const std::string purpose,
                                            const CChainParams::Base58Type addrType = CChainParams::PUBKEY_ADDRESS);
@@ -1170,6 +1176,9 @@ public:
 
     /** notify wallet file backed up */
     boost::signals2::signal<void (const bool& fSuccess, const std::string& filename)> NotifyWalletBacked;
+
+    /** notify stake-split threshold changed */
+    boost::signals2::signal<void (const CAmount stakeSplitThreshold)> NotifySSTChanged;
 };
 
 /** A key allocated from the key pool. */

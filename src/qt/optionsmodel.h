@@ -55,10 +55,7 @@ public:
         AnonymizePivxAmount, //int
         ShowMasternodesTab,  // bool
         Listen,              // bool
-        StakeSplitThreshold,    // CAmount (LongLong)
         ShowColdStakingScreen,  // bool
-        fUseCustomFee,          // bool
-        nCustomFee,             // CAmount (LongLong)
         OptionIDRowCount,
     };
 
@@ -71,13 +68,6 @@ public:
     void refreshDataView();
     /** Updates current unit in memory, settings and emits displayUnitChanged(newUnit) signal */
     void setDisplayUnit(const QVariant& value);
-    /* Update StakeSplitThreshold's value in wallet */
-    void setStakeSplitThreshold(const CAmount value);
-    double getSSTMinimum() const;
-    bool isSSTValid();
-    /* Update Custom Fee value in wallet */
-    void setUseCustomFee(bool fUse);
-    void setCustomFeeValue(const CAmount& value);
 
     /* Explicit getters */
     bool isHideCharts() { return fHideCharts; }
@@ -93,8 +83,6 @@ public:
     /* Restart flag helper */
     void setRestartRequired(bool fRequired);
     bool isRestartRequired();
-    void setSSTChanged(bool fChanged);
-    bool isSSTChanged();
     bool resetSettings;
 
     bool isColdStakingScreenEnabled() { return showColdStakingScreen; }

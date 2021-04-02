@@ -19,6 +19,7 @@
 
 #include <QObject>
 #include <QFuture>
+#include <QSettings>
 
 class AddressTableModel;
 class ClientModel;
@@ -147,6 +148,7 @@ public:
     TransactionTableModel* getTransactionTableModel();
     RecentRequestsTableModel* getRecentRequestsTableModel();
 
+    void resetWalletOptions(QSettings& settings);
     bool isTestNetwork() const;
     bool isRegTestNetwork() const;
     bool isShutdownRequested();
@@ -204,7 +206,12 @@ public:
     void setWalletDefaultFee(CAmount fee = DEFAULT_TRANSACTION_FEE);
     bool hasWalletCustomFee();
     bool getWalletCustomFee(CAmount& nFeeRet);
-    void setWalletCustomFee(bool fUseCustomFee, const CAmount& nFee = DEFAULT_TRANSACTION_FEE);
+    void setWalletCustomFee(bool fUseCustomFee, const CAmount nFee = DEFAULT_TRANSACTION_FEE);
+
+    void setWalletStakeSplitThreshold(const CAmount nStakeSplitThreshold);
+    CAmount getWalletStakeSplitThreshold() const;
+    /* Minimum stake split threshold*/
+    double getSSTMinimum() const;
 
     const CWalletTx* getTx(uint256 id);
 
@@ -351,6 +358,7 @@ private:
     // Listeners
     std::unique_ptr<interfaces::Handler> m_handler_notify_status_changed;
     std::unique_ptr<interfaces::Handler> m_handler_notify_addressbook_changed;
+    std::unique_ptr<interfaces::Handler> m_handler_notify_sst_changed;
     std::unique_ptr<interfaces::Handler> m_handler_notify_transaction_changed;
     std::unique_ptr<interfaces::Handler> m_handler_show_progress;
     std::unique_ptr<interfaces::Handler> m_handler_notify_watch_only_changed;
@@ -409,6 +417,9 @@ Q_SIGNALS:
 
     // Receive tab address may have changed
     void notifyReceiveAddressChanged();
+
+    /** notify stake-split threshold changed */
+    void notifySSTChanged(const double sstVal);
 
 public Q_SLOTS:
     /* Wallet balances changes */

@@ -45,13 +45,19 @@ WalletModel::WalletModel(CWallet* wallet, OptionsModel* optionsModel, QObject* p
     pollTimer = new QTimer(this);
     connect(pollTimer, &QTimer::timeout, this, &WalletModel::pollBalanceChanged);
     pollTimer->start(MODEL_UPDATE_DELAY * 5);
-
     subscribeToCoreSignals();
 }
 
 WalletModel::~WalletModel()
 {
     unsubscribeFromCoreSignals();
+}
+
+void WalletModel::resetWalletOptions(QSettings& settings)
+{
+    setWalletStakeSplitThreshold(CWallet::DEFAULT_STAKE_SPLIT_THRESHOLD);
+    setWalletCustomFee(false, DEFAULT_TRANSACTION_FEE);
+    optionsModel->setWalletDefaultOptions(settings, false);
 }
 
 bool WalletModel::isTestNetwork() const
@@ -302,24 +308,45 @@ void WalletModel::setWalletDefaultFee(CAmount fee)
 
 bool WalletModel::hasWalletCustomFee()
 {
-    if (!optionsModel) return false;
-    return optionsModel->data(optionsModel->index(OptionsModel::fUseCustomFee), Qt::EditRole).toBool();
+    LOCK(wallet->cs_wallet);
+    return wallet->fUseCustomFee;
 }
 
 bool WalletModel::getWalletCustomFee(CAmount& nFeeRet)
 {
-    nFeeRet = static_cast<CAmount>(optionsModel->data(optionsModel->index(OptionsModel::nCustomFee), Qt::EditRole).toLongLong());
-    return hasWalletCustomFee();
+    LOCK(wallet->cs_wallet);
+    nFeeRet = wallet->nCustomFee;
+    return wallet->fUseCustomFee;
 }
 
-void WalletModel::setWalletCustomFee(bool fUseCustomFee, const CAmount& nFee)
+void WalletModel::setWalletCustomFee(bool fUseCustomFee, const CAmount nFee)
 {
-    if (!optionsModel) return;
-    optionsModel->setData(optionsModel->index(OptionsModel::fUseCustomFee), fUseCustomFee);
-    // do not update custom fee value when fUseCustomFee is set to false
-    if (fUseCustomFee) {
-        optionsModel->setData(optionsModel->index(OptionsModel::nCustomFee), static_cast<qlonglong>(nFee));
+    LOCK(wallet->cs_wallet);
+    CWalletDB db(wallet->GetDBHandle());
+    if (wallet->fUseCustomFee != fUseCustomFee) {
+        wallet->fUseCustomFee = fUseCustomFee;
+        db.WriteUseCustomFee(fUseCustomFee);
     }
+    if (wallet->nCustomFee != nFee) {
+        wallet->nCustomFee = nFee;
+        db.WriteCustomFeeValue(nFee);
+    }
+}
+
+void WalletModel::setWalletStakeSplitThreshold(const CAmount nStakeSplitThreshold)
+{
+    wallet->SetStakeSplitThreshold(nStakeSplitThreshold);
+}
+
+CAmount WalletModel::getWalletStakeSplitThreshold() const
+{
+    return wallet->GetStakeSplitThreshold();
+}
+
+/* returns default minimum value for stake split threshold as doulbe */
+double WalletModel::getSSTMinimum() const
+{
+    return static_cast<double>(CWallet::minStakeSplitThreshold) / COIN;
 }
 
 void WalletModel::updateTransaction()
@@ -778,6 +805,12 @@ static void NotifyWatchonlyChanged(WalletModel* walletmodel, bool fHaveWatchonly
         Q_ARG(bool, fHaveWatchonly));
 }
 
+static void NotifySSTChanged(WalletModel* walletmodel, const CAmount stakeSplitThreshold)
+{
+    const double val = static_cast<double>(stakeSplitThreshold) / COIN;
+    Q_EMIT walletmodel->notifySSTChanged(val);
+}
+
 static void NotifyWalletBacked(WalletModel* model, const bool& fSuccess, const std::string& filename)
 {
     std::string message;
@@ -807,6 +840,7 @@ void WalletModel::subscribeToCoreSignals()
     // Connect signals to wallet
     m_handler_notify_status_changed = interfaces::MakeHandler(wallet->NotifyStatusChanged.connect(std::bind(&NotifyKeyStoreStatusChanged, this)));
     m_handler_notify_addressbook_changed = interfaces::MakeHandler(wallet->NotifyAddressBookChanged.connect(std::bind(NotifyAddressBookChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6)));
+    m_handler_notify_sst_changed = interfaces::MakeHandler(wallet->NotifySSTChanged.connect(std::bind(NotifySSTChanged, this, std::placeholders::_1)));
     m_handler_notify_transaction_changed = interfaces::MakeHandler(wallet->NotifyTransactionChanged.connect(std::bind(NotifyTransactionChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
     m_handler_show_progress = interfaces::MakeHandler(wallet->ShowProgress.connect(std::bind(ShowProgress, this, std::placeholders::_1, std::placeholders::_2)));
     m_handler_notify_watch_only_changed = interfaces::MakeHandler(wallet->NotifyWatchonlyChanged.connect(std::bind(NotifyWatchonlyChanged, this, std::placeholders::_1)));
@@ -818,6 +852,7 @@ void WalletModel::unsubscribeFromCoreSignals()
     // Disconnect signals from wallet
     m_handler_notify_status_changed->disconnect();
     m_handler_notify_addressbook_changed->disconnect();
+    m_handler_notify_sst_changed->disconnect();
     m_handler_notify_transaction_changed->disconnect();
     m_handler_show_progress->disconnect();
     m_handler_notify_watch_only_changed->disconnect();

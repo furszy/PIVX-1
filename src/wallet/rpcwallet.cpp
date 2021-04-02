@@ -3860,21 +3860,10 @@ UniValue setstakesplitthreshold(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf(_("The threshold value cannot be less than %s"),
                 FormatMoney(CWallet::minStakeSplitThreshold)));
 
-    EnsureWalletIsUnlocked();
-
-    CWalletDB walletdb(pwalletMain->GetDBHandle());
-    LOCK(pwalletMain->cs_wallet);
-    {
-        UniValue result(UniValue::VOBJ);
-        pwalletMain->nStakeSplitThreshold = nStakeSplitThreshold;
-        result.pushKV("threshold", ValueFromAmount(pwalletMain->nStakeSplitThreshold));
-        if (walletdb.WriteStakeSplitThreshold(nStakeSplitThreshold)) {
-            result.pushKV("saved", "true");
-        } else
-            result.pushKV("saved", "false");
-
-        return result;
-    }
+    UniValue result(UniValue::VOBJ);
+    result.pushKV("threshold", request.params[0]);
+    result.pushKV("saved", pwalletMain->SetStakeSplitThreshold(nStakeSplitThreshold));
+    return result;
 }
 
 UniValue getstakesplitthreshold(const JSONRPCRequest& request)
@@ -3890,7 +3879,7 @@ UniValue getstakesplitthreshold(const JSONRPCRequest& request)
             "\nExamples:\n" +
             HelpExampleCli("getstakesplitthreshold", "") + HelpExampleRpc("getstakesplitthreshold", ""));
 
-    return ValueFromAmount(pwalletMain->nStakeSplitThreshold);
+    return ValueFromAmount(pwalletMain->GetStakeSplitThreshold());
 }
 
 UniValue autocombinerewards(const JSONRPCRequest& request)

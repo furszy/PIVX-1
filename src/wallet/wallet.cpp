@@ -3781,6 +3781,19 @@ std::set<COutPoint> CWallet::ListLockedCoins()
     return setLockedCoins;
 }
 
+bool CWallet::SetStakeSplitThreshold(const CAmount sst)
+{
+    LOCK(cs_wallet);
+    if (nStakeSplitThreshold != sst) {
+        nStakeSplitThreshold = sst;
+        if (!CWalletDB(*dbw).WriteStakeSplitThreshold(sst)) {
+            return false;
+        }
+        NotifySSTChanged(sst);
+    }
+    return true;
+}
+
 /** @} */ // end of Actions
 
 class CAffectedKeysVisitor : public boost::static_visitor<void>
