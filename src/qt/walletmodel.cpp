@@ -377,7 +377,7 @@ bool WalletModel::validateAddress(const QString& address, bool fStaking, bool& i
 
 bool WalletModel::updateAddressBookLabels(const CWDestination& dest, const std::string& strName, const std::string& strPurpose)
 {
-    auto optAdd = pwalletMain->GetAddressBookEntry(dest);
+    auto optAdd = wallet->GetAddressBookEntry(dest);
     // Check if we have a new address or an updated label
     if (!optAdd) {
         return wallet->SetAddressBook(dest, strName, strPurpose);
@@ -738,7 +738,7 @@ static void NotifyKeyStoreStatusChanged(WalletModel* walletmodel, CCryptoKeyStor
 
 static void NotifyAddressBookChanged(WalletModel* walletmodel, CWallet* wallet, const CWDestination& address, const std::string& label, bool isMine, const std::string& purpose, ChangeType status)
 {
-    QString strAddress = QString::fromStdString(pwalletMain->ParseIntoAddress(address, purpose));
+    QString strAddress = QString::fromStdString(wallet->ParseIntoAddress(address, purpose));
     QString strLabel = QString::fromStdString(label);
     QString strPurpose = QString::fromStdString(purpose);
 
@@ -879,26 +879,26 @@ int64_t WalletModel::getCreationTime() const {
 
 int64_t WalletModel::getKeyCreationTime(const CPubKey& key)
 {
-    return pwalletMain->GetKeyCreationTime(key);
+    return wallet->GetKeyCreationTime(key);
 }
 
 int64_t WalletModel::getKeyCreationTime(const CTxDestination& address)
 {
     if (this->isMine(address)) {
-        return pwalletMain->GetKeyCreationTime(address);
+        return wallet->GetKeyCreationTime(address);
     }
     return 0;
 }
 
 int64_t WalletModel::getKeyCreationTime(const std::string& address)
 {
-    return pwalletMain->GetKeyCreationTime(Standard::DecodeDestination(address));
+    return wallet->GetKeyCreationTime(Standard::DecodeDestination(address));
 }
 
 int64_t WalletModel::getKeyCreationTime(const libzcash::SaplingPaymentAddress& address)
 {
     if (this->isMine(address)) {
-        return pwalletMain->GetKeyCreationTime(address);
+        return wallet->GetKeyCreationTime(address);
     }
     return 0;
 }
@@ -945,7 +945,7 @@ bool WalletModel::updateAddressBookPurpose(const QString &addressStr, const std:
     CKeyID keyID;
     if (!getKeyId(address, keyID))
         return false;
-    return pwalletMain->SetAddressBook(keyID, getLabelForAddress(address), purpose);
+    return wallet->SetAddressBook(keyID, getLabelForAddress(address), purpose);
 }
 
 bool WalletModel::getKeyId(const CTxDestination& address, CKeyID& keyID)
