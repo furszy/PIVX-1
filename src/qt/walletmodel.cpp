@@ -6,26 +6,21 @@
 
 #include "walletmodel.h"
 
-#include "addresstablemodel.h"
-#include "qt/clientmodel.h"
-#include "guiconstants.h"
-#include "optionsmodel.h"
-#include "recentrequeststablemodel.h"
-#include "transactiontablemodel.h"
-#include "init.h" // for ShutdownRequested(). Future: move to an interface wrapper
-
-#include "base58.h"
-#include "coincontrol.h"
-#include "db.h"
-#include "keystore.h"
+#include "init.h"   // for ShutdownRequested()
 #include "interfaces/handler.h"
 #include "sapling/key_io_sapling.h"
 #include "sapling/sapling_operation.h"
+#include "sapling/transaction_builder.h"
 #include "spork.h"
-#include "sync.h"
-#include "guiinterface.h"
-#include "wallet/wallet.h"
-#include "wallet/walletdb.h" // for BackupWallet
+
+#include "qt/addresstablemodel.h"
+#include "qt/clientmodel.h"
+#include "qt/guiconstants.h"
+#include "qt/optionsmodel.h"
+#include "qt/recentrequeststablemodel.h"
+#include "qt/transactiontablemodel.h"
+#include "qt/walletmodeltransaction.h"
+
 #include <stdint.h>
 #include <iostream>
 

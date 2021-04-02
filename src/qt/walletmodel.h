@@ -7,16 +7,12 @@
 #ifndef PIVX_QT_WALLETMODEL_H
 #define PIVX_QT_WALLETMODEL_H
 
-#include "askpassphrasedialog.h"
-#include "paymentrequestplus.h"
-#include "walletmodeltransaction.h"
-
 #include "interfaces/wallet.h"
 
 #include "operationresult.h"
 #include "support/allocators/zeroafterfree.h"
-#include "wallet/wallet.h"
 #include "pairresult.h"
+#include "qt/paymentrequestplus.h"
 
 #include <map>
 #include <vector>

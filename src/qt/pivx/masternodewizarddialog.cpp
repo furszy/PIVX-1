@@ -11,6 +11,7 @@
 #include "qt/pivx/mnmodel.h"
 #include "qt/pivx/guitransactionsutils.h"
 #include "qt/pivx/qtutils.h"
+#include "qt/walletmodeltransaction.h"
 
 #include <QFile>
 #include <QIntValidator>
