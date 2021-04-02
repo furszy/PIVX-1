@@ -77,7 +77,7 @@ MasterNodesWidget::MasterNodesWidget(PIVXGUI *parent) :
             new MNHolder(isLightTheme()),
             this
     );
-    mnModel = new MNModel(this);
+    mnModel = new MNModel(this, walletModel);
 
     this->setStyleSheet(parent->styleSheet());
 

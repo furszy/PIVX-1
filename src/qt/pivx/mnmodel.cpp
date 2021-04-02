@@ -12,7 +12,9 @@
 #include "uint256.h"
 #include "wallet/wallet.h"
 
-MNModel::MNModel(QObject *parent) : QAbstractTableModel(parent)
+MNModel::MNModel(QObject *parent, WalletModel* _model) :
+    QAbstractTableModel(parent),
+    walletModel(_model)
 {
     updateMNList();
 }
@@ -34,11 +36,8 @@ void MNModel::updateMNList()
             pmn->vin = txIn;
         }
         nodes.insert(QString::fromStdString(mne.getAlias()), std::make_pair(QString::fromStdString(mne.getIp()), pmn));
-        if (pwalletMain) {
-            const CWalletTx *walletTx = pwalletMain->GetWalletTx(txHash);
-            bool txAccepted = walletTx &&
-                    WITH_LOCK(pwalletMain->cs_wallet, return walletTx->GetDepthInMainChain()) >= MasternodeCollateralMinConf();
-            collateralTxAccepted.insert(mne.getTxHash(), txAccepted);
+        if (walletModel) {
+            collateralTxAccepted.insert(mne.getTxHash(), walletModel->getWalletTxDepth(txHash) >= MasternodeCollateralMinConf());
         }
     }
     Q_EMIT dataChanged(index(0, 0, QModelIndex()), index(end, 5, QModelIndex()) );
@@ -109,9 +108,8 @@ QVariant MNModel::data(const QModelIndex &index, int role) const
             case WAS_COLLATERAL_ACCEPTED:{
                 if (!isAvailable) return false;
                 std::string txHash = rec->vin.prevout.hash.GetHex();
-                if (!collateralTxAccepted.value(txHash)) {
-                    const CWalletTx *walletTx = pwalletMain->GetWalletTx(rec->vin.prevout.hash);
-                    return walletTx && WITH_LOCK(pwalletMain->cs_wallet, return walletTx->GetDepthInMainChain()) > 0;
+                if (!collateralTxAccepted.value(txHash) && walletModel) {
+                    return walletModel->getWalletTxDepth(rec->vin.prevout.hash) > 0;
                 }
                 return true;
             }

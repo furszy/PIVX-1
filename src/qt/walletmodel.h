@@ -295,6 +295,8 @@ public:
     bool IsShieldedDestination(const CWDestination& address);
     bool isUsed(CTxDestination address);
     bool getMNCollateralCandidate(COutPoint& outPoint);
+    // Depth of a wallet transaction or -1 if not found
+    int getWalletTxDepth(const uint256& txHash) const;
     bool isSpent(const COutPoint& outpoint) const;
 
     class ListCoinsKey {
