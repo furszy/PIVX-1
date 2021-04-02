@@ -171,6 +171,11 @@ bool WalletModel::isColdStaking() const
     return false;
 }
 
+void WalletModel::getAvailableP2CSCoins(std::vector<COutput>& vCoins) const
+{
+    return wallet->GetAvailableP2CSCoins(vCoins);
+}
+
 void WalletModel::updateStatus()
 {
     if (!wallet) return;

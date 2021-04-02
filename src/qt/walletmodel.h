@@ -175,6 +175,7 @@ public:
     CAmount getDelegatedBalance() const;
 
     bool isColdStaking() const;
+    void getAvailableP2CSCoins(std::vector<COutput>& vCoins) const;
 
     EncryptionStatus getEncryptionStatus() const;
     bool isWalletUnlocked() const;
