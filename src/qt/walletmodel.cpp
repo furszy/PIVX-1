@@ -200,35 +200,35 @@ static bool IsImportingOrReindexing()
 
 std::atomic<bool> processingBalance{false};
 
-static bool processBalanceChangeInternal(WalletModel* walletModel)
+bool WalletModel::processBalanceChangeInternal()
 {
-    int chainHeight = walletModel->getLastBlockProcessedNum();
-    const uint256& blockHash = walletModel->getLastBlockProcessed();
+    int chainHeight = getLastBlockProcessedNum();
+    const uint256& blockHash = getLastBlockProcessed();
 
-    if (walletModel->hasForceCheckBalance() || chainHeight != walletModel->getCacheNumBLocks()) {
+    if (hasForceCheckBalance() || chainHeight != getCacheNumBLocks()) {
         // Try to get lock only if needed
-        TRY_LOCK(pwalletMain->cs_wallet, lockWallet);
+        TRY_LOCK(wallet->cs_wallet, lockWallet);
         if (!lockWallet)
             return false;
 
-        walletModel->setfForceCheckBalanceChanged(false);
+        setfForceCheckBalanceChanged(false);
 
         // Balance and number of transactions might have changed
-        walletModel->setCacheNumBlocks(chainHeight);
-        walletModel->setCacheBlockHash(blockHash);
-        walletModel->checkBalanceChanged(walletModel->getBalances());
-        QMetaObject::invokeMethod(walletModel, "updateTxModelData", Qt::QueuedConnection);
-        QMetaObject::invokeMethod(walletModel, "pollFinished", Qt::QueuedConnection);
+        setCacheNumBlocks(chainHeight);
+        setCacheBlockHash(blockHash);
+        checkBalanceChanged(getBalances());
+        QMetaObject::invokeMethod(this, "updateTxModelData", Qt::QueuedConnection);
+        QMetaObject::invokeMethod(this, "pollFinished", Qt::QueuedConnection);
 
         // Address in receive tab may have been used
-        Q_EMIT walletModel->notifyReceiveAddressChanged();
+        Q_EMIT notifyReceiveAddressChanged();
     }
     return true;
 }
 
 static void processBalanceChange(WalletModel* walletModel)
 {
-    if (!processBalanceChangeInternal(walletModel)) {
+    if (!walletModel || !walletModel->processBalanceChangeInternal()) {
         processingBalance = false;
     }
 }

@@ -342,6 +342,7 @@ public:
     void setCacheBlockHash(const uint256& _blockHash) { m_cached_best_block_hash = _blockHash; }
     void setfForceCheckBalanceChanged(bool _fForceCheckBalanceChanged) { fForceCheckBalanceChanged = _fForceCheckBalanceChanged; }
     Q_INVOKABLE void checkBalanceChanged(const interfaces::WalletBalances& new_balances);
+    bool processBalanceChangeInternal();
 
     void stop();
 
