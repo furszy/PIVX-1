@@ -166,7 +166,7 @@ void SettingsBitToolWidget::onEncryptKeyButtonENCClicked()
     }
 
     CKey key;
-    if (!pwalletMain->GetKey(*keyID, key)) {
+    if (!walletModel->getKey(*keyID, key)) {
         ui->statusLabel_ENC->setStyleSheet("QLabel { color: red; }");
         ui->statusLabel_ENC->setText(tr("Private key for the entered address is not available."));
         return;
@@ -292,27 +292,20 @@ void SettingsBitToolWidget::importAddressFromDecKey()
         ui->statusLabel_DEC->setStyleSheet("QLabel { color: red; }");
         ui->statusLabel_DEC->setText(tr("Please wait while key is imported"));
 
-        pwalletMain->MarkDirty();
-        pwalletMain->SetAddressBook(vchAddress, "", AddressBook::AddressBookPurpose::RECEIVE);
+        walletModel->updateAddressBookLabels(vchAddress, "", AddressBook::AddressBookPurpose::RECEIVE);
 
         // Don't throw error in case a key is already there
-        if (pwalletMain->HaveKey(vchAddress)) {
+        if (walletModel->haveKey(vchAddress)) {
             ui->statusLabel_DEC->setStyleSheet("QLabel { color: red; }");
             ui->statusLabel_DEC->setText(tr("Cannot import address, key already held by the wallet"));
             return;
         }
 
-        pwalletMain->mapKeyMetadata[vchAddress].nCreateTime = 1;
-
-        if (!pwalletMain->AddKeyPubKey(key, pubkey)) {
+        if (!walletModel->addKeys(key, pubkey)) {
             ui->statusLabel_DEC->setStyleSheet("QLabel { color: red; }");
             ui->statusLabel_DEC->setText(tr("Error adding key to the wallet"));
             return;
         }
-
-        // whenever a key is imported, we need to scan the whole chain
-        pwalletMain->nTimeFirstKey = 1; // 0 would be considered 'no value'
-        pwalletMain->ScanForWalletTransactions(chainActive.Genesis(), nullptr, true);
     }
 
     ui->statusLabel_DEC->setStyleSheet("QLabel { color: green; }");
