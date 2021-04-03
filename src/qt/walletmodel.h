@@ -288,6 +288,7 @@ public:
     bool blacklistAddressFromColdStaking(const QString &address);
     bool updateAddressBookPurpose(const QString &addressStr, const std::string& purpose);
     std::string getLabelForAddress(const CTxDestination& address);
+    QString getSaplingAddressString(const CWalletTx* wtx, const SaplingOutPoint& op) const;
     bool getKeyId(const CTxDestination& address, CKeyID& keyID);
 
     bool isMine(const CWDestination& address);

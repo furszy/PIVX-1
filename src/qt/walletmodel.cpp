@@ -1003,6 +1003,17 @@ std::string WalletModel::getLabelForAddress(const CTxDestination& address)
     return label;
 }
 
+QString WalletModel::getSaplingAddressString(const CWalletTx* wtx, const SaplingOutPoint& op) const
+{
+    Optional<libzcash::SaplingPaymentAddress> opAddr =
+            wallet->GetSaplingScriptPubKeyMan()->GetOutPointAddress(*wtx, op);
+    if (!opAddr) {
+        return QString();
+    }
+    QString ret = QString::fromStdString(Standard::EncodeDestination(*opAddr));
+    return ret.left(18) + "..." + ret.right(18);
+}
+
 // returns a COutPoint of 10000 PIV if found
 bool WalletModel::getMNCollateralCandidate(COutPoint& outPoint)
 {

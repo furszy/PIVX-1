@@ -363,12 +363,8 @@ void TxDetailDialog::onOutputsClicked()
                         }
                         // Obtain the noteData to get the cached amount value
                         SaplingNoteData noteData = walletTx->mapSaplingNoteData.at(op);
-                        Optional<libzcash::SaplingPaymentAddress> opAddr =
-                                pwalletMain->GetSaplingScriptPubKeyMan()->GetOutPointAddress(*walletTx, op);
-
-                        QString labelRes = opAddr ? QString::fromStdString(Standard::EncodeDestination(*opAddr)) : "";
-                        labelRes = labelRes.left(18) + "..." + labelRes.right(18);
-                        appendOutput(layoutGrid, i, labelRes, *noteData.amount, nDisplayUnit);
+                        const QString& addrStr = model->getSaplingAddressString(walletTx, op);
+                        appendOutput(layoutGrid, i, addrStr, *noteData.amount, nDisplayUnit);
 
                         i++;
                     }
