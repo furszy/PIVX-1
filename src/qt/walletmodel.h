@@ -335,7 +335,6 @@ public:
     uint256 getLastBlockProcessed() const;
     int getLastBlockProcessedNum() const;
 
-    interfaces::WalletBalances getBalances() { return walletWrapper.getBalances(); };
     bool hasForceCheckBalance() { return fForceCheckBalanceChanged; }
     void setCacheNumBlocks(int _cachedNumBlocks) { cachedNumBlocks = _cachedNumBlocks; }
     int getCacheNumBLocks() { return cachedNumBlocks; }
@@ -382,6 +381,8 @@ private:
 
     QTimer* pollTimer;
     QFuture<void> pollFuture;
+
+    interfaces::WalletBalances getBalances() { return walletWrapper.getBalances(); };
 
     void subscribeToCoreSignals();
     void unsubscribeFromCoreSignals();

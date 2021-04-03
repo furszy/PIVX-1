@@ -271,7 +271,7 @@ void WalletModel::updateTxModelData()
 void WalletModel::emitBalanceChanged()
 {
     // Force update of UI elements even when no values have changed
-   Q_EMIT balanceChanged(walletWrapper.getBalances());
+   Q_EMIT balanceChanged(getBalances());
 }
 
 void WalletModel::checkBalanceChanged(const interfaces::WalletBalances& newBalance)
