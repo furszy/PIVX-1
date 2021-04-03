@@ -40,7 +40,6 @@ SettingsWidget::SettingsWidget(PIVXGUI* parent) :
 
     setCssProperty(ui->pushButtonFile, "btn-settings-check");
     setCssProperty(ui->pushButtonFile2, "btn-settings-options");
-    setCssProperty(ui->pushButtonFile3, "btn-settings-options");
     setCssProperty(ui->pushButtonExportCsv, "btn-settings-options");
 
     setCssProperty(ui->pushButtonConfiguration, "btn-settings-check");
@@ -63,7 +62,6 @@ SettingsWidget::SettingsWidget(PIVXGUI* parent) :
 
     options = {
         ui->pushButtonFile2,
-        ui->pushButtonFile3,
         ui->pushButtonExportCsv,
         ui->pushButtonOptions1,
         ui->pushButtonOptions2,
@@ -75,9 +73,6 @@ SettingsWidget::SettingsWidget(PIVXGUI* parent) :
         ui->pushButtonTools2,
         ui->pushButtonTools5,
     };
-
-    /* disable multisend for now */
-    ui->pushButtonFile3->setVisible(false);
 
     menus.insert(ui->pushButtonFile, ui->fileButtonsWidget);
     menus.insert(ui->pushButtonConfiguration, ui->configurationButtonsWidget);
@@ -93,7 +88,6 @@ SettingsWidget::SettingsWidget(PIVXGUI* parent) :
     settingsWalletOptionsWidget = new SettingsWalletOptionsWidget(window, this);
     settingsMainOptionsWidget = new SettingsMainOptionsWidget(window, this);
     settingsDisplayOptionsWidget = new SettingsDisplayOptionsWidget(window, this);
-    //settingsMultisendWidget = new SettingsMultisendWidget(this); // no visible for now
     settingsInformationWidget = new SettingsInformationWidget(window, this);
     settingsConsoleWidget = new SettingsConsoleWidget(window, this);
 
@@ -105,7 +99,6 @@ SettingsWidget::SettingsWidget(PIVXGUI* parent) :
     ui->stackedWidgetContainer->addWidget(settingsWalletOptionsWidget);
     ui->stackedWidgetContainer->addWidget(settingsMainOptionsWidget);
     ui->stackedWidgetContainer->addWidget(settingsDisplayOptionsWidget);
-    //ui->stackedWidgetContainer->addWidget(settingsMultisendWidget);
     ui->stackedWidgetContainer->addWidget(settingsInformationWidget);
     ui->stackedWidgetContainer->addWidget(settingsConsoleWidget);
     ui->stackedWidgetContainer->setCurrentWidget(settingsBackupWallet);
@@ -113,7 +106,6 @@ SettingsWidget::SettingsWidget(PIVXGUI* parent) :
     // File Section
     connect(ui->pushButtonFile, &QPushButton::clicked, this, &SettingsWidget::onFileClicked);
     connect(ui->pushButtonFile2, &QPushButton::clicked, this, &SettingsWidget::onBackupWalletClicked);
-    connect(ui->pushButtonFile3, &QPushButton::clicked, this, &SettingsWidget::onMultisendClicked);
     connect(ui->pushButtonExportCsv, &QPushButton::clicked, this, &SettingsWidget::onExportCSVClicked);
 
     // Options
@@ -148,9 +140,6 @@ SettingsWidget::SettingsWidget(PIVXGUI* parent) :
     connect(settingsExportCsvWidget, &SettingsExportCSV::message,this, &SettingsWidget::message);
     connect(settingsExportCsvWidget, &SettingsExportCSV::showHide, this, &SettingsWidget::showHide);
     connect(settingsExportCsvWidget, &SettingsExportCSV::execDialog, this, &SettingsWidget::execDialog);
-    // no visible for now
-    //connect(settingsMultisendWidget, &SettingsMultisendWidget::showHide, this, &SettingsWidget::showHide);
-    //connect(settingsMultisendWidget, &SettingsMultisendWidget::message, this, &SettingsWidget::message);
     connect(settingsMainOptionsWidget, &SettingsMainOptionsWidget::message, this, &SettingsWidget::message);
     connect(settingsDisplayOptionsWidget, &SettingsDisplayOptionsWidget::message, this, &SettingsWidget::message);
     connect(settingsWalletOptionsWidget, &SettingsWalletOptionsWidget::message, this, &SettingsWidget::message);
@@ -211,7 +200,6 @@ void SettingsWidget::loadWalletModel()
     this->settingsExportCsvWidget->setWalletModel(this->walletModel);
     this->settingsSingMessageWidgets->setWalletModel(this->walletModel);
     this->settingsBitToolWidget->setWalletModel(this->walletModel);
-    //this->settingsMultisendWidget->setWalletModel(this->walletModel); no visible for now
     this->settingsDisplayOptionsWidget->setWalletModel(this->walletModel);
     this->settingsWalletOptionsWidget->setWalletModel(this->walletModel);
 
@@ -320,12 +308,6 @@ void SettingsWidget::onBipToolClicked()
 {
     ui->stackedWidgetContainer->setCurrentWidget(settingsBitToolWidget);
     selectOption(ui->pushButtonConfiguration3);
-}
-
-void SettingsWidget::onMultisendClicked()
-{
-    ui->stackedWidgetContainer->setCurrentWidget(settingsMultisendWidget);
-    selectOption(ui->pushButtonFile3);
 }
 
 void SettingsWidget::onExportCSVClicked()

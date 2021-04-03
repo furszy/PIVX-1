@@ -15,7 +15,6 @@
 #include "qt/pivx/settings/settingswalletoptionswidget.h"
 #include "qt/pivx/settings/settingsmainoptionswidget.h"
 #include "qt/pivx/settings/settingsdisplayoptionswidget.h"
-#include "qt/pivx/settings/settingsmultisendwidget.h"
 #include "qt/pivx/settings/settingsinformationwidget.h"
 #include "qt/pivx/settings/settingsconsolewidget.h"
 
@@ -57,7 +56,6 @@ private Q_SLOTS:
     // Wallet Configuration
     void onConfigurationClicked();
     void onBipToolClicked();
-    void onMultisendClicked();
     void onExportCSVClicked();
 
     // Options
@@ -92,7 +90,6 @@ private:
     SettingsWalletOptionsWidget *settingsWalletOptionsWidget{nullptr};
     SettingsMainOptionsWidget *settingsMainOptionsWidget{nullptr};
     SettingsDisplayOptionsWidget *settingsDisplayOptionsWidget{nullptr};
-    SettingsMultisendWidget *settingsMultisendWidget{nullptr};
     SettingsInformationWidget *settingsInformationWidget{nullptr};
     SettingsConsoleWidget *settingsConsoleWidget{nullptr};
 

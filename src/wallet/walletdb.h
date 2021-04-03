@@ -149,11 +149,6 @@ public:
     bool WriteStakeSplitThreshold(const CAmount& nStakeSplitThreshold);
     bool WriteUseCustomFee(bool fUse);
     bool WriteCustomFeeValue(const CAmount& nCustomFee);
-    bool WriteMultiSend(std::vector<std::pair<std::string, int> > vMultiSend);
-    bool EraseMultiSend(std::vector<std::pair<std::string, int> > vMultiSend);
-    bool WriteMSettings(bool fMultiSendStake, bool fMultiSendMasternode, int nLastMultiSendHeight);
-    bool WriteMSDisabledAddresses(std::vector<std::string> vDisabledAddresses);
-    bool EraseMSDisabledAddresses(std::vector<std::string> vDisabledAddresses);
     bool WriteAutoCombineSettings(bool fEnable, CAmount nCombineThreshold);
 
     bool ReadPool(int64_t nPool, CKeyPool& keypool);

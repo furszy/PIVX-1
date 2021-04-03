@@ -237,78 +237,6 @@ bool CWalletDB::WriteCustomFeeValue(const CAmount& nFee)
     return batch.Write(std::string("nCustomFee"), nFee);
 }
 
-bool CWalletDB::WriteMultiSend(std::vector<std::pair<std::string, int> > vMultiSend)
-{
-    return false;
-    /* disable multisend
-    nWalletDBUpdateCounter++;
-    bool ret = true;
-    for (unsigned int i = 0; i < vMultiSend.size(); i++) {
-        std::pair<std::string, int> pMultiSend;
-        pMultiSend = vMultiSend[i];
-        if (!Write(std::make_pair(std::string("multisend"), i), pMultiSend, true))
-            ret = false;
-    }
-    return ret;
-    */
-}
-
-bool CWalletDB::EraseMultiSend(std::vector<std::pair<std::string, int> > vMultiSend)
-{
-    return false;
-    /* disable multisend
-    nWalletDBUpdateCounter++;
-    bool ret = true;
-    for (unsigned int i = 0; i < vMultiSend.size(); i++) {
-        std::pair<std::string, int> pMultiSend;
-        pMultiSend = vMultiSend[i];
-        if (!Erase(std::make_pair(std::string("multisend"), i)))
-            ret = false;
-    }
-    return ret;
-    */
-}
-
-bool CWalletDB::WriteMSettings(bool fMultiSendStake, bool fMultiSendMasternode, int nLastMultiSendHeight)
-{
-    return false;
-    /* disable multisend
-    nWalletDBUpdateCounter++;
-    std::pair<bool, bool> enabledMS(fMultiSendStake, fMultiSendMasternode);
-    std::pair<std::pair<bool, bool>, int> pSettings(enabledMS, nLastMultiSendHeight);
-
-    return Write(std::string("msettingsv2"), pSettings, true);
-    */
-}
-
-bool CWalletDB::WriteMSDisabledAddresses(std::vector<std::string> vDisabledAddresses)
-{
-    return false;
-    /* disable multisend
-    nWalletDBUpdateCounter++;
-    bool ret = true;
-    for (unsigned int i = 0; i < vDisabledAddresses.size(); i++) {
-        if (!Write(std::make_pair(std::string("mdisabled"), i), vDisabledAddresses[i]))
-            ret = false;
-    }
-    return ret;
-    */
-}
-
-bool CWalletDB::EraseMSDisabledAddresses(std::vector<std::string> vDisabledAddresses)
-{
-    return false;
-    /* disable multisend
-    nWalletDBUpdateCounter++;
-    bool ret = true;
-    for (unsigned int i = 0; i < vDisabledAddresses.size(); i++) {
-        if (!batch.Erase(std::make_pair(std::string("mdisabled"), i)))
-            ret = false;
-    }
-    return ret;
-    */
-}
-
 bool CWalletDB::WriteAutoCombineSettings(bool fEnable, CAmount nCombineThreshold)
 {
     nWalletDBUpdateCounter++;
@@ -612,26 +540,6 @@ bool ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue, CW
             ssValue >> pwallet->fUseCustomFee;
         } else if (strType == "nCustomFee") {
             ssValue >> pwallet->nCustomFee;
-        /* disable multisend
-        } else if (strType == "multisend") {
-            unsigned int i;
-            ssKey >> i;
-            std::pair<std::string, int> pMultiSend;
-            ssValue >> pMultiSend;
-            if (CBitcoinAddress(pMultiSend.first).IsValid()) {
-                pwallet->vMultiSend.push_back(pMultiSend);
-            }
-        } else if (strType == "msettingsv2") {
-            std::pair<std::pair<bool, bool>, int> pSettings;
-            ssValue >> pSettings;
-            pwallet->fMultiSendStake = pSettings.first.first;
-            pwallet->fMultiSendMasternodeReward = pSettings.first.second;
-            pwallet->nLastMultiSendHeight = pSettings.second;
-        } else if (strType == "mdisabled") {
-            std::string strDisabledAddress;
-            ssValue >> strDisabledAddress;
-            pwallet->vDisabledAddresses.push_back(strDisabledAddress);
-            */
         } else if (strType == "autocombinesettings") {
             std::pair<bool, CAmount> pSettings;
             ssValue >> pSettings;

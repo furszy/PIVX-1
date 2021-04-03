@@ -4023,129 +4023,6 @@ void CWallet::AutoCombineDust(CConnman* connman)
     }
 }
 
-bool CWallet::MultiSend()
-{
-    return false;
-    /* disable multisend
-    LOCK2(cs_main, cs_wallet);
-    // Stop the old blocks from sending multisends
-    const CBlockIndex* tip = chainActive.Tip();
-    int chainTipHeight = tip->nHeight;
-    if (tip->nTime < (GetAdjustedTime() - 300) || IsLocked()) {
-        return false;
-    }
-
-    if (chainTipHeight <= nLastMultiSendHeight) {
-        LogPrintf("Multisend: lastmultisendheight is higher than current best height\n");
-        return false;
-    }
-
-    std::vector<COutput> vCoins;
-    AvailableCoins(&vCoins);
-    bool stakeSent = false;
-    bool mnSent = false;
-    for (const COutput& out : vCoins) {
-
-        //need output with precise confirm count - this is how we identify which is the output to send
-        if (out.tx->GetDepthInMainChain() != Params().GetConsensus().nCoinbaseMaturity + 1)
-            continue;
-
-        bool isCoinStake = out.tx->IsCoinStake();
-        bool isMNOutPoint = isCoinStake && (out.i == ((int)out.tx->vout.size()) - 1) &&
-                (out.tx->vout[1].scriptPubKey != out.tx->vout[out.i].scriptPubKey);
-        bool sendMSonMNReward = fMultiSendMasternodeReward && isMNOutPoint;
-        bool sendMSOnStake = fMultiSendStake && isCoinStake && !sendMSonMNReward; //output is either mnreward or stake reward, not both
-
-        if (!(sendMSOnStake || sendMSonMNReward))
-            continue;
-
-        CTxDestination destMyAddress;
-        if (!ExtractDestination(out.tx->vout[out.i].scriptPubKey, destMyAddress)) {
-            LogPrintf("Multisend: failed to extract destination\n");
-            continue;
-        }
-
-        //Disabled Addresses won't send MultiSend transactions
-        if (vDisabledAddresses.size() > 0) {
-            for (unsigned int i = 0; i < vDisabledAddresses.size(); i++) {
-                if (vDisabledAddresses[i] == CBitcoinAddress(destMyAddress).ToString()) {
-                    LogPrintf("Multisend: disabled address preventing multisend\n");
-                    return false;
-                }
-            }
-        }
-
-        // create new coin control, populate it with the selected utxo, create sending vector
-        CCoinControl cControl;
-        COutPoint outpt(out.tx->GetHash(), out.i);
-        cControl.Select(outpt);
-        cControl.destChange = destMyAddress;
-
-        CWalletTx wtx;
-        CReserveKey keyChange(this); // this change address does not end up being used, because change is returned with coin control switch
-        CAmount nFeeRet = 0;
-        std::vector<CRecipient> vecSend;
-
-        // loop through multisend vector and add amounts and addresses to the sending vector
-        const isminefilter filter = ISMINE_SPENDABLE;
-        CAmount nAmount = 0;
-        for (unsigned int i = 0; i < vMultiSend.size(); i++) {
-            // MultiSend vector is a pair of 1)Address as a std::string 2) Percent of stake to send as an int
-            nAmount = ((out.tx->GetCredit(filter) - out.tx->GetDebit(filter)) * vMultiSend[i].second) / 100;
-            CBitcoinAddress strAddSend(vMultiSend[i].first);
-            CScript scriptPubKey;
-            scriptPubKey = GetScriptForDestination(strAddSend.Get());
-            vecSend.emplace_back(scriptPubKey, nAmount, false);
-        }
-
-        //get the fee amount
-        CWalletTx wtxdummy;
-        std::string strErr;
-        int nChangePosInOut = -1;
-        CreateTransaction(vecSend, wtxdummy, keyChange, nFeeRet, nChangePosInOut, strErr, &cControl, ALL_COINS, true, false, CAmount(0));
-        CAmount nLastSendAmount = vecSend[vecSend.size() - 1].nAmount;
-        if (nLastSendAmount < nFeeRet + 500) {
-            LogPrintf("%s: fee of %d is too large to insert into last output\n", __func__, nFeeRet + 500);
-            return false;
-        }
-        vecSend[vecSend.size() - 1].nAmount = nLastSendAmount - nFeeRet - 500;
-
-        // Create the transaction and commit it to the network
-        if (!CreateTransaction(vecSend, wtx, keyChange, nFeeRet, int nChangePosInOut, strErr, &cControl, ALL_COINS, true, false, CAmount(0))) {
-            LogPrintf("MultiSend createtransaction failed\n");
-            return false;
-        }
-
-        const CWallet::CommitResult& res = CommitTransaction(wtx, keyChange);
-        if (res.status != CWallet::CommitStatus::OK) {
-            LogPrintf("MultiSend transaction commit failed\n");
-            return false;
-        } else
-            fMultiSendNotify = true;
-
-        //write nLastMultiSendHeight to DB
-        CWalletDB walletdb(*dbw);
-        nLastMultiSendHeight = chainActive.Tip()->nHeight;
-        if (!walletdb.WriteMSettings(fMultiSendStake, fMultiSendMasternodeReward, nLastMultiSendHeight))
-            LogPrintf("Failed to write MultiSend setting to DB\n");
-
-        LogPrintf("MultiSend successfully sent\n");
-
-        //set which MultiSend triggered
-        if (sendMSOnStake)
-            stakeSent = true;
-        else
-            mnSent = true;
-
-        //stop iterating if we have sent out all the MultiSend(s)
-        if ((stakeSent && mnSent) || (stakeSent && !fMultiSendMasternodeReward) || (mnSent && !fMultiSendStake))
-            return true;
-    }
-
-    return true;
-    */
-}
-
 std::string CWallet::GetWalletHelpString(bool showDebug)
 {
     std::string strUsage = HelpMessageGroup(_("Wallet options:"));
@@ -4507,15 +4384,6 @@ void CWallet::SetNull()
     fUseCustomFee = false;
     nCustomFee = CWallet::minTxFee.GetFeePerK();
 
-    //MultiSend
-    vMultiSend.clear();
-    fMultiSendStake = false;
-    fMultiSendMasternodeReward = false;
-    fMultiSendNotify = false;
-    strMultiSendChangeAddress = "";
-    nLastMultiSendHeight = 0;
-    vDisabledAddresses.clear();
-
     //Auto Combine Dust
     fCombineDust = false;
     nAutoCombineThreshold = 0;
@@ -4523,17 +4391,6 @@ void CWallet::SetNull()
     // Sapling.
     m_sspk_man->nWitnessCacheSize = 0;
     m_sspk_man->nWitnessCacheNeedsUpdate = true;
-}
-
-bool CWallet::isMultiSendEnabled()
-{
-    return fMultiSendMasternodeReward || fMultiSendStake;
-}
-
-void CWallet::setMultiSendDisabled()
-{
-    fMultiSendMasternodeReward = false;
-    fMultiSendStake = false;
 }
 
 bool CWallet::CanSupportFeature(enum WalletFeature wf)
