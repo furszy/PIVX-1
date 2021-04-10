@@ -87,7 +87,6 @@ SET(QT_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/intro.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/networkstyle.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/notificator.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/optionsdialog.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/optionsmodel.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/peertablemodel.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/platformstyle.cpp
