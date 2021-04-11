@@ -65,7 +65,8 @@ void SettingsWalletOptionsWidget::onResetClicked()
     inform(tr("Options reset succeed"));
 }
 
-void SettingsWalletOptionsWidget::setMapper(QDataWidgetMapper *mapper){
+void SettingsWalletOptionsWidget::setMapper(QDataWidgetMapper *mapper)
+{
     mapper->addMapping(ui->radioButtonSpend, OptionsModel::SpendZeroConfChange);
 
     // Network
@@ -76,10 +77,10 @@ void SettingsWalletOptionsWidget::setMapper(QDataWidgetMapper *mapper){
     mapper->addMapping(ui->lineEditPort, OptionsModel::ProxyPort);
 }
 
-void SettingsWalletOptionsWidget::setWalletModel(WalletModel* model)
+void SettingsWalletOptionsWidget::loadWalletModel()
 {
-    PWidget::setWalletModel(model);
     reloadWalletOptions();
+    connect(walletModel, &WalletModel::notifySSTChanged, this, &SettingsWalletOptionsWidget::setSpinBoxStakeSplitThreshold);
 }
 
 void SettingsWalletOptionsWidget::reloadWalletOptions()
@@ -95,6 +96,28 @@ void SettingsWalletOptionsWidget::setSpinBoxStakeSplitThreshold(double val)
 double SettingsWalletOptionsWidget::getSpinBoxStakeSplitThreshold() const
 {
     return ui->spinBoxStakeSplitThreshold->value();
+}
+
+bool SettingsWalletOptionsWidget::saveWalletOnlyOptions()
+{
+    // stake split threshold
+    const CAmount sstOld = walletModel->getWalletStakeSplitThreshold();
+    const CAmount sstNew = static_cast<CAmount>(getSpinBoxStakeSplitThreshold() * COIN);
+    if (sstNew != sstOld) {
+        const double stakeSplitMinimum = walletModel->getSSTMinimum();
+        if (sstNew != 0 && sstNew < static_cast<CAmount>(stakeSplitMinimum * COIN)) {
+            setSpinBoxStakeSplitThreshold(stakeSplitMinimum);
+            inform(tr("Stake Split too low, it shall be either >= %1 or equal to 0 (to disable stake splitting)").arg(stakeSplitMinimum));
+            return false;
+        }
+        walletModel->setWalletStakeSplitThreshold(sstNew);
+    }
+    return true;
+}
+
+void SettingsWalletOptionsWidget::discardWalletOnlyOptions()
+{
+    reloadWalletOptions();
 }
 
 SettingsWalletOptionsWidget::~SettingsWalletOptionsWidget(){

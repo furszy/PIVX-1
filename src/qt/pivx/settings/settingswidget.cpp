@@ -202,9 +202,6 @@ void SettingsWidget::loadWalletModel()
     this->settingsBitToolWidget->setWalletModel(this->walletModel);
     this->settingsDisplayOptionsWidget->setWalletModel(this->walletModel);
     this->settingsWalletOptionsWidget->setWalletModel(this->walletModel);
-
-    // connect to walletModel signals
-    connect(walletModel, &WalletModel::notifySSTChanged, this->settingsWalletOptionsWidget, &SettingsWalletOptionsWidget::setSpinBoxStakeSplitThreshold);
 }
 
 void SettingsWidget::onResetAction()
@@ -222,18 +219,8 @@ void SettingsWidget::onResetAction()
 
 void SettingsWidget::onSaveOptionsClicked()
 {
-    // stake split threshold
-    const CAmount sstOld = walletModel->getWalletStakeSplitThreshold();
-    const CAmount sstNew = static_cast<CAmount>(settingsWalletOptionsWidget->getSpinBoxStakeSplitThreshold() * COIN);
-    if (sstNew != sstOld) {
-        const double stakeSplitMinimum = walletModel->getSSTMinimum();
-        if (sstNew != 0 && sstNew < static_cast<CAmount>(stakeSplitMinimum * COIN)) {
-            settingsWalletOptionsWidget->setSpinBoxStakeSplitThreshold(stakeSplitMinimum);
-            inform(tr("Stake Split too low, it shall be either >= %1 or equal to 0 (to disable stake splitting)").arg(stakeSplitMinimum));
-            return;
-        }
-        walletModel->setWalletStakeSplitThreshold(sstNew);
-    }
+    // Save settings that are stored inside the wallet only
+    settingsWalletOptionsWidget->saveWalletOnlyOptions();
 
     if (mapper->submit()) {
         OptionsModel* optionsModel = this->clientModel->getOptionsModel();
@@ -414,7 +401,7 @@ void SettingsWidget::onDiscardChanges()
             return;
         clientModel->getOptionsModel()->refreshDataView();
     }
-    settingsWalletOptionsWidget->reloadWalletOptions();
+    settingsWalletOptionsWidget->discardWalletOnlyOptions();
 }
 
 void SettingsWidget::setMapper()

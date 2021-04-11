@@ -12,8 +12,6 @@ namespace Ui {
 class SettingsWalletOptionsWidget;
 }
 
-class SettingsWidget;
-
 class SettingsWalletOptionsWidget : public PWidget
 {
     Q_OBJECT
@@ -21,6 +19,11 @@ class SettingsWalletOptionsWidget : public PWidget
 public:
     explicit SettingsWalletOptionsWidget(PIVXGUI* _window, QWidget *parent = nullptr);
     ~SettingsWalletOptionsWidget();
+
+    void setMapper(QDataWidgetMapper *mapper);
+
+    void discardWalletOnlyOptions();
+    bool saveWalletOnlyOptions();
 
 Q_SIGNALS:
     void saveSettings();
@@ -30,12 +33,9 @@ public Q_SLOTS:
     void onResetClicked();
 
 private:
-    friend class SettingsWidget;
-
     Ui::SettingsWalletOptionsWidget *ui;
 
-    void setMapper(QDataWidgetMapper *mapper);
-    void setWalletModel(WalletModel* model);
+    void loadWalletModel() override;
     void reloadWalletOptions();
 
     void setSpinBoxStakeSplitThreshold(double val);
