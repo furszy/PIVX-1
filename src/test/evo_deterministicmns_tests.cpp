@@ -37,7 +37,7 @@ static SimpleUTXOMap BuildSimpleUtxoMap(const std::vector<CTransaction>& txs)
     return utxos;
 }
 
-static std::vector<COutPoint> SelectUTXOs(SimpleUTXOMap& utoxs, CAmount amount, CAmount& changeRet)
+static std::vector<COutPoint> SelectUTXOs(SimpleUTXOMap& utxos, CAmount amount, CAmount& changeRet)
 {
     changeRet = 0;
     amount += fee;
@@ -45,9 +45,9 @@ static std::vector<COutPoint> SelectUTXOs(SimpleUTXOMap& utoxs, CAmount amount, 
     std::vector<COutPoint> selectedUtxos;
     CAmount selectedAmount = 0;
     int chainHeight = chainActive.Height();
-    while (!utoxs.empty()) {
+    while (!utxos.empty()) {
         bool found = false;
-        for (auto it = utoxs.begin(); it != utoxs.end(); ++it) {
+        for (auto it = utxos.begin(); it != utxos.end(); ++it) {
             if (chainHeight - it->second.first < 100) {
                 continue;
             }
@@ -55,7 +55,7 @@ static std::vector<COutPoint> SelectUTXOs(SimpleUTXOMap& utoxs, CAmount amount, 
             found = true;
             selectedAmount += it->second.second;
             selectedUtxos.emplace_back(it->first);
-            utoxs.erase(it);
+            utxos.erase(it);
             break;
         }
         BOOST_ASSERT(found);
@@ -68,10 +68,10 @@ static std::vector<COutPoint> SelectUTXOs(SimpleUTXOMap& utoxs, CAmount amount, 
     return selectedUtxos;
 }
 
-static void FundTransaction(CMutableTransaction& tx, SimpleUTXOMap& utoxs, const CScript& scriptPayout, const CScript& scriptChange, CAmount amount)
+static void FundTransaction(CMutableTransaction& tx, SimpleUTXOMap& utxos, const CScript& scriptPayout, const CScript& scriptChange, CAmount amount)
 {
     CAmount change;
-    auto inputs = SelectUTXOs(utoxs, amount, change);
+    auto inputs = SelectUTXOs(utxos, amount, change);
     for (size_t i = 0; i < inputs.size(); i++) {
         tx.vin.emplace_back(inputs[i]);
     }
