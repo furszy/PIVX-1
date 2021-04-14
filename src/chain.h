@@ -240,7 +240,7 @@ public:
     unsigned int nTime{0};
     unsigned int nBits{0};
     unsigned int nNonce{0};
-    uint256 nAccumulatorCheckpoint{};
+    Optional<uint256> nAccumulatorCheckpoint{};
 
     //! (memory only) Sequential id assigned to distinguish order in which blocks are received.
     uint32_t nSequenceId{0};
@@ -348,8 +348,15 @@ public:
             READWRITE(nTime);
             READWRITE(nBits);
             READWRITE(nNonce);
-            if(this->nVersion > 3 && this->nVersion < 7)
-                READWRITE(nAccumulatorCheckpoint);
+            if(this->nVersion > 3 && this->nVersion < 7) {
+                if (ser_action.ForRead()) {
+                    uint256 _nAccumulatorCheckpoint;
+                    READWRITE(_nAccumulatorCheckpoint);
+                    nAccumulatorCheckpoint = _nAccumulatorCheckpoint;
+                } else {
+                    READWRITE(*nAccumulatorCheckpoint);
+                }
+            }
 
             // Sapling blocks
             if (this->nVersion >= 8) {
@@ -372,7 +379,11 @@ public:
             READWRITE(nNonce);
             if(this->nVersion > 3) {
                 READWRITE(mapZerocoinSupply);
-                if(this->nVersion < 7) READWRITE(nAccumulatorCheckpoint);
+                if(this->nVersion < 7) {
+                    uint256 _nAccumulatorCheckpoint;
+                    READWRITE(_nAccumulatorCheckpoint);
+                    nAccumulatorCheckpoint = _nAccumulatorCheckpoint;
+                }
             }
 
         } else if (ser_action.ForRead()) {
@@ -408,7 +419,9 @@ public:
             if(this->nVersion > 3) {
                 std::map<libzerocoin::CoinDenomination, int64_t> mapZerocoinSupply;
                 std::vector<libzerocoin::CoinDenomination> vMintDenominationsInBlock;
-                READWRITE(nAccumulatorCheckpoint);
+                uint256 _nAccumulatorCheckpoint;
+                READWRITE(_nAccumulatorCheckpoint);
+                nAccumulatorCheckpoint = _nAccumulatorCheckpoint;
                 READWRITE(mapZerocoinSupply);
                 READWRITE(vMintDenominationsInBlock);
             }
@@ -501,7 +514,11 @@ public:
             READWRITE(nNonce);
             if(this->nVersion > 3) {
                 READWRITE(mapZerocoinSupply);
-                if(this->nVersion < 7) READWRITE(nAccumulatorCheckpoint);
+                if(this->nVersion < 7) {
+                    uint256 _nAccumulatorCheckpoint;
+                    READWRITE(_nAccumulatorCheckpoint);
+                    nAccumulatorCheckpoint = _nAccumulatorCheckpoint;
+                }
             }
 
         } else {
@@ -526,7 +543,9 @@ public:
             READWRITE(nBits);
             READWRITE(nNonce);
             if(this->nVersion > 3) {
-                READWRITE(nAccumulatorCheckpoint);
+                uint256 _nAccumulatorCheckpoint;
+                READWRITE(_nAccumulatorCheckpoint);
+                nAccumulatorCheckpoint = _nAccumulatorCheckpoint;
                 READWRITE(mapZerocoinSupply);
                 READWRITE(vMintDenominationsInBlock);
             }
