@@ -31,7 +31,7 @@ public:
     uint32_t nBits;
     uint32_t nNonce;
     Optional<uint256> nAccumulatorCheckpoint;   // only for version 4, 5 and 6.
-    uint256 hashFinalSaplingRoot;               // only for version 8+
+    Optional<uint256> hashFinalSaplingRoot;               // only for version 8+
 
     CBlockHeader()
     {
@@ -57,8 +57,11 @@ public:
         }
 
         // Sapling active
-        if (nVersion >= 8)
-            READWRITE(hashFinalSaplingRoot);
+        if (nVersion >= 8) {
+            uint256 _hashFinalSaplingRoot;
+            READWRITE(_hashFinalSaplingRoot);
+            hashFinalSaplingRoot = _hashFinalSaplingRoot;
+        }
     }
 
     void SetNull()
@@ -70,7 +73,7 @@ public:
         nBits = 0;
         nNonce = 0;
         nAccumulatorCheckpoint.reset();
-        hashFinalSaplingRoot.SetNull();
+        hashFinalSaplingRoot.reset();
     }
 
     bool IsNull() const
