@@ -236,7 +236,7 @@ public:
     //! block header
     int nVersion{0};
     uint256 hashMerkleRoot{};
-    uint256 hashFinalSaplingRoot{};
+    Optional<uint256> hashFinalSaplingRoot{};
     unsigned int nTime{0};
     unsigned int nBits{0};
     unsigned int nNonce{0};
@@ -360,7 +360,13 @@ public:
 
             // Sapling blocks
             if (this->nVersion >= 8) {
-                READWRITE(hashFinalSaplingRoot);
+                if (ser_action.ForRead()) {
+                    uint256 _hashFinalSaplingRoot;
+                    READWRITE(_hashFinalSaplingRoot);
+                    hashFinalSaplingRoot = _hashFinalSaplingRoot;
+                } else {
+                    READWRITE(*hashFinalSaplingRoot);
+                }
                 READWRITE(nSaplingValue);
             }
 
