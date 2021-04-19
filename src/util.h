@@ -104,7 +104,6 @@ void CreatePidFile(const fs::path& path, pid_t pid);
 #ifdef WIN32
 fs::path GetSpecialFolderPath(int nFolder, bool fCreate = true);
 #endif
-fs::path GetTempPath();
 
 void runCommand(std::string strCommand);
 
