@@ -34,7 +34,7 @@ static inline std::vector<unsigned char> InsecureRandBytes(size_t len) { return 
  * This just configures logging and chain parameters.
  */
 struct BasicTestingSetup {
-    BasicTestingSetup();
+    BasicTestingSetup(const std::string& chainName = CBaseChainParams::MAIN);
     ~BasicTestingSetup();
 };
 

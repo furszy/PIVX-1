@@ -37,13 +37,13 @@ std::ostream& operator<<(std::ostream& os, const uint256& num)
     return os;
 }
 
-BasicTestingSetup::BasicTestingSetup()
+BasicTestingSetup::BasicTestingSetup(const std::string& chainName)
 {
         ECC_Start();
         SetupEnvironment();
         InitSignatureCache();
         fCheckBlockIndex = true;
-        SelectParams(CBaseChainParams::MAIN);
+        SelectParams(chainName);
         evoDb.reset(new CEvoDB(1 << 20, true, true));
 }
 BasicTestingSetup::~BasicTestingSetup()
