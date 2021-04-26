@@ -1707,10 +1707,11 @@ static SaplingOperation CreateShieldedTransaction(CWallet* const pwallet, const 
         if (nAmount < 0)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, amount must be positive");
 
+        bool fSubtractFeeFromAmount = false; // !TODO
         if (saddr) {
-            recipients.emplace_back(*saddr, nAmount, memo);
+            recipients.emplace_back(*saddr, nAmount, memo, fSubtractFeeFromAmount);
         } else {
-            recipients.emplace_back(taddr, nAmount);
+            recipients.emplace_back(taddr, nAmount, fSubtractFeeFromAmount);
         }
 
         nTotalOut += nAmount;

@@ -23,17 +23,19 @@ struct ShieldedRecipient
     const libzcash::SaplingPaymentAddress address;
     const CAmount amount;
     const std::string memo;
-    ShieldedRecipient(const libzcash::SaplingPaymentAddress& _address, const CAmount& _amount, const std::string& _memo) :
+    bool fSubtractFeeFromAmount;
+    ShieldedRecipient(const libzcash::SaplingPaymentAddress& _address, const CAmount& _amount, const std::string& _memo, bool _fSubtractFeeFromAmount) :
         address(_address),
         amount(_amount),
-        memo(_memo)
+        memo(_memo),
+        fSubtractFeeFromAmount(_fSubtractFeeFromAmount)
     {}
 };
 
 struct SendManyRecipient
 {
     const Optional<ShieldedRecipient> shieldedRecipient{nullopt};
-    const Optional<CTxOut> transparentRecipient{nullopt};
+    const Optional<CRecipient> transparentRecipient{nullopt};
 
     bool IsTransparent() const { return transparentRecipient != nullopt; }
 
@@ -41,29 +43,29 @@ struct SendManyRecipient
     SendManyRecipient() = delete;
 
     // Shielded recipient
-    SendManyRecipient(const libzcash::SaplingPaymentAddress& address, const CAmount& amount, const std::string& memo):
-        shieldedRecipient(ShieldedRecipient(address, amount, memo))
+    SendManyRecipient(const libzcash::SaplingPaymentAddress& address, const CAmount& amount, const std::string& memo, bool fSubtractFeeFromAmount):
+        shieldedRecipient(ShieldedRecipient(address, amount, memo, fSubtractFeeFromAmount))
     {}
 
     // Transparent recipient: P2PKH
-    SendManyRecipient(const CTxDestination& dest, const CAmount& amount):
-        transparentRecipient(CTxOut(amount, GetScriptForDestination(dest)))
+    SendManyRecipient(const CTxDestination& dest, const CAmount& amount, bool fSubtractFeeFromAmount):
+        transparentRecipient(CRecipient(GetScriptForDestination(dest), amount, fSubtractFeeFromAmount))
     {}
 
     // Transparent recipient: P2CS
     SendManyRecipient(const CKeyID& ownerKey, const CKeyID& stakerKey, const CAmount& amount, bool fV6Enforced):
-        transparentRecipient(CTxOut(amount, fV6Enforced ? GetScriptForStakeDelegation(stakerKey, ownerKey)
-                                                        : GetScriptForStakeDelegationLOF(stakerKey, ownerKey)))
+        transparentRecipient(CRecipient(fV6Enforced ? GetScriptForStakeDelegation(stakerKey, ownerKey)
+                                                    : GetScriptForStakeDelegationLOF(stakerKey, ownerKey), amount, false))
     {}
 
     // Transparent recipient: multisig
     SendManyRecipient(int nRequired, const std::vector<CPubKey>& keys, const CAmount& amount):
-        transparentRecipient(CTxOut(amount, GetScriptForMultisig(nRequired, keys)))
+        transparentRecipient(CRecipient(GetScriptForMultisig(nRequired, keys), amount, false))
     {}
 
     // Transparent recipient: OP_RETURN
     SendManyRecipient(const uint256& message):
-        transparentRecipient(CTxOut(0, GetScriptForOpReturn(message)))
+        transparentRecipient(CRecipient(GetScriptForOpReturn(message), 0, false))
     {}
 };
 

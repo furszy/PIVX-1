@@ -68,7 +68,7 @@ TxValues calculateTarget(const std::vector<SendManyRecipient>& recipients, const
     TxValues txValues;
     for (const SendManyRecipient &t : recipients) {
         if (t.IsTransparent())
-            txValues.transOutTotal += t.transparentRecipient->nValue;
+            txValues.transOutTotal += t.transparentRecipient->nAmount;
         else
             txValues.shieldedOutTotal += t.shieldedRecipient->amount;
     }
@@ -145,7 +145,7 @@ OperationResult SaplingOperation::build()
         // Add outputs
         for (const SendManyRecipient &t : recipients) {
             if (t.IsTransparent()) {
-                txBuilder.AddTransparentOutput(*t.transparentRecipient);
+                txBuilder.AddTransparentOutput(CTxOut(t.transparentRecipient->nAmount, t.transparentRecipient->scriptPubKey));
             } else {
                 const auto& address = t.shieldedRecipient->address;
                 const CAmount& amount = t.shieldedRecipient->amount;

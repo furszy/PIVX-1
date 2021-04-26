@@ -110,7 +110,7 @@ BOOST_AUTO_TEST_CASE(test_in_block_and_mempool_notes_double_spend)
     // single recipient
     std::vector<SendManyRecipient> recipients;
     libzcash::SaplingPaymentAddress pa = pwalletMain->GenerateNewSaplingZKey("sapling1");
-    recipients.emplace_back(pa, CAmount(100 * COIN), "");
+    recipients.emplace_back(pa, CAmount(100 * COIN), "", false);
 
     // Create the operation and build the transaction
     SaplingOperation operation = createOperationAndBuildTx(pwalletMain, recipients, tipHeight + 1, true);
@@ -135,14 +135,14 @@ BOOST_AUTO_TEST_CASE(test_in_block_and_mempool_notes_double_spend)
     CTxDestination tDest2;
     pwalletMain->getNewAddress(tDest2, "receiveValid");
     std::vector<SendManyRecipient> recipients2;
-    recipients2.emplace_back(tDest2, CAmount(90 * COIN));
+    recipients2.emplace_back(tDest2, CAmount(90 * COIN), false);
     SaplingOperation operation2 = createOperationAndBuildTx(pwalletMain, recipients2, tipHeight + 1, false);
 
     // Create a second transaction that spends the same note with a different output now
     CTxDestination tDest3;
     pwalletMain->getNewAddress(tDest3, "receiveInvalid");
     std::vector<SendManyRecipient> recipients3;
-    recipients3.emplace_back(tDest3, CAmount(5 * COIN));
+    recipients3.emplace_back(tDest3, CAmount(5 * COIN), false);
     SaplingOperation operation3 = createOperationAndBuildTx(pwalletMain, recipients3, tipHeight + 1, false);
 
     // Now that both transactions were created, broadcast the first one

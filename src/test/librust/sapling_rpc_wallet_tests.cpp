@@ -349,7 +349,7 @@ BOOST_AUTO_TEST_CASE(saplingOperationTests)
 
     // there are no utxos to spend
     {
-        std::vector<SendManyRecipient> recipients = { SendManyRecipient(zaddr1, COIN, "DEADBEEF") };
+        std::vector<SendManyRecipient> recipients = { SendManyRecipient(zaddr1, COIN, "DEADBEEF", false) };
         SaplingOperation operation(consensusParams, 1, pwalletMain.get());
         operation.setFromAddress(taddr1);
         auto res = operation.setRecipients(recipients)->buildAndSend(ret);
@@ -359,7 +359,7 @@ BOOST_AUTO_TEST_CASE(saplingOperationTests)
 
     // minconf cannot be zero when sending from zaddr
     {
-        std::vector<SendManyRecipient> recipients = { SendManyRecipient(zaddr1, COIN, "DEADBEEF") };
+        std::vector<SendManyRecipient> recipients = { SendManyRecipient(zaddr1, COIN, "DEADBEEF", false) };
         SaplingOperation operation(consensusParams, 1, pwalletMain.get());
         operation.setFromAddress(zaddr1);
         auto res = operation.setRecipients(recipients)->setMinDepth(0)->buildAndSend(ret);
@@ -369,7 +369,7 @@ BOOST_AUTO_TEST_CASE(saplingOperationTests)
 
     // there are no unspent notes to spend
     {
-        std::vector<SendManyRecipient> recipients = { SendManyRecipient(taddr1, COIN) };
+        std::vector<SendManyRecipient> recipients = { SendManyRecipient(taddr1, COIN, false) };
         SaplingOperation operation(consensusParams, 1, pwalletMain.get());
         operation.setFromAddress(zaddr1);
         auto res = operation.setRecipients(recipients)->buildAndSend(ret);
@@ -455,7 +455,7 @@ BOOST_AUTO_TEST_CASE(rpc_shieldsendmany_taddr_to_sapling)
     pwalletMain->BlockConnected(std::make_shared<CBlock>(block), mi->second);
     BOOST_CHECK_MESSAGE(pwalletMain->GetAvailableBalance() > 0, "tx not confirmed");
 
-    std::vector<SendManyRecipient> recipients = { SendManyRecipient(zaddr1, 1 * COIN, "ABCD") };
+    std::vector<SendManyRecipient> recipients = { SendManyRecipient(zaddr1, 1 * COIN, "ABCD", false) };
     SaplingOperation operation(consensusParams, nextBlockHeight, pwalletMain.get());
     operation.setFromAddress(taddr);
     BOOST_CHECK(operation.setRecipients(recipients)
@@ -463,7 +463,7 @@ BOOST_AUTO_TEST_CASE(rpc_shieldsendmany_taddr_to_sapling)
                          ->build());
 
     // try from auto-selected transparent address
-    std::vector<SendManyRecipient> recipients2 = { SendManyRecipient(zaddr1, 1 * COIN, "ABCD") };
+    std::vector<SendManyRecipient> recipients2 = { SendManyRecipient(zaddr1, 1 * COIN, "ABCD", false) };
     SaplingOperation operation2(consensusParams, nextBlockHeight, pwalletMain.get());
     BOOST_CHECK(operation2.setSelectTransparentCoins(true)
                           ->setRecipients(recipients2)
