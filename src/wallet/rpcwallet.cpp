@@ -2248,7 +2248,7 @@ UniValue getunconfirmedbalance(const JSONRPCRequest& request)
 /*
  * Only used for t->t transactions (via sendmany RPC)
  */
-static UniValue legacy_sendmany(CWallet* const pwallet, const UniValue& sendTo, int nMinDepth, std::string comment, bool fIncludeDelegated)
+static UniValue legacy_sendmany(CWallet* const pwallet, const UniValue& sendTo, int nMinDepth, std::string comment, bool fIncludeDelegated, const UniValue& subtractFeeFromAmount)
 {
     LOCK2(cs_main, pwallet->cs_wallet);
 
@@ -2277,7 +2277,16 @@ static UniValue legacy_sendmany(CWallet* const pwallet, const UniValue& sendTo, 
         CAmount nAmount = AmountFromValue(sendTo[name_]);
         totalAmount += nAmount;
 
-        vecSend.emplace_back(scriptPubKey, nAmount, false);
+        bool fSubtractFeeFromAmount = false;
+        for (unsigned int idx = 0; idx < subtractFeeFromAmount.size(); idx++) {
+            const UniValue& addr = subtractFeeFromAmount[idx];
+            if (addr.get_str() == name_) {
+                fSubtractFeeFromAmount = true;
+                break;
+            }
+        }
+
+        vecSend.emplace_back(scriptPubKey, nAmount, fSubtractFeeFromAmount);
     }
 
     // Check funds
@@ -2321,7 +2330,7 @@ UniValue sendmany(const JSONRPCRequest& request)
     if (!EnsureWalletIsAvailable(pwallet, request.fHelp))
         return NullUniValue;
 
-    if (request.fHelp || request.params.size() < 2 || request.params.size() > 5)
+    if (request.fHelp || request.params.size() < 2 || request.params.size() > 6)
         throw std::runtime_error(
             "sendmany \"\" {\"address\":amount,...} ( minconf \"comment\" include_delegated )\n"
             "\nSend to multiple destinations. Recipients are transparent or shield PIVX addresses.\n"
@@ -2339,6 +2348,14 @@ UniValue sendmany(const JSONRPCRequest& request)
             "3. minconf                 (numeric, optional, default=1) Only use the balance confirmed at least this many times.\n"
             "4. \"comment\"             (string, optional) A comment\n"
             "5. include_delegated       (bool, optional, default=false) Also include balance delegated to cold stakers\n"
+            "6. subtract_fee_from       (array, optional) A json array with addresses.\n"
+            "                           The fee will be equally deducted from the amount of each selected address.\n"
+            "                           Those recipients will receive less PIV than you enter in their corresponding amount field.\n"
+            "                           If no addresses are specified here, the sender pays the fee.\n"
+            "    [\n"
+            "      \"address\"          (string) Subtract fee from this address\n"
+            "      ,...\n"
+            "    ]\n"
 
             "\nResult:\n"
             "\"transactionid\"          (string) The transaction id for the send. Only 1 transaction is created regardless of \n"
@@ -2369,7 +2386,11 @@ UniValue sendmany(const JSONRPCRequest& request)
     const int nMinDepth = request.params.size() > 2 ? request.params[2].get_int() : 1;
     const std::string comment = (request.params.size() > 3 && !request.params[3].isNull() && !request.params[3].get_str().empty()) ?
                         request.params[3].get_str() : "";
-    const bool fIncludeDelegated = (request.params.size() > 5 && request.params[5].get_bool());
+    const bool fIncludeDelegated = (request.params.size() > 4 && request.params[4].get_bool());
+
+    UniValue subtractFeeFromAmount(UniValue::VARR);
+    if (request.params.size() > 5 && !request.params[5].isNull())
+        subtractFeeFromAmount = request.params[5].get_array();
 
     // Check  if any recipient address is shield
     bool fShieldSend = false;
@@ -2387,7 +2408,7 @@ UniValue sendmany(const JSONRPCRequest& request)
     }
 
     // All recipients are transparent: use Legacy sendmany t->t
-    return legacy_sendmany(pwallet, sendTo, nMinDepth, comment, fIncludeDelegated);
+    return legacy_sendmany(pwallet, sendTo, nMinDepth, comment, fIncludeDelegated, subtractFeeFromAmount);
 }
 
 // Defined in rpc/misc.cpp
@@ -4651,7 +4672,7 @@ static const CRPCCommand commands[] =
     { "wallet",             "listunspent",              &listunspent,              false, {"minconf","maxconf","addresses","watchonly_config" } },
     { "wallet",             "lockunspent",              &lockunspent,              true,  {"unlock","transactions"} },
     { "wallet",             "rawdelegatestake",         &rawdelegatestake,         false, {"staking_addr","amount","owner_addr","ext_owner","include_delegated","from_shield","force"} },
-    { "wallet",             "sendmany",                 &sendmany,                 false, {"dummy","amounts","minconf","comment","include_delegated"} },
+    { "wallet",             "sendmany",                 &sendmany,                 false, {"dummy","amounts","minconf","comment","include_delegated","subtract_fee_from"} },
     { "wallet",             "sendtoaddress",            &sendtoaddress,            false, {"address","amount","comment","comment-to","subtract_fee"} },
     { "wallet",             "settxfee",                 &settxfee,                 true,  {"amount"} },
     { "wallet",             "setstakesplitthreshold",   &setstakesplitthreshold,   false, {"value"} },
