@@ -135,6 +135,7 @@ static const CRPCConvertParam vRPCConvertParams[] = {
     { "sendmany", 2, "minconf" },
     { "sendrawtransaction", 1, "allowhighfees" },
     { "sendtoaddress", 1, "amount" },
+    { "sendtoaddress", 4, "subtract_fee" },
     { "setautocombinethreshold", 0, "enable" },
     { "setautocombinethreshold", 1, "threshold" },
     { "setban", 2, "bantime" },

@@ -512,7 +512,13 @@ UniValue fundrawtransaction(const JSONRPCRequest& request)
             "     \"changePosition\"    (numeric, optional, default random) The index of the change output\n"
             "     \"includeWatching\"   (boolean, optional, default false) Also select inputs which are watch only\n"
             "     \"lockUnspents\"      (boolean, optional, default false) Lock selected unspent outputs\n"
-                " \"feeRate\"           (numeric, optional, default 0=estimate) Set a specific feerate (PIV per KB)\n"
+            "     \"feeRate\"           (numeric, optional, default 0=estimate) Set a specific feerate (PIV per KB)\n"
+            "     \"subtractFeeFromOutputs\" (array, optional) A json array of integers.\n"
+            "                              The fee will be equally deducted from the amount of each specified output.\n"
+            "                              The outputs are specified by their zero-based index, before any change output is added.\n"
+            "                              Those recipients will receive less PIV than you enter in their corresponding amount field.\n"
+            "                              If no outputs are specified here, the sender pays the fee.\n"
+            "                                  [vout_index,...]\n"
             "   }\n"
             "\nResult:\n"
             "{\n"
@@ -542,6 +548,8 @@ UniValue fundrawtransaction(const JSONRPCRequest& request)
     int changePosition = -1;
     bool includeWatching = false;
     bool lockUnspents = false;
+    UniValue subtractFeeFromOutputs;
+    std::set<int> setSubtractFeeFromOutputs;
     CFeeRate feeRate = CFeeRate(0);
     bool overrideEstimatedFeerate = false;
 
@@ -555,6 +563,7 @@ UniValue fundrawtransaction(const JSONRPCRequest& request)
                 {"includeWatching", UniValueType(UniValue::VBOOL)},
                 {"lockUnspents", UniValueType(UniValue::VBOOL)},
                 {"feeRate", UniValueType()}, // will be checked below
+                {"subtractFeeFromOutputs", UniValueType(UniValue::VARR)},
             },
             true, true);
 
@@ -578,6 +587,10 @@ UniValue fundrawtransaction(const JSONRPCRequest& request)
             feeRate = CFeeRate(AmountFromValue(options["feeRate"]));
             overrideEstimatedFeerate = true;
         }
+
+        if (options.exists("subtractFeeFromOutputs")) {
+            subtractFeeFromOutputs = options["subtractFeeFromOutputs"].get_array();
+        }
     }
 
     // parse hex string from parameter
@@ -591,11 +604,25 @@ UniValue fundrawtransaction(const JSONRPCRequest& request)
     if (changePosition != -1 && (changePosition < 0 || (unsigned int) changePosition > origTx.vout.size()))
         throw JSONRPCError(RPC_INVALID_PARAMETER, "changePosition out of bounds");
 
+    for (unsigned int idx = 0; idx < subtractFeeFromOutputs.size(); idx++) {
+        int pos = subtractFeeFromOutputs[idx].get_int();
+        if (setSubtractFeeFromOutputs.count(pos))
+            throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Invalid parameter, duplicated position: %d", pos));
+        if (pos < 0)
+            throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Invalid parameter, negative position: %d", pos));
+        if (pos >= int(origTx.vout.size()))
+            throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Invalid parameter, position too large: %d", pos));
+        setSubtractFeeFromOutputs.insert(pos);
+    }
+
     CMutableTransaction tx(origTx);
     CAmount nFeeOut;
     std::string strFailReason;
-    if(!pwallet->FundTransaction(tx, nFeeOut, overrideEstimatedFeerate, feeRate, changePosition, strFailReason, includeWatching, lockUnspents, changeAddress))
+    if(!pwallet->FundTransaction(tx, nFeeOut, overrideEstimatedFeerate, feeRate,
+                                 changePosition, strFailReason, includeWatching,
+                                 lockUnspents, setSubtractFeeFromOutputs, changeAddress)) {
         throw JSONRPCError(RPC_INTERNAL_ERROR, strFailReason);
+    }
 
     UniValue result(UniValue::VOBJ);
     result.pushKV("hex", EncodeHexTx(tx));

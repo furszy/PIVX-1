@@ -984,7 +984,7 @@ UniValue setlabel(const JSONRPCRequest& request)
     return NullUniValue;
 }
 
-static void SendMoney(CWallet* const pwallet, const CTxDestination& address, CAmount nValue, CTransactionRef& tx)
+static void SendMoney(CWallet* const pwallet, const CTxDestination& address, CAmount nValue, bool fSubtractFeeFromAmount, CTransactionRef& tx)
 {
     LOCK2(cs_main, pwallet->cs_wallet);
 
@@ -1005,8 +1005,12 @@ static void SendMoney(CWallet* const pwallet, const CTxDestination& address, CAm
     CReserveKey reservekey(pwallet);
     CAmount nFeeRequired;
     std::string strError;
-    if (!pwallet->CreateTransaction(scriptPubKey, nValue, tx, reservekey, nFeeRequired, strError, nullptr, (CAmount)0)) {
-        if (nValue + nFeeRequired > pwallet->GetAvailableBalance())
+    std::vector<CRecipient> vecSend;
+    int nChangePosRet = -1;
+    CRecipient recipient = {scriptPubKey, nValue, fSubtractFeeFromAmount};
+    vecSend.push_back(recipient);
+    if (!pwallet->CreateTransaction(vecSend, tx, reservekey, nFeeRequired, nChangePosRet, strError)) {
+        if (!fSubtractFeeFromAmount && nValue + nFeeRequired > pwallet->GetAvailableBalance())
             strError = strprintf("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!", FormatMoney(nFeeRequired));
         LogPrintf("%s: %s\n", __func__, strError);
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
@@ -1073,9 +1077,9 @@ UniValue sendtoaddress(const JSONRPCRequest& request)
     if (!EnsureWalletIsAvailable(pwallet, request.fHelp))
         return NullUniValue;
 
-    if (request.fHelp || request.params.size() < 2 || request.params.size() > 4)
+    if (request.fHelp || request.params.size() < 2 || request.params.size() > 5)
         throw std::runtime_error(
-            "sendtoaddress \"address\" amount ( \"comment\" \"comment-to\" )\n"
+            "sendtoaddress \"address\" amount ( \"comment\" \"comment-to\" subtract_fee )\n"
             "\nSend an amount to a given address. The amount is a real and is rounded to the nearest 0.00000001\n" +
             HelpRequiringPassphrase(pwallet) + "\n"
 
@@ -1087,6 +1091,8 @@ UniValue sendtoaddress(const JSONRPCRequest& request)
             "4. \"comment-to\"  (string, optional) A comment to store the name of the person or organization \n"
             "                             to which you're sending the transaction. This is not part of the \n"
             "                             transaction, just kept in your wallet.\n"
+            "5. subtract_fee    (boolean, optional, default=false) The fee will be deducted from the amount being sent.\n"
+            "                             The recipient will receive less bitcoins than you enter in the amount field.\n"
 
             "\nResult:\n"
             "\"transactionid\"  (string) The transaction id.\n"
@@ -1094,6 +1100,7 @@ UniValue sendtoaddress(const JSONRPCRequest& request)
             "\nExamples:\n" +
             HelpExampleCli("sendtoaddress", "\"DMJRSsuU9zfyrvxVaAEFQqK4MxZg6vgeS6\" 0.1") +
             HelpExampleCli("sendtoaddress", "\"DMJRSsuU9zfyrvxVaAEFQqK4MxZg6vgeS6\" 0.1 \"donation\" \"seans outpost\"") +
+            HelpExampleCli("sendtoaddress", "\"DMJRSsuU9zfyrvxVaAEFQqK4MxZg6vgeS6\" 0.1 \"\" \"\" true") +
             HelpExampleRpc("sendtoaddress", "\"DMJRSsuU9zfyrvxVaAEFQqK4MxZg6vgeS6\", 0.1, \"donation\", \"seans outpost\""));
 
     EnsureWalletIsUnlocked(pwallet);
@@ -1111,6 +1118,7 @@ UniValue sendtoaddress(const JSONRPCRequest& request)
                                    request.params[2].get_str() : "";
     const std::string toStr = (request.params.size() > 3 && !request.params[3].isNull()) ?
                                    request.params[3].get_str() : "";
+    bool fSubtractFeeFromAmount = request.params.size() > 4 && request.params[4].get_bool();
 
     if (isShielded) {
         UniValue sendTo(UniValue::VOBJ);
@@ -1124,7 +1132,7 @@ UniValue sendtoaddress(const JSONRPCRequest& request)
     CAmount nAmount = AmountFromValue(request.params[1]);
 
     CTransactionRef tx;
-    SendMoney(pwallet, address, nAmount, tx);
+    SendMoney(pwallet, address, nAmount, fSubtractFeeFromAmount, tx);
 
     // Wallet comments
     CWalletTx& wtx = pwallet->mapWallet.at(tx->GetHash());
@@ -4495,7 +4503,7 @@ static const CRPCCommand commands[] =
     { "wallet",             "lockunspent",              &lockunspent,              true,  {"unlock","transactions"} },
     { "wallet",             "rawdelegatestake",         &rawdelegatestake,         false, {"staking_addr","amount","owner_addr","ext_owner","include_delegated","from_shield","force"} },
     { "wallet",             "sendmany",                 &sendmany,                 false, {"dummy","amounts","minconf","comment","include_delegated"} },
-    { "wallet",             "sendtoaddress",            &sendtoaddress,            false, {"address","amount","comment","comment-to"} },
+    { "wallet",             "sendtoaddress",            &sendtoaddress,            false, {"address","amount","comment","comment-to","subtract_fee"} },
     { "wallet",             "settxfee",                 &settxfee,                 true,  {"amount"} },
     { "wallet",             "setstakesplitthreshold",   &setstakesplitthreshold,   false, {"value"} },
     { "wallet",             "signmessage",              &signmessage,              true,  {"address","message"} },

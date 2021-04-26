@@ -2982,13 +2982,14 @@ bool CWallet::CreateBudgetFeeTX(CTransactionRef& tx, const uint256& hash, CReser
     return true;
 }
 
-bool CWallet::FundTransaction(CMutableTransaction& tx, CAmount& nFeeRet, bool overrideEstimatedFeeRate, const CFeeRate& specificFeeRate, int& nChangePosInOut, std::string& strFailReason, bool includeWatching, bool lockUnspents, const CTxDestination& destChange)
+bool CWallet::FundTransaction(CMutableTransaction& tx, CAmount& nFeeRet, bool overrideEstimatedFeeRate, const CFeeRate& specificFeeRate, int& nChangePosInOut, std::string& strFailReason, bool includeWatching, bool lockUnspents, const std::set<int>& setSubtractFeeFromOutputs, const CTxDestination& destChange)
 {
     std::vector<CRecipient> vecSend;
 
-    // Turn the txout set into a CRecipient vector
-    for (const CTxOut& txOut : tx.vout) {
-        vecSend.emplace_back(txOut.scriptPubKey, txOut.nValue, false);
+    // Turn the txout set into a CRecipient vector.
+    for (size_t idx = 0; idx < tx.vout.size(); idx++) {
+        const CTxOut& txOut = tx.vout[idx];
+        vecSend.emplace_back(txOut.scriptPubKey, txOut.nValue, setSubtractFeeFromOutputs.count(idx) == 1);
     }
 
     CCoinControl coinControl;
@@ -3022,6 +3023,12 @@ bool CWallet::FundTransaction(CMutableTransaction& tx, CAmount& nFeeRet, bool ov
         reservekey.KeepKey();
     }
 
+    // Copy output sizes from new transaction; they may have had the fee
+    // subtracted from them.
+    for (unsigned int idx = 0; idx < tx.vout.size(); idx++) {
+        tx.vout[idx].nValue = wtx->vout[idx].nValue;
+    }
+
     // Add new txins while keeping original txin scriptSig/order.
     for (const CTxIn& txin : wtx->vin) {
         if (!coinControl.IsSelected(txin.prevout)) {
@@ -3048,16 +3055,18 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend,
 {
     CAmount nValue = 0;
     int nChangePosRequest = nChangePosInOut;
-
+    unsigned int nSubtractFeeFromAmount = 0;
     for (const CRecipient& rec : vecSend) {
-        if (rec.nAmount < 0) {
+        if (nValue < 0 || rec.nAmount < 0) {
             strFailReason = _("Transaction amounts must be positive");
             return false;
         }
         nValue += rec.nAmount;
+        if (rec.fSubtractFeeFromAmount)
+            nSubtractFeeFromAmount++;
     }
-    if (vecSend.empty() || nValue < 0) {
-        strFailReason = _("Transaction amounts must be positive");
+    if (vecSend.empty()) {
+        strFailReason = _("Transaction must have at least one recipient");
         return false;
     }
 
@@ -3081,11 +3090,25 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend,
                 nChangePosInOut = nChangePosRequest;
                 txNew.vin.clear();
                 txNew.vout.clear();
-                CAmount nTotalValue = nValue + nFeeRet;
+                bool fFirst = true;
+
+                CAmount nValueToSelect = nValue;
+                if (nSubtractFeeFromAmount == 0)
+                    nValueToSelect += nFeeRet;
 
                 // Fill outputs
                 for (const CRecipient& rec : vecSend) {
                     CTxOut txout(rec.nAmount, rec.scriptPubKey);
+                    if (rec.fSubtractFeeFromAmount) {
+                        assert(nSubtractFeeFromAmount != 0);
+                        txout.nValue -= nFeeRet / nSubtractFeeFromAmount; // Subtract fee equally from each selected recipient
+
+                        if (fFirst) {
+                            // first receiver pays the remainder not divisible by output count
+                            fFirst = false;
+                            txout.nValue -= nFeeRet % nSubtractFeeFromAmount;
+                        }
+                    }
                     if (IsDust(txout, ::minRelayTxFee)) {
                         strFailReason = _("Transaction amount too small");
                         return false;
@@ -3097,13 +3120,13 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend,
                 CAmount nValueIn = 0;
                 setCoins.clear();
 
-                if (!SelectCoinsToSpend(vAvailableCoins, nTotalValue, setCoins, nValueIn, coinControl)) {
+                if (!SelectCoinsToSpend(vAvailableCoins, nValueToSelect, setCoins, nValueIn, coinControl)) {
                     strFailReason = _("Insufficient funds.");
                     return false;
                 }
 
                 // Change
-                CAmount nChange = nValueIn - nValue - nFeeRet;
+                CAmount nChange = nValueIn - nValueToSelect;
                 if (nChange > 0) {
                     // Fill a vout to ourself
                     // TODO: pass in scriptChange instead of reservekey so

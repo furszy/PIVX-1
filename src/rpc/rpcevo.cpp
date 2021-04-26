@@ -224,7 +224,7 @@ static void FundSpecialTx(CWallet* pwallet, CMutableTransaction& tx, SpecialTxPa
     int nChangePos = -1;
     std::string strFailReason;
     std::set<int> setSubtractFeeFromOutputs;
-    if (!pwallet->FundTransaction(tx, nFee, false, feeRate, nChangePos, strFailReason, false, false))
+    if (!pwallet->FundTransaction(tx, nFee, false, feeRate, nChangePos, strFailReason, false, false, {}))
         throw JSONRPCError(RPC_INTERNAL_ERROR, strFailReason);
 
     if (dummyTxOutAdded && tx.vout.size() > 1) {

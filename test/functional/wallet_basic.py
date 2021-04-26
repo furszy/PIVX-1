@@ -119,10 +119,11 @@ class WalletTest(PivxTestFramework):
         assert_equal(node_2_bal, node_2_expected_bal)
 
         # Send 10 PIV normal
+        self.log.info("test sendtoaddress")
         address = self.nodes[0].getnewaddress("test")
         self.nodes[2].settxfee(float(fee_per_kbyte))
         txid = self.nodes[2].sendtoaddress(address, 10, "", "")
-        fee = self.nodes[2].gettransaction(txid)["fee"]
+        fee = self.nodes[2].gettransaction(txid)["fee"]     # fee < 0
         node_2_bal -= (Decimal('10') - fee)
         assert_equal(self.nodes[2].getbalance(), node_2_bal)
         self.nodes[2].generate(1)
@@ -131,6 +132,7 @@ class WalletTest(PivxTestFramework):
         assert_equal(node_0_bal, Decimal('10'))
 
         # Sendmany 10 PIV
+        self.log.info("test sendmany")
         txid = self.nodes[2].sendmany('', {address: 10}, 0, "")
         fee = self.nodes[2].gettransaction(txid)["fee"]
         self.nodes[2].generate(1)
@@ -141,9 +143,6 @@ class WalletTest(PivxTestFramework):
         assert_equal(self.nodes[0].getbalance(), node_0_bal)
         assert_fee_amount(-fee, self.get_vsize(self.nodes[2].getrawtransaction(txid)), fee_per_kbyte)
 
-        # This will raise an exception since generate does not accept a string
-        assert_raises_rpc_error(-1, "not an integer", self.nodes[0].generate, "2")
-
         # Import address and private key to check correct behavior of spendable unspents
         # 1. Send some coins to generate new UTXO
         address_to_import = self.nodes[2].getnewaddress()
@@ -152,6 +151,7 @@ class WalletTest(PivxTestFramework):
         self.sync_all(self.nodes[0:3])
 
         # 2. Import address from node2 to node1
+        self.log.info("test importaddress")
         self.nodes[1].importaddress(address_to_import)
 
         # 3. Validate that the imported address is watch-only on node1
@@ -165,6 +165,7 @@ class WalletTest(PivxTestFramework):
 
         # 5. Import private key of the previously imported address on node1
         priv_key = self.nodes[2].dumpprivkey(address_to_import)
+        self.log.info("test importprivkey")
         self.nodes[1].importprivkey(priv_key)
 
         # 6. Check that the unspents are now spendable on node1
@@ -237,8 +238,6 @@ class WalletTest(PivxTestFramework):
         assert_equal(2, self.len_listunspent({"minimumAmount": 250.00, "minimumSumAmount": 250.00000001}))
         assert_equal(5, self.len_listunspent({"minimumAmount": 250.00, "minimumSumAmount": 1250.0000000}))
         assert_equal(9, self.len_listunspent({"minimumSumAmount": 2500.00}))
-
-
 
 
 if __name__ == '__main__':
