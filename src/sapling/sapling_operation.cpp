@@ -67,13 +67,25 @@ TxValues calculateTarget(const std::vector<SendManyRecipient>& recipients, const
 {
     TxValues txValues;
     for (const SendManyRecipient &t : recipients) {
-        if (t.IsTransparent())
+        if (t.IsTransparent()) {
             txValues.transOutTotal += t.transparentRecipient->nAmount;
-        else
+        } else {
             txValues.shieldedOutTotal += t.shieldedRecipient->amount;
+        }
     }
     txValues.target = txValues.shieldedOutTotal + txValues.transOutTotal + fee;
     return txValues;
+}
+
+static void subtractFee(bool& fFirst, CAmount& nOutAmt, const CAmount& nFee, unsigned int nSubtractFeeFromAmount)
+{
+    // Subtract fee equally from each selected recipient
+    nOutAmt -= nFee / nSubtractFeeFromAmount;
+    if (fFirst) {
+        // first receiver pays the remainder not divisible by output count
+        fFirst = false;
+        nOutAmt -= nFee % nSubtractFeeFromAmount;
+    }
 }
 
 OperationResult SaplingOperation::build()
@@ -123,11 +135,17 @@ OperationResult SaplingOperation::build()
         return errorOut("Minconf cannot be zero when sending from shielded address");
     }
 
+    // Check outputs to subtract fee from
+    unsigned int nSubtractFeeFromAmount = 0;
+    for (const SendManyRecipient& rec : recipients) {
+        if (rec.IsSubtractFee()) nSubtractFeeFromAmount++;
+    }
+
     CAmount nFeeRet = (fee > 0 ? fee : minRelayTxFee.GetFeePerK());
     int tries = 0;
     while (true) {
         // First calculate target values
-        TxValues txValues = calculateTarget(recipients, nFeeRet);
+        TxValues txValues = calculateTarget(recipients, nSubtractFeeFromAmount == 0 ? nFeeRet : 0);
         OperationResult result(false);
         uint256 ovk;
         if (isFromShielded) {
@@ -143,12 +161,20 @@ OperationResult SaplingOperation::build()
         }
 
         // Add outputs
+        bool fFirst = false;
         for (const SendManyRecipient &t : recipients) {
             if (t.IsTransparent()) {
-                txBuilder.AddTransparentOutput(CTxOut(t.transparentRecipient->nAmount, t.transparentRecipient->scriptPubKey));
+                CAmount amount = t.transparentRecipient->nAmount;
+                if (t.transparentRecipient->fSubtractFeeFromAmount) {
+                    subtractFee(fFirst, amount, nFeeRet, nSubtractFeeFromAmount);
+                }
+                txBuilder.AddTransparentOutput(CTxOut(amount, t.transparentRecipient->scriptPubKey));
             } else {
                 const auto& address = t.shieldedRecipient->address;
-                const CAmount& amount = t.shieldedRecipient->amount;
+                CAmount amount = t.shieldedRecipient->amount;
+                if (t.shieldedRecipient->fSubtractFeeFromAmount) {
+                    subtractFee(fFirst, amount, nFeeRet, nSubtractFeeFromAmount);
+                }
                 const std::string& memo = t.shieldedRecipient->memo;
                 assert(IsValidPaymentAddress(address));
                 std::array<unsigned char, ZC_MEMO_SIZE> vMemo = {};

@@ -38,6 +38,8 @@ struct SendManyRecipient
     const Optional<CRecipient> transparentRecipient{nullopt};
 
     bool IsTransparent() const { return transparentRecipient != nullopt; }
+    bool IsSubtractFee() const { return IsTransparent() ? transparentRecipient->fSubtractFeeFromAmount
+                                                        : shieldedRecipient->fSubtractFeeFromAmount; }
 
     // Prevent default empty initialization
     SendManyRecipient() = delete;
