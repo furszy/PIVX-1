@@ -158,6 +158,7 @@ SAPLING_SCRIPTS = [
     'sapling_wallet_nullifiers.py',             # ~ 190 sec
     'sapling_wallet_listreceived.py',           # ~ 157 sec
     'sapling_changeaddresses.py',               # ~ 151 sec
+    'sapling_wallet_send.py',                   # ~ 126 sec
     'sapling_mempool.py',                       # ~ 98 sec
     'sapling_wallet_persistence.py',            # ~ 90 sec
     'sapling_supply.py',                        # ~ 58 sec

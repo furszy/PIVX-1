@@ -1030,7 +1030,8 @@ static UniValue ShieldSendManyTo(CWallet * const pwallet,
                                  const std::string& commentStr,
                                  const std::string& toStr,
                                  int nMinDepth,
-                                 bool fIncludeDelegated)
+                                 bool fIncludeDelegated,
+                                 UniValue subtractFeeFromAmount)
 {
     // convert params to 'shieldsendmany' format
     JSONRPCRequest req;
@@ -1049,6 +1050,8 @@ static UniValue ShieldSendManyTo(CWallet * const pwallet,
     }
     req.params.push_back(recipients);
     req.params.push_back(nMinDepth);
+    req.params.push_back(0);
+    req.params.push_back(subtractFeeFromAmount);
 
     // send
     SaplingOperation operation = CreateShieldedTransaction(pwallet, req);
@@ -1123,7 +1126,11 @@ UniValue sendtoaddress(const JSONRPCRequest& request)
     if (isShielded) {
         UniValue sendTo(UniValue::VOBJ);
         sendTo.pushKV(addrStr, request.params[1]);
-        return ShieldSendManyTo(pwallet, sendTo, commentStr, toStr, 1, false);
+        UniValue subtractFeeFromAmount(UniValue::VARR);
+        if (fSubtractFeeFromAmount) {
+            subtractFeeFromAmount.push_back(addrStr);
+        }
+        return ShieldSendManyTo(pwallet, sendTo, commentStr, toStr, 1, false, subtractFeeFromAmount);
     }
 
     const CTxDestination& address = *Standard::GetTransparentDestination(destination);
@@ -1650,6 +1657,9 @@ static SaplingOperation CreateShieldedTransaction(CWallet* const pwallet, const 
         }
     }
 
+    // Param 4: subtractFeeFromAmount addresses
+    const UniValue subtractFeeFromAmount = request.params[4];
+
     // Param 1: array of outputs
     UniValue outputs = request.params[1].get_array();
     if (outputs.empty())
@@ -1707,7 +1717,15 @@ static SaplingOperation CreateShieldedTransaction(CWallet* const pwallet, const 
         if (nAmount < 0)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, amount must be positive");
 
-        bool fSubtractFeeFromAmount = false; // !TODO
+        bool fSubtractFeeFromAmount = false;
+        for (unsigned int idx = 0; idx < subtractFeeFromAmount.size(); idx++) {
+            const UniValue& addr = subtractFeeFromAmount[idx];
+            if (addr.get_str() == address) {
+                fSubtractFeeFromAmount = true;
+                break;
+            }
+        }
+
         if (saddr) {
             recipients.emplace_back(*saddr, nAmount, memo, fSubtractFeeFromAmount);
         } else {
@@ -1741,11 +1759,13 @@ static SaplingOperation CreateShieldedTransaction(CWallet* const pwallet, const 
     // If not set, SaplingOperation will set the minimum fee (based on minRelayFee and tx size)
     if (request.params.size() > 3) {
         CAmount nFee = AmountFromValue(request.params[3]);
-        if (nFee <= 0) {
+        if (nFee < 0) {
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid fee. Must be positive.");
+        } else if (nFee > 0) {
+            // If the user-selected fee is not enough (or too much), the build operation will fail.
+            operation.setFee(nFee);
         }
-        // If the user-selected fee is not enough (or too much), the build operation will fail.
-        operation.setFee(nFee);
+        // If nFee=0 leave the default (build operation will compute the minimum fee)
     }
 
     if (fromSapling && nMinDepth == 0) {
@@ -1771,9 +1791,9 @@ UniValue shieldsendmany(const JSONRPCRequest& request)
     if (!EnsureWalletIsAvailable(pwallet, request.fHelp))
         return NullUniValue;
 
-    if (request.fHelp || request.params.size() < 2 || request.params.size() > 4)
+    if (request.fHelp || request.params.size() < 2 || request.params.size() > 5)
         throw std::runtime_error(
-                "shieldsendmany \"fromaddress\" [{\"address\":... ,\"amount\":...},...] ( minconf fee )\n"
+                "shieldsendmany \"fromaddress\" [{\"address\":... ,\"amount\":...},...] ( minconf fee subtract_fee_from )\n"
                 "\nSend to many recipients. Amounts are decimal numbers with at most 8 digits of precision."
                 "\nChange generated from a transparent addr flows to a new  transparent addr address, while change generated from a shield addr returns to itself."
                 "\nWhen sending coinbase UTXOs to a shield addr, change is not allowed. The entire value of the UTXO(s) must be consumed."
@@ -1793,8 +1813,16 @@ UniValue shieldsendmany(const JSONRPCRequest& request)
                 "    }, ... ]\n"
                 "3. minconf               (numeric, optional, default=1) Only use funds confirmed at least this many times.\n"
                 "4. fee                   (numeric, optional), The fee amount to attach to this transaction.\n"
-                "                            If not specified, the wallet will try to compute the minimum possible fee for a shield TX,\n"
+                "                            If not specified, or set to 0, the wallet will try to compute the minimum possible fee for a shield TX,\n"
                 "                            based on the expected transaction size and the current value of -minRelayTxFee.\n"
+                "5. subtract_fee_from     (array, optional) A json array with addresses.\n"
+                "                           The fee will be equally deducted from the amount of each selected address.\n"
+                "                           Those recipients will receive less PIV than you enter in their corresponding amount field.\n"
+                "                           If no addresses are specified here, the sender pays the fee.\n"
+                "    [\n"
+                "      \"address\"          (string) Subtract fee from this address\n"
+                "      ,...\n"
+                "    ]\n"
                 "\nResult:\n"
                 "\"id\"          (string) transaction hash in the network\n"
                 "\nExamples:\n"
@@ -2405,7 +2433,7 @@ UniValue sendmany(const JSONRPCRequest& request)
     }
 
     if (fShieldSend) {
-        return ShieldSendManyTo(pwallet, sendTo, comment, "", nMinDepth, fIncludeDelegated);
+        return ShieldSendManyTo(pwallet, sendTo, comment, "", nMinDepth, fIncludeDelegated, subtractFeeFromAmount);
     }
 
     // All recipients are transparent: use Legacy sendmany t->t
@@ -4697,7 +4725,7 @@ static const CRPCCommand commands[] =
     { "wallet",             "getshieldbalance",              &getshieldbalance,               false, {"address","minconf","include_watchonly"} },
     { "wallet",             "listshieldunspent",             &listshieldunspent,              false, {"minconf","maxconf","include_watchonly","addresses"} },
     { "wallet",             "rawshieldsendmany",             &rawshieldsendmany,              false, {"fromaddress","amounts","minconf","fee"} },
-    { "wallet",             "shieldsendmany",                &shieldsendmany,                 false, {"fromaddress","amounts","minconf","fee"} },
+    { "wallet",             "shieldsendmany",                &shieldsendmany,                 false, {"fromaddress","amounts","minconf","fee","subtract_fee_from"} },
     { "wallet",             "listreceivedbyshieldaddress",   &listreceivedbyshieldaddress,    false, {"address","minconf"} },
     { "wallet",             "viewshieldtransaction",         &viewshieldtransaction,          false, {"txid"} },
     { "wallet",             "getsaplingnotescount",          &getsaplingnotescount,           false, {"minconf"} },

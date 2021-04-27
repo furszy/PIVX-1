@@ -150,6 +150,7 @@ static const CRPCConvertParam vRPCConvertParams[] = {
     { "shieldsendmany", 1, "amounts" },
     { "shieldsendmany", 2, "minconf" },
     { "shieldsendmany", 3, "fee" },
+    { "shieldsendmany", 4, "subtract_fee_from" },
     { "signrawtransaction", 1, "prevtxs" },
     { "signrawtransaction", 2, "privkeys" },
     { "spork", 1, "value" },
