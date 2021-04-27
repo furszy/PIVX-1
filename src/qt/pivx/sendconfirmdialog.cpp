@@ -183,14 +183,26 @@ void TxDetailDialog::setData(WalletModel *_model, WalletModelTransaction* _tx)
     this->model = _model;
     this->tx = _tx;
     CAmount txFee = tx->getTransactionFee();
-    CAmount totalAmount = tx->getTotalTransactionAmount() + txFee;
 
     // inputs label
     CTransactionRef walletTx = tx->getTransaction();
     setInputsType(walletTx);
 
+    bool fSubtractFee = false;
+    const QList<SendCoinsRecipient>& recipients = tx->getRecipients();
+    for (const SendCoinsRecipient& rec : recipients) {
+        if (rec.fSubtractFee) {
+            fSubtractFee = true;
+            break;
+        }
+    }
+
+    CAmount totalAmount = tx->getTotalTransactionAmount();
+    if (!fSubtractFee) totalAmount += txFee;
+
     ui->textAmount->setText(BitcoinUnits::formatWithUnit(nDisplayUnit, totalAmount, false, BitcoinUnits::separatorAlways) + " (Fee included)");
-    int nRecipients = tx->getRecipients().size();
+
+    int nRecipients = recipients.size();
     if (nRecipients == 1) {
         const SendCoinsRecipient& recipient = tx->getRecipients().at(0);
         if (recipient.isP2CS) {
