@@ -98,6 +98,7 @@ Results without keys can be queried using an integer in brackets.
     example:    getblock(getblockhash(0),true)[tx][0]
 ```
 
+
 Support for JSON-RPC Named Arguments
 ------------------------------------
 
@@ -125,6 +126,8 @@ A new init option flag '-blocksdir' will allow one to keep the blockfiles extern
 Low-level RPC changes
 ---------------------
 
+### Query options for listunspent RPC
+
 - The `listunspent` RPC now takes a `query_options` argument (see [PR 2317](https://github.com/PIVX-Project/PIVX/pull/2317)), which is a JSON object
   containing one or more of the following members:
   - `minimumAmount` - a number specifying the minimum value of each UTXO
@@ -134,12 +137,37 @@ Low-level RPC changes
 
 - the `stop` RPC no longer accepts the (already deprecated, ignored, and undocumented) optional boolean argument `detach`.
 
+### Subtract fee from recipient amount for RPC
 
-#### Show wallet's auto-combine settings in getwalletinfo
+A new argument `subtract_fee_from` is added to `sendmany`/`shieldsendmany` RPC functions.
+It can be used to provide the list of recipent addresses paying the fee.
+```
+subtract_fee_from         (array, optional) 
+A json array with addresses.
+The fee will be equally deducted from the amount of each selected address.
+  [\"address\"          (string) Subtract fee from this address\n"
+   ,...
+  ]
+
+For `fundrawtransaction` a new key (`subtractFeeFromOutputs`) is added to the `options` argument.
+It can be used to specify a list of output indexes.
+```
+subtractFeeFromOutputs    (array, optional)  A json array of integers.
+The fee will be equally deducted from the amount of each specified output.
+The outputs are specified by their zero-based index, before any change output is added.
+  [vout_index,...]
+```
+
+For `sendtoaddress`, the new parameter is called `subtract_fee` and it is a simple boolean.
+
+In all cases those recipients will receive less PIV than you enter in their corresponding amount field.
+If no outputs/addresses are specified, the sender pays the fee as usual.
+
+### Show wallet's auto-combine settings in getwalletinfo
 
 `getwalletinfo` now has two additional return fields. `autocombine_enabled` (boolean) and `autocombine_threshold` (numeric) that will show the auto-combine threshold and whether or not it is currently enabled.
 
-#### Deprecate the autocombine RPC command
+### Deprecate the autocombine RPC command
 
 The `autocombine` RPC command has been replaced with specific set/get commands (`setautocombinethreshold` and `getautocombinethreshold`, respectively) to bring this functionality further in-line with our RPC standards. Previously, the `autocombine` command gave no user-facing feedback when the setting was changed. This is now resolved with the introduction of the two new commands as detailed below:
 
@@ -174,26 +202,18 @@ The `autocombine` RPC command has been replaced with specific set/get commands (
     }
     ```
 
-#### Build system changes
+Build system changes
+--------------------
 
 The minimum supported miniUPnPc API version is set to 10. This keeps compatibility with Ubuntu 16.04 LTS and Debian 8 `libminiupnpc-dev` packages. Please note, on Debian this package is still vulnerable to [CVE-2017-8798](https://security-tracker.debian.org/tracker/CVE-2017-8798) (in jessie only) and [CVE-2017-1000494](https://security-tracker.debian.org/tracker/CVE-2017-1000494) (both in jessie and in stretch).
-
-
-#### Build System
 
 OpenSSL is no longer used by PIVX Core
 
 
-#### Disable PoW mining RPC Commands
+Configuration changes
+---------------------
 
-A new configure flag has been introduced to allow more granular control over weather or not the PoW mining RPC commands are compiled into the wallet. By default they are not. This behavior can be overridden by passing `--enable-mining-rpc` to the `configure` script.
-
-#### Removed startup options
-
-- `printstakemodifier`
-
-Configuration sections for testnet and regtest
-----------------------------------------------
+### Configuration sections for testnet and regtest
 
 It is now possible for a single configuration file to set different options for different networks. This is done by using sections or by prefixing the option with the network, such as:
 
@@ -209,13 +229,24 @@ It is now possible for a single configuration file to set different options for 
 
 The `addnode=`, `connect=`, `port=`, `bind=`, `rpcport=`, `rpcbind=`, and `wallet=` options will only apply to mainnet when specified in the configuration file, unless a network is specified.
 
+### Allow to optional specify the directory for the blocks storage
 
-#### Logging
+A new init option flag '-blocksdir' will allow one to keep the blockfiles external from the data directory.
+
+### Disable PoW mining RPC Commands
+
+A new configure flag has been introduced to allow more granular control over weather or not the PoW mining RPC commands are compiled into the wallet. By default they are not. This behavior can be overridden by passing `--enable-mining-rpc` to the `configure` script.
+
+### Removed startup options
+
+- `printstakemodifier`
+
+### Logging
 
 The log timestamp format is now ISO 8601 (e.g. "2021-02-28T12:34:56Z").
 
 
-#### Automatic Backup File Naming
+### Automatic Backup File Naming
 
 The file extension applied to automatic backups is now in ISO 8601 basic notation (e.g. "20210228T123456Z"). The basic notation is used to prevent illegal `:` characters from appearing in the filename.
 
