@@ -3068,6 +3068,11 @@ HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH*/
     color: #5c4b7d;
 }
 
+*[cssClass="btn-list-menu"]:checked{
+    font-size:16px;
+    color:#b088ff;
+}
+
 
 
 /*HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
