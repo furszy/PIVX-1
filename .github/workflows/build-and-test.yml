@@ -400,7 +400,7 @@ jobs:
           fi
 
           echo "Installing libsodium.."
-          ./contrib/install_sodium.sh `pwd`
+          sudo ./contrib/install_sodium.sh `pwd`
           echo "libsodium install finished.."
 
           echo ::group::Autogen
