@@ -15,6 +15,7 @@
 #include "net_processing.h"
 #include "rpc/server.h"
 #include "rpc/register.h"
+#include "sapling/sodium_sanity.h"
 #include "script/sigcache.h"
 #include "sporkdb.h"
 #include "txmempool.h"
@@ -40,6 +41,7 @@ std::ostream& operator<<(std::ostream& os, const uint256& num)
 
 BasicTestingSetup::BasicTestingSetup()
 {
+        assert(init_and_check_sodium() != -1);
         ECC_Start();
         SetupEnvironment();
         InitSignatureCache();
