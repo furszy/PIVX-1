@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Install patched libsodium 1.0.17.
+# Install patched libsodium 1.0.15.
 
 export LC_ALL=C
 set -e
@@ -21,9 +21,9 @@ ROOT_PREFIX="$(expand_path ${1})";
 SODIUM_PREFIX="$ROOT_PREFIX/sodium"; shift;
 echo $SODIUM_PREFIX
 echo $ROOT_PREFIX
-SODIUM_VERSION='1.0.17'
-SODIUM_HASH='0cc3dae33e642cc187b5ceb467e0ad0e1b51dcba577de1190e9ffa17766ac2b1'
-SODIUM_URL="https://download.libsodium.org/libsodium/releases/libsodium-${SODIUM_VERSION}.tar.gz"
+SODIUM_VERSION='1.0.15'
+SODIUM_HASH='fb6a9e879a2f674592e4328c5d9f79f082405ee4bb05cb6e679b90afe9e178f4'
+SODIUM_URL="https://download.libsodium.org/libsodium/releases/old/unsupported/libsodium-${SODIUM_VERSION}.tar.gz"
 
 check_exists() {
   which "$1" >/dev/null 2>&1
@@ -68,9 +68,9 @@ tar -xzvf libsodium-${SODIUM_VERSION}.tar.gz -C "$SODIUM_PREFIX"
 cd "${SODIUM_PREFIX}/libsodium-${SODIUM_VERSION}/"
 
 # Apply patches
-echo "Applying patches.."
-patch -p1 < "${ROOT_PREFIX}/depends/patches/libsodium/1.0.15-pubkey-validation.diff" && \
-patch -p1 < "${ROOT_PREFIX}/depends/patches/libsodium/1.0.15-signature-validation.diff" && \
+#echo "Applying patches.."
+#patch -p1 < "${ROOT_PREFIX}/depends/patches/libsodium/1.0.15-pubkey-validation.diff" && \
+#patch -p1 < "${ROOT_PREFIX}/depends/patches/libsodium/1.0.15-signature-validation.diff" && \
 DO_NOT_UPDATE_CONFIG_SCRIPTS=1 ./autogen.sh
 
 # make
