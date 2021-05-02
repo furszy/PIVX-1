@@ -75,7 +75,7 @@ patch -p1 < "${ROOT_PREFIX}/depends/patches/libsodium/1.0.15-signature-validatio
 
 # make
 "${SODIUM_PREFIX}/libsodium-${SODIUM_VERSION}/configure" --enable-static --disable-shared
-make -j3 && make check
+make && make check
 
 make install
 
