@@ -207,7 +207,6 @@ static CKeyID ParsePubKeyIDFromAddress(const std::string& strAddress)
 template<typename SpecialTxPayload>
 static void FundSpecialTx(CWallet* pwallet, CMutableTransaction& tx, SpecialTxPayload& payload)
 {
-    assert(pwallet != nullptr);
     SetTxPayload(tx, payload);
 
     static CTxOut dummyTxOut(0, CScript() << OP_RETURN);
@@ -274,7 +273,6 @@ static std::string TxInErrorToString(int i, const CTxIn& txin, const std::string
 
 static OperationResult SignTransaction(CMutableTransaction& tx)
 {
-    EnsureWalletIsUnlocked();
     LOCK2(cs_main, pwalletMain->cs_wallet);
     const CTransaction txConst(tx);
     for (unsigned int i = 0; i < tx.vin.size(); i++) {
@@ -297,9 +295,6 @@ static OperationResult SignTransaction(CMutableTransaction& tx)
 
 static std::string SignAndSendSpecialTx(CMutableTransaction& tx, const ProRegPL& pl)
 {
-    EnsureWallet();
-    EnsureWalletIsUnlocked();
-
     SetTxPayload(tx, pl);
 
     CValidationState state;
@@ -321,7 +316,6 @@ static std::string SignAndSendSpecialTx(CMutableTransaction& tx, const ProRegPL&
 // Parses inputs (starting from index paramIdx) and returns ProReg payload
 static ProRegPL ParseProRegPLParams(const UniValue& params, unsigned int paramIdx)
 {
-    assert(pwalletMain);
     assert(params.size() > paramIdx + 4);
     assert(params.size() < paramIdx + 8);
     ProRegPL pl;
