@@ -72,7 +72,7 @@ jobs:
       matrix:
         config:
           - name: Linux
-            os: ubuntu-16.04
+            os: ubuntu-18.04
             packages: python3-zmq qtbase5-dev qttools5-dev-tools libqt5svg5-dev libssl-dev libevent-dev bsdmainutils libboost-system-dev libboost-filesystem-dev libboost-chrono-dev libboost-test-dev libboost-thread-dev libdb5.3++-dev libminiupnpc-dev libzmq3-dev libqrencode-dev libgmp-dev libsodium-dev cargo
             cc: gcc
             cxx: g++
@@ -296,7 +296,7 @@ jobs:
             BITCOIN_CONFIG: "--enable-zmq --with-gui=no --enable-glibc-back-compat --enable-reduce-exports --disable-online-rust"
 
           - name: x86_64 Linux  [GOAL:install]  [xenial]  [no depends only system libs]
-            os: ubuntu-16.04
+            os: ubuntu-18.04
             host: x86_64-unknown-linux-gnu
             apt_get: python3-zmq qtbase5-dev qttools5-dev-tools libqt5svg5-dev libssl-dev libevent-dev bsdmainutils libboost-system-dev libboost-filesystem-dev libboost-chrono-dev libboost-test-dev libboost-thread-dev libdb5.3++-dev libminiupnpc-dev libzmq3-dev libqrencode-dev libgmp-dev libsodium-dev cargo
             unit_tests: true
