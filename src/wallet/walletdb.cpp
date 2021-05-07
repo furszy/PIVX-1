@@ -884,21 +884,10 @@ bool AutoBackupWallet(const std::string& strWalletFile, std::string& strBackupWa
         return false;
     }
 
-#if BOOST_VERSION >= 105800
-    try {
-        fs::copy_file(sourceFile, backupFile);
-        LogPrintf("Creating backup of %s -> %s\n", sourceFile.string(), backupFile.string());
-    } catch(fs::filesystem_error &error) {
-        strBackupWarning = strprintf(_("Failed to create backup, error: %s"), error.what());
-        LogPrintf("%s\n", strBackupWarning);
-        nWalletBackups = -1;
-        return false;
+    // Try to backup
+    if (!AttemptBackupWallet(nullptr, sourceFile, backupFile)) {
+        return false; // error is logged internally
     }
-#else
-    std::ifstream src(sourceFile.string(), std::ios::binary);
-    std::ofstream dst(backupFile.string(), std::ios::binary);
-    dst << src.rdbuf();
-#endif
 
     // Keep only the last 10 backups, including the new one of course
     typedef std::multimap<std::time_t, fs::path> folder_set_t;
@@ -985,7 +974,7 @@ void MultiBackup(const CWallet& wallet, fs::path pathCustom, fs::path pathWithFi
             }
         }
     }
-    AttemptBackupWallet(wallet, pathSrc.string(), pathWithFile.string());
+    AttemptBackupWallet(&wallet, pathSrc.string(), pathWithFile.string());
 }
 
 bool BackupWallet(const CWallet& wallet, const fs::path& strDest)
@@ -1011,7 +1000,7 @@ bool BackupWallet(const CWallet& wallet, const fs::path& strDest)
                     if(!exists(pathDest)) create_directory(pathDest);
                     pathDest /= strFile;
                 }
-                bool defaultPath = AttemptBackupWallet(wallet, pathSrc.string(), pathDest.string());
+                bool defaultPath = AttemptBackupWallet(&wallet, pathSrc.string(), pathDest.string());
 
                 if(defaultPath && !pathCustom.empty()) {
                     MultiBackup(wallet, pathCustom, pathWithFile, pathSrc);
@@ -1025,7 +1014,7 @@ bool BackupWallet(const CWallet& wallet, const fs::path& strDest)
     return false;
 }
 
-bool AttemptBackupWallet(const CWallet& wallet, const fs::path& pathSrc, const fs::path& pathDest)
+bool AttemptBackupWallet(const CWallet* wallet, const fs::path& pathSrc, const fs::path& pathDest)
 {
     bool retStatus;
     std::string strMessage;
@@ -1046,7 +1035,7 @@ bool AttemptBackupWallet(const CWallet& wallet, const fs::path& pathSrc, const f
         src.close();
         dst.close();
 #endif
-        strMessage = strprintf("copied %s to %s\n", wallet.GetDBHandle().GetName(), pathDest.string());
+        strMessage = strprintf("copied %s to %s\n", pathSrc.string(), pathDest.string());
         LogPrintf("%s : %s\n", __func__, strMessage);
         retStatus = true;
     } catch (const fs::filesystem_error& e) {
@@ -1054,7 +1043,7 @@ bool AttemptBackupWallet(const CWallet& wallet, const fs::path& pathSrc, const f
         strMessage = strprintf("%s\n", e.what());
         LogPrintf("%s : %s\n", __func__, strMessage);
     }
-    NotifyBacked(wallet, retStatus, strMessage);
+    if (wallet) NotifyBacked(*wallet, retStatus, strMessage);
     return retStatus;
 }
 
