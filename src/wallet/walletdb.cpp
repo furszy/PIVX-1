@@ -873,6 +873,27 @@ static folder_set_t buildBackupsMapSortedByLastWrite(const std::string& strWalle
     return folder_set;
 }
 
+static bool cleanWalletBackups(folder_set_t& folder_set, int nWalletBackups, std::string& strBackupWarning)
+{
+    // Loop backward through backup files and keep the N newest ones (1 <= N <= 10)
+    int counter = 0;
+    for (const std::pair<const std::time_t, fs::path>& file : reverse_iterate(folder_set)) {
+        counter++;
+        if (counter > nWalletBackups) {
+            // More than nWalletBackups backups: delete oldest one(s)
+            try {
+                fs::remove(file.second);
+                LogPrintf("Old backup deleted: %s\n", file.second);
+            } catch (fs::filesystem_error &error) {
+                strBackupWarning = strprintf(_("Failed to delete backup, error: %s"), error.what());
+                LogPrintf("%s\n", strBackupWarning);
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 bool AutoBackupWallet(const std::string& strWalletFile, std::string& strBackupWarning, std::string& strBackupError)
 {
     strBackupWarning = strBackupError = "";
@@ -909,58 +930,24 @@ bool AutoBackupWallet(const std::string& strWalletFile, std::string& strBackupWa
 
     // Keep only 0 < nWalletBackups <= 10 backups, including the new one of course
     folder_set_t folder_set = buildBackupsMapSortedByLastWrite(strWalletFile, backupsDir);
-
-    // Loop backward through backup files and keep the N newest ones (1 <= N <= 10)
-    int counter = 0;
-    for (const std::pair<const std::time_t, fs::path>& file : reverse_iterate(folder_set)) {
-        counter++;
-        if (counter > nWalletBackups) {
-            // More than nWalletBackups backups: delete oldest one(s)
-            try {
-                fs::remove(file.second);
-                LogPrintf("Old backup deleted: %s\n", file.second);
-            } catch (fs::filesystem_error &error) {
-                strBackupWarning = strprintf(_("Failed to delete backup, error: %s"), error.what());
-                LogPrintf("%s\n", strBackupWarning);
-                return false;
-            }
-        }
-    }
-    return true;
+    return cleanWalletBackups(folder_set, nWalletBackups, strBackupWarning);
 }
 
 void MultiBackup(const CWallet& wallet, fs::path pathCustom, fs::path pathWithFile, const fs::path& pathSrc)
 {
     int nThreshold = gArgs.GetArg("-custombackupthreshold", DEFAULT_CUSTOMBACKUPTHRESHOLD);
     if (nThreshold > 0) {
+        std::string strBackupWarning;
         pathCustom.make_preferred();
         folder_set_t folderSet = buildBackupsMapSortedByLastWrite(wallet.GetDBHandle().GetName(), pathCustom);
-
-        int counter = 0; //TODO: add seconds to avoid naming conflicts
-        for (auto entry : folderSet) {
-            counter++;
-            if(entry.second == pathWithFile) {
-                pathWithFile += "(1)";
-            }
+        if (!cleanWalletBackups(folderSet, nThreshold, strBackupWarning)) {
+            NotifyBacked(wallet, false, strBackupWarning);
         }
 
-        if (counter >= nThreshold) {
-            std::time_t oldestBackup = 0;
-            for(auto entry : folderSet) {
-                if(oldestBackup == 0 || entry.first < oldestBackup) {
-                    oldestBackup = entry.first;
-                }
-            }
-
-            try {
-                auto entry = folderSet.find(oldestBackup);
-                if (entry != folderSet.end()) {
-                    fs::remove(entry->second);
-                    LogPrintf("Old backup deleted: %s\n", (*entry).second);
-                }
-            } catch (const fs::filesystem_error& error) {
-                std::string strMessage = strprintf("Failed to delete backup %s\n", error.what());
-                NotifyBacked(wallet, false, strMessage);
+        // TODO: add seconds to avoid naming conflicts
+        for (const auto& entry : folderSet) {
+            if(entry.second == pathWithFile) {
+                pathWithFile += "(1)";
             }
         }
     }
