@@ -855,6 +855,24 @@ std::pair<fs::path, fs::path> GetBackupPath(const CWallet& wallet)
     return {pathCustom, pathWithFile};
 }
 
+typedef std::multimap<std::time_t, fs::path> folder_set_t;
+static folder_set_t buildBackupsMapSortedByLastWrite(const std::string& strWalletFile, const fs::path& backupsDir)
+{
+    folder_set_t folder_set;
+    fs::directory_iterator end_iter;
+    // Build map of backup files for current(!) wallet sorted by last write time
+    for (fs::directory_iterator dir_iter(backupsDir); dir_iter != end_iter; ++dir_iter) {
+        // Only check regular files
+        if (fs::is_regular_file(dir_iter->status())) {
+            // Only add the backups for the current wallet, e.g. wallet.dat.*
+            if(dir_iter->path().stem().string() == strWalletFile) {
+                folder_set.insert(folder_set_t::value_type(fs::last_write_time(dir_iter->path()), *dir_iter));
+            }
+        }
+    }
+    return folder_set;
+}
+
 bool AutoBackupWallet(const std::string& strWalletFile, std::string& strBackupWarning, std::string& strBackupError)
 {
     strBackupWarning = strBackupError = "";
@@ -889,20 +907,9 @@ bool AutoBackupWallet(const std::string& strWalletFile, std::string& strBackupWa
         return false; // error is logged internally
     }
 
-    // Keep only the last 10 backups, including the new one of course
-    typedef std::multimap<std::time_t, fs::path> folder_set_t;
-    folder_set_t folder_set;
-    fs::directory_iterator end_iter;
-    // Build map of backup files for current(!) wallet sorted by last write time
-    for (fs::directory_iterator dir_iter(backupsDir); dir_iter != end_iter; ++dir_iter) {
-        // Only check regular files
-        if (fs::is_regular_file(dir_iter->status())) {
-            // Only add the backups for the current wallet, e.g. wallet.dat.*
-            if(dir_iter->path().stem().string() == strWalletFile) {
-                folder_set.insert(folder_set_t::value_type(fs::last_write_time(dir_iter->path()), *dir_iter));
-            }
-        }
-    }
+    // Keep only 0 < nWalletBackups <= 10 backups, including the new one of course
+    folder_set_t folder_set = buildBackupsMapSortedByLastWrite(strWalletFile, backupsDir);
+
     // Loop backward through backup files and keep the N newest ones (1 <= N <= 10)
     int counter = 0;
     for (const std::pair<const std::time_t, fs::path>& file : reverse_iterate(folder_set)) {
@@ -926,25 +933,8 @@ void MultiBackup(const CWallet& wallet, fs::path pathCustom, fs::path pathWithFi
 {
     int nThreshold = gArgs.GetArg("-custombackupthreshold", DEFAULT_CUSTOMBACKUPTHRESHOLD);
     if (nThreshold > 0) {
-
-        typedef std::multimap<std::time_t, fs::path> folder_set_t;
-        folder_set_t folderSet;
-        fs::directory_iterator end_iter;
-
         pathCustom.make_preferred();
-        // Build map of backup files for current(!) wallet sorted by last write time
-
-        fs::path currentFile;
-        for (fs::directory_iterator dir_iter(pathCustom); dir_iter != end_iter; ++dir_iter) {
-            // Only check regular files
-            if (fs::is_regular_file(dir_iter->status())) {
-                currentFile = dir_iter->path().filename();
-                // Only add the backups for the current wallet, e.g. wallet.dat.*
-                if (dir_iter->path().stem().string() == wallet.GetDBHandle().GetName()) {
-                    folderSet.insert(folder_set_t::value_type(fs::last_write_time(dir_iter->path()), *dir_iter));
-                }
-            }
-        }
+        folder_set_t folderSet = buildBackupsMapSortedByLastWrite(wallet.GetDBHandle().GetName(), pathCustom);
 
         int counter = 0; //TODO: add seconds to avoid naming conflicts
         for (auto entry : folderSet) {
