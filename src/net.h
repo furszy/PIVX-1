@@ -224,7 +224,6 @@ public:
     void AddNewAddress(const CAddress& addr, const CAddress& addrFrom, int64_t nTimePenalty = 0);
     void AddNewAddresses(const std::vector<CAddress>& vAddr, const CAddress& addrFrom, int64_t nTimePenalty = 0);
     std::vector<CAddress> GetAddresses();
-    void AddressCurrentlyConnected(const CService& addr);
 
     // Denial-of-service detection/prevention
     // The idea is to detect peers that are behaving
@@ -794,9 +793,6 @@ public:
         vecRequestsFulfilled.push_back(strRequest);
     }
 
-    bool IsSubscribed(unsigned int nChannel);
-    void Subscribe(unsigned int nChannel, unsigned int nHops = 0);
-    void CancelSubscribe(unsigned int nChannel);
     void CloseSocketDisconnect();
     bool DisconnectOldProtocol(int nVersionIn, int nVersionRequired, std::string strLastCommand = "");
 
