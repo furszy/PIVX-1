@@ -142,6 +142,7 @@ set(BITCOIN_TESTS
         ${CMAKE_SOURCE_DIR}/src/wallet/test/crypto_tests.cpp
         ${CMAKE_SOURCE_DIR}/src/wallet/test/wallet_shielded_balances_tests.cpp
         ${CMAKE_SOURCE_DIR}/src/wallet/test/wallet_sapling_transactions_validations_tests.cpp
+        ${CMAKE_SOURCE_DIR}/src/wallet/test/validation_NU_activation_tests.cpp
         )
 
 set(test_test_pivx_SOURCES ${BITCOIN_TEST_SUITE} ${BITCOIN_TESTS} ${JSON_TEST_FILES})
