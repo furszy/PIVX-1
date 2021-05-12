@@ -10,6 +10,10 @@ find_path(MINIUPNP_INCLUDE_DIR miniupnpc.h
         PATHS ${MINIUPNP_PREFIX}/include /usr/include /usr/local/include
         PATH_SUFFIXES miniupnpc)
 
+if(NOT EXISTS "${MINIUPNP_INCLUDE_DIR}/miniupnpc.h")
+    set(MINIUPNP_INCLUDE_DIR "${MINIUPNP_INCLUDE_DIR}/miniupnpc/")
+endif()
+
 find_library(MINIUPNP_LIBRARY NAMES miniupnpc libminiupnpc
         PATHS ${MINIUPNP_PREFIX}/lib /usr/lib /usr/local/lib)
 
