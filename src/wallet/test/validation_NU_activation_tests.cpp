@@ -4,6 +4,7 @@
 
 #include "wallet/test/wallet_test_fixture.h"
 #include "blockassembler.h"
+#include "blocksignature.h"
 #include "consensus/merkle.h"
 #include "primitives/transaction.h"
 #include "test/librust/utiltest.h"
@@ -48,7 +49,7 @@ BOOST_AUTO_TEST_CASE(P2CS_new_opcode_activation_tests)
     BOOST_ASSERT_MSG(IsValidDestination(coinbaseDest), "invalid destination");
     BOOST_ASSERT_MSG(IsMine(*pwalletMain, coinbaseDest), "destination not from wallet");
 
-    // create the chain
+    // Create the chain
     const CScript& scriptPubKey = GetScriptForDestination(coinbaseDest);
     int nGenerateBlocks = 250;
     for (int i = 0; i < nGenerateBlocks; ++i) {
@@ -76,24 +77,40 @@ BOOST_AUTO_TEST_CASE(P2CS_new_opcode_activation_tests)
     int nChangePosInOut = -1;
     std::string strFailReason;
     BOOST_CHECK(pwalletMain->CreateTransaction(vecSend, txRef, reservekey, nFeeRet, nChangePosInOut, strFailReason));
-    const CWallet::CommitResult& res = pwalletMain->CommitTransaction(txRef, reservekey, nullptr);
-    BOOST_CHECK_EQUAL(res.status, CWallet::CommitStatus::OK);
 
-    // Try to connect the delegation ahead of time, it must fail.
+    // Validate mempool rejection.
+    CValidationState mempoolState;
+    BOOST_CHECK(!AcceptToMemoryPool(mempool, mempoolState, txRef, true, nullptr, false, true));
+    BOOST_CHECK_EQUAL(mempoolState.GetRejectReason(), "bad-early-p2cs-v2");
+
+    // Now try to connect the delegation ahead of time, it must fail as well.
     std::vector<CStakeableOutput> availableCoins;
     pwalletMain->StakeableCoins(&availableCoins);
     std::unique_ptr<CBlockTemplate> pblocktemplate;
     BOOST_CHECK(pblocktemplate = BlockAssembler(Params(), false).CreateNewBlock(scriptPubKey, pwalletMain, true, &availableCoins));
     std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>(pblocktemplate->block);
+    pblock->vtx.emplace_back(txRef);
+    pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
+    BOOST_CHECK(SignBlock(*pblock, *pwalletMain));
     CValidationState state;
     BOOST_CHECK_MESSAGE(!ProcessNewBlock(state, nullptr, pblock, nullptr), "Error: Block prior-v6 with new P2CS opcode passed");
     BOOST_CHECK(!state.IsValid());
+    BOOST_CHECK_EQUAL(state.GetRejectReason(), "bad-early-p2cs-v2");
     BOOST_CHECK(WITH_LOCK(cs_main, return chainActive.Height()) == 250);
 
     // Now enforce v6 and try to connect the delegation again, it must pass
     UpdateNetworkUpgradeParameters(Consensus::UPGRADE_V6_0, 250);
-    BOOST_CHECK_MESSAGE(ProcessNewBlock(state, nullptr, pblock, nullptr), "Error: Block post-v6 with new P2CS opcode failed");
-    BOOST_CHECK(state.IsValid());
+
+    // Validate that now gets into the mempool and the wallet
+    const CWallet::CommitResult& res = pwalletMain->CommitTransaction(txRef, reservekey, nullptr);
+    BOOST_CHECK_EQUAL(res.status, CWallet::CommitStatus::OK);
+
+    // Validate that now gets into a block
+    CValidationState validState;
+    pblock->nVersion = 10; // Must be version 10 post upgrade enforcement
+    BOOST_CHECK(SignBlock(*pblock, *pwalletMain));
+    BOOST_CHECK_MESSAGE(ProcessNewBlock(validState, nullptr, pblock, nullptr), "Error: Block post-v6 with new P2CS opcode failed");
+    BOOST_CHECK(validState.IsValid());
     BOOST_CHECK(WITH_LOCK(cs_main, return chainActive.Height()) == 251);
     SyncWithValidationInterfaceQueue();
     CWallet::Balance balance = pwalletMain->GetBalance(1);

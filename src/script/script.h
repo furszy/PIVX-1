@@ -633,6 +633,8 @@ public:
     bool IsPayToPublicKeyHash() const;
     bool IsPayToScriptHash() const;
     bool IsPayToColdStaking() const;
+    /** Return whether the script is a v6 P2CS script (0xd2) */
+    bool IsPayToColdStakingV2() const;
     bool IsPayToColdStakingLOF() const;
     bool StartsWithOpcode(const opcodetype opcode) const;
     bool IsZerocoinMint() const;

@@ -128,6 +128,17 @@ bool CheckTransaction(const CTransaction& tx, CValidationState& state, bool fCol
 
 bool ContextualCheckTransaction(const CTransactionRef& tx, CValidationState& state, const CChainParams& chainparams, int nHeight, bool isMined, bool fIBD)
 {
+    // Validate that no pre-v6 tx has a v2 cold staking script.
+    bool isV6Active = Params().GetConsensus().NetworkUpgradeActive(nHeight, Consensus::UPGRADE_V6_0);
+    if (!isV6Active) {
+        for (const auto& out : tx->vout) {
+            if (out.scriptPubKey.IsPayToColdStakingV2()) {
+                return state.DoS(100, error("%s : prior v6 enforcement block with a v2 cold staking script", __func__),
+                                 REJECT_INVALID, "bad-early-p2cs-v2");
+            }
+        }
+    }
+
     // Dispatch to Sapling validator
     if (!SaplingValidation::ContextualCheckTransaction(*tx, state, chainparams, nHeight, isMined, fIBD)) {
         return false; // Failure reason has been set in validation state object

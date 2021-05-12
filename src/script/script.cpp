@@ -252,6 +252,11 @@ bool CScript::IsPayToColdStakingLOF() const
     return IsPayToColdStaking() && (*this)[4] == OP_CHECKCOLDSTAKEVERIFY_LOF;
 }
 
+bool CScript::IsPayToColdStakingV2() const
+{
+    return IsPayToColdStaking() && (*this)[4] == OP_CHECKCOLDSTAKEVERIFY;
+}
+
 bool CScript::StartsWithOpcode(const opcodetype opcode) const
 {
     return (!this->empty() && (*this)[0] == opcode);
