@@ -67,7 +67,7 @@ class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
             assert(len(proposals) > 0)
             assert_equal(proposals[0]["Hash"], proposalHash)
 
-    def check_vote_existence(self, proposalName, mnCollateralHash, voteType):
+    def check_vote_existence(self, proposalName, mnCollateralHash, voteType, voteValid):
         for i in range(0, len(self.nodes)):
             node = self.nodes[i]
             votesInfo = node.getbudgetvotes(proposalName)
@@ -76,6 +76,7 @@ class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
             for voteInfo in votesInfo:
                 if (voteInfo["mnId"].split("-")[0] == mnCollateralHash) :
                     assert_equal(voteInfo["Vote"], voteType)
+                    assert_equal(voteInfo["fValid"], voteValid)
                     found = True
             assert_true(found, "Error checking vote existence in node " + str(i))
 
@@ -182,7 +183,7 @@ class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
 
         # check that the vote was accepted everywhere
         self.stake(1, [self.remoteOne, self.remoteTwo])
-        self.check_vote_existence(firstProposalName, self.mnOneCollateral.hash, "YES")
+        self.check_vote_existence(firstProposalName, self.mnOneCollateral.hash, "YES", True)
         self.log.info("all good, MN1 vote accepted everywhere!")
 
         # now let's vote for the proposal with the second MN
@@ -192,7 +193,7 @@ class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
 
         # check that the vote was accepted everywhere
         self.stake(1, [self.remoteOne, self.remoteTwo])
-        self.check_vote_existence(firstProposalName, self.mnTwoCollateral.hash, "YES")
+        self.check_vote_existence(firstProposalName, self.mnTwoCollateral.hash, "YES", True)
         self.log.info("all good, MN2 vote accepted everywhere!")
 
         # now let's vote for the proposal with the first DMN
@@ -202,7 +203,7 @@ class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
 
         # check that the vote was accepted everywhere
         self.stake(1, [self.remoteOne, self.remoteTwo])
-        self.check_vote_existence(firstProposalName, self.proRegTx1.hash, "YES")
+        self.check_vote_existence(firstProposalName, self.proRegTx1.hash, "YES", True)
         self.log.info("all good, DMN1 vote accepted everywhere!")
 
         # Now check the budget
@@ -262,6 +263,27 @@ class MasternodeGovernanceBasicTest(PivxTier2TestFramework):
         # Check that the proposal info returns updated payment count
         expected_budget[0]["RemainingPaymentCount"] -= 1
         self.check_budgetprojection(expected_budget)
+
+        self.stake(1, [self.remoteOne, self.remoteTwo])
+
+        # now let's verify that votes expire properly.
+        # Drop one MN and one DMN
+        self.log.info("expiring MN1..")
+        self.spend_collateral(self.ownerOne, self.mnOneCollateral, self.miner)
+        self.wait_until_mn_vinspent(self.mnOneCollateral.hash, 30, [self.remoteTwo])
+        self.stake(12, [self.remoteTwo]) # create blocks to remove staled votes
+        time.sleep(2) # wait a little bit
+        self.check_vote_existence(firstProposalName, self.mnOneCollateral.hash, "YES", False)
+        self.log.info("MN1 vote expired after collateral spend, all good")
+
+        self.log.info("expiring DMN..")
+        self.spend_collateral(self.ownerOne, self.proRegTx1, self.miner)
+        self.wait_until_mn_vinspent(self.proRegTx1.hash, 30, [self.remoteTwo])
+        self.stake(12, [self.remoteTwo]) # create blocks to remove staled votes
+        time.sleep(2) # wait a little bit
+        self.check_vote_existence(firstProposalName, self.proRegTx1.hash, "YES", False)
+        self.log.info("DMN vote expired after collateral spend, all good")
+
 
 
 if __name__ == '__main__':

@@ -60,6 +60,7 @@ from .util import (
     set_node_times,
     SPORK_ACTIVATION_TIME,
     SPORK_DEACTIVATION_TIME,
+    satoshi_round
 )
 
 class TestStatus(Enum):
@@ -1482,3 +1483,16 @@ class PivxTier2TestFramework(PivxTestFramework):
 
         # Now everything is set, can start both masternodes
         self.controller_start_all_masternodes()
+
+    def spend_collateral(self, mnOwner, collateralOutpoint, miner):
+        send_value = satoshi_round(100 - 0.001)
+        inputs = [{'txid': collateralOutpoint.hash, 'vout': collateralOutpoint.n}]
+        outputs = {}
+        outputs[mnOwner.getnewaddress()] = float(send_value)
+        rawtx = mnOwner.createrawtransaction(inputs, outputs)
+        signedtx = mnOwner.signrawtransaction(rawtx)
+        txid = miner.sendrawtransaction(signedtx['hex'])
+        self.sync_mempools()
+        self.log.info("Collateral spent in %s" % txid)
+        self.send_pings([self.remoteTwo])
+        self.stake(1, [self.remoteTwo])
