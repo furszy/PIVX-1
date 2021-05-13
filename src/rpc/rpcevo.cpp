@@ -370,7 +370,15 @@ static ProRegPL ParseProRegPLParams(const UniValue& params, unsigned int paramId
     return pl;
 }
 
-// handles protx_register, and protx_register_prepare
+UniValue packOutput(const std::string& txHash, int outIndex)
+{
+    UniValue ret(UniValue::VOBJ);
+    ret.pushKV("txid", txHash);
+    ret.pushKV("index", outIndex);
+    return ret;
+}
+
+// handles protx_register, and `protx_register_prepare`
 static UniValue ProTxRegister(const JSONRPCRequest& request, bool fSignAndSend)
 {
     if (request.fHelp || request.params.size() < 7 || request.params.size() > 9) {
@@ -398,7 +406,10 @@ static UniValue ProTxRegister(const JSONRPCRequest& request, bool fSignAndSend)
                 + GetHelpString(9, operatorPayoutAddress_register) +
                 "\nResult:\n" +
                 (fSignAndSend ? (
-                        "\"txid\"                 (string) The transaction id.\n"
+                        "{"
+                            "\"txid\"                        (string) The transaction id.\n"
+                            "\"index\"                       (number) The collateral output index.\n"
+                        "}"
                         "\nExamples:\n"
                         + HelpExampleCli("protx_register", "...!TODO...")
                         ) : (
@@ -465,7 +476,7 @@ static UniValue ProTxRegister(const JSONRPCRequest& request, bool fSignAndSend)
     if (fSignAndSend) {
         SignSpecialTxPayloadByString(pl, keyCollateral); // prove we own the collateral
         // check the payload, add the tx inputs sigs, and send the tx.
-        return SignAndSendSpecialTx(tx, pl);
+        return packOutput(SignAndSendSpecialTx(tx, pl), (int) pl.collateralOutpoint.n);
     }
     // external signing with collateral key
     pl.vchSig.clear();
@@ -499,7 +510,10 @@ UniValue protx_register_submit(const JSONRPCRequest& request)
                 "1. \"tx\"                 (string, required) The serialized transaction previously returned by \"protx_register_prepare\"\n"
                 "2. \"sig\"                (string, required) The signature signed with the collateral key. Must be in base64 format.\n"
                 "\nResult:\n"
-                "\"txid\"                  (string) The transaction id.\n"
+                "{"
+                    "\"txid\"                        (string) The transaction id.\n"
+                    "\"index\"                       (number) The collateral output index.\n"
+                "}"
                 "\nExamples:\n"
                 + HelpExampleCli("protx_register_submit", "\"tx\" \"sig\"")
         );
@@ -530,7 +544,7 @@ UniValue protx_register_submit(const JSONRPCRequest& request)
     pl.vchSig = DecodeBase64(request.params[1].get_str().c_str());
 
     // check the payload, add the tx inputs sigs, and send the tx.
-    return SignAndSendSpecialTx(tx, pl);
+    return packOutput(SignAndSendSpecialTx(tx, pl), (int) pl.collateralOutpoint.n);
 }
 
 UniValue protx_register_fund(const JSONRPCRequest& request)
@@ -551,7 +565,10 @@ UniValue protx_register_fund(const JSONRPCRequest& request)
                 + GetHelpString(7, operatorReward)
                 + GetHelpString(8, operatorPayoutAddress_register) +
                 "\nResult:\n"
-                "\"txid\"                        (string) The transaction id.\n"
+                "{"
+                    "\"txid\"                        (string) The transaction id.\n"
+                    "\"index\"                       (number) The collateral output index.\n"
+                "}"
                 "\nExamples:\n"
                 + HelpExampleCli("protx_register_fund", "...!TODO...")
         );
@@ -588,7 +605,7 @@ UniValue protx_register_fund(const JSONRPCRequest& request)
     // update payload on tx (with final collateral outpoint)
     pl.vchSig.clear();
     // check the payload, add the tx inputs sigs, and send the tx.
-    return SignAndSendSpecialTx(tx, pl);
+    return packOutput(SignAndSendSpecialTx(tx, pl), (int) pl.collateralOutpoint.n);
 }
 
 #endif  //ENABLE_WALLET
