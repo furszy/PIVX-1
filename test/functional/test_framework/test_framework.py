@@ -1086,6 +1086,7 @@ class PivxTestFramework():
         operatorAdd = mnOwner.getnewaddress("dmn_operator")
         operatorKey = mnOwner.dumpprivkey(operatorAdd)
         votingAdd = mnOwner.getnewaddress("dmn_voting")
+        ret = {}
         if strType == "fund":
             # send to the owner the collateral tx cost + some dust for the ProReg and fee
             fundingTxId = miner.sendtoaddress(collateralAdd, Decimal('101'))
@@ -1093,7 +1094,7 @@ class PivxTestFramework():
             self.stake_and_sync(self.nodes.index(miner), 1)
             assert_greater_than(mnOwner.getrawtransaction(fundingTxId, 1)["confirmations"], 0)
             # create and send the ProRegTx funding the collateral
-            proTxId = mnOwner.protx_register_fund(collateralAdd, ipport, ownerAdd,
+            ret = mnOwner.protx_register_fund(collateralAdd, ipport, ownerAdd,
                                                   operatorAdd, votingAdd, collateralAdd)
         elif strType == "internal":
             mnOwner.getnewaddress("dust")
@@ -1110,7 +1111,7 @@ class PivxTestFramework():
                     break
             assert_greater_than(collateralTxId_n, -1)
             assert_greater_than(json_tx["confirmations"], 0)
-            proTxId = mnOwner.protx_register(collateralTxId, collateralTxId_n, ipport, ownerAdd,
+            ret = mnOwner.protx_register(collateralTxId, collateralTxId_n, ipport, ownerAdd,
                                              operatorAdd, votingAdd, collateralAdd)
         elif strType == "external":
             self.log.info("Setting up ProRegTx with collateral externally-signed...")
@@ -1123,16 +1124,19 @@ class PivxTestFramework():
             collateralAdd = register_res["collateralAddress"]
             signature = mnOwner.signmessage(collateralAdd, message_to_sign)
             self.log.info("ProTx signed")
-            proTxId = miner.protx_register_submit(register_res["tx"], signature)
+            ret = miner.protx_register_submit(register_res["tx"], signature)
         else:
             raise Exception("Type %s not available" % strType)
 
+        proTxId = ret["txid"]
+        collateralIndex = ret["index"]
+        if (collateralIndex < 0): raise Exception("Invalid collateral index %s for tx %s" % (collateralIndex, proTxId))
         self.sync_mempools([mnOwner, miner])
         # confirm and verify inclusion in list
         self.stake_and_sync(self.nodes.index(miner), 1)
         assert_greater_than(self.nodes[mnRemotePos].getrawtransaction(proTxId, 1)["confirmations"], 0)
         assert proTxId in self.nodes[mnRemotePos].protx_list(False)
-        return COutPoint(proTxId, 0), operatorKey
+        return COutPoint(proTxId, collateralIndex), operatorKey
 
     def setupMasternode(self,
                         mnOwner,
@@ -1201,10 +1205,10 @@ class PivxTestFramework():
         assert_greater_than(controller.getrawtransaction(funding_txid, True)["confirmations"], 0)
         # create and send the ProRegTx funding the collateral
         print("Before RPC: %s" % str(dmn.ipport))
-        dmn.proTx = controller.protx_register_fund(collateral_addr, dmn.ipport, dmn.owner,
+        ret = controller.protx_register_fund(collateral_addr, dmn.ipport, dmn.owner,
                                                    dmn.operator, dmn.voting, dmn.payee)
-        dmn.collateral = COutPoint(int(dmn.proTx, 16),
-                                   get_collateral_vout(controller.getrawtransaction(dmn.proTx, True)))
+        dmn.proTx = ret["txid"]
+        dmn.collateral = COutPoint(int(dmn.proTx, 16), ret["index"])
         if lock:
             lock_utxo(controller, dmn.collateral)
 
@@ -1224,8 +1228,10 @@ class PivxTestFramework():
         assert_greater_than(json_tx["confirmations"], 0)
         # create and send the ProRegTx
         dmn.collateral = COutPoint(int(funding_txid, 16), get_collateral_vout(json_tx))
-        dmn.proTx = controller.protx_register(funding_txid, dmn.collateral.n, dmn.ipport, dmn.owner,
+        ret = controller.protx_register(funding_txid, dmn.collateral.n, dmn.ipport, dmn.owner,
                                               dmn.operator, dmn.voting, dmn.payee)
+        dmn.proTx = ret["txid"]
+        assert_equal(dmn.collateral, COutPoint(int(dmn.proTx, 16), ret["index"]))
         if fLock:
             lock_utxo(controller, dmn.collateral)
 
