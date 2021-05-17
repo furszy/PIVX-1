@@ -221,11 +221,21 @@ bool InitLoadWallet()
             }
         }
 
-        CWallet * const pwallet = CWallet::CreateWalletFromFile(walletFile);
+        bool fFirstRun;
+        CWallet * const pwallet = CWallet::CreateWalletFromFile(walletFile, fFirstRun);
         if (!pwallet) {
             return false;
         }
         vpwallets.emplace_back(pwallet);
+
+        if (fFirstRun) {
+            // Initial backup
+            if (!AutoBackupWallet(walletFile, strWarning, strError)) {
+                LogPrintf("Initial auto-backup failed for wallet %s, error: %s, warning: %s\n",
+                          pwallet->GetName(), (strError.empty() ? "no error" : strError),
+                          (strWarning.empty() ? "no warning" : strWarning));
+            }
+        }
     }
 
     return true;

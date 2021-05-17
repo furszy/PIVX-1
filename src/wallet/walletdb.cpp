@@ -918,8 +918,8 @@ bool AutoBackupWallet(const std::string& strWalletFile, std::string& strBackupWa
     }
 
     if (!fs::exists(sourceFile)) {
-        strBackupWarning = _("Failed to create backup, wallet file not found");
-        LogPrintf("%s\n", strBackupWarning);
+        // Do not warn here. This could happen if the wallet hasn't been created.
+        LogPrintf("%s\n", _("Cannot create wallet auto-backup, wallet file not found"));
         return false;
     }
 
