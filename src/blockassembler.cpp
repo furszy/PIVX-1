@@ -111,7 +111,7 @@ bool SolveProofOfStake(CBlock* pblock, CBlockIndex* pindexPrev, CWallet* pwallet
     return true;
 }
 
-bool CreateCoinbaseTx(CBlock* pblock, const CScript& scriptPubKeyIn, CBlockIndex* pindexPrev)
+CMutableTransaction CreateCoinbaseTx(const CScript& scriptPubKeyIn, CBlockIndex* pindexPrev)
 {
     assert(pindexPrev);
     const int nHeight = pindexPrev->nHeight + 1;
@@ -128,7 +128,12 @@ bool CreateCoinbaseTx(CBlock* pblock, const CScript& scriptPubKeyIn, CBlockIndex
         txCoinbase.vout[0].nValue = GetBlockValue(nHeight);
     }
 
-    pblock->vtx.emplace_back(MakeTransactionRef(txCoinbase));
+    return txCoinbase;
+}
+
+bool CreateCoinbaseTx(CBlock* pblock, const CScript& scriptPubKeyIn, CBlockIndex* pindexPrev)
+{
+    pblock->vtx.emplace_back(MakeTransactionRef(CreateCoinbaseTx(scriptPubKeyIn, pindexPrev)));
     return true;
 }
 

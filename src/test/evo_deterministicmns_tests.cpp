@@ -5,9 +5,12 @@
 
 #include "test/test_pivx.h"
 
+#include "blockassembler.h"
+#include "consensus/merkle.h"
 #include "evo/specialtx.h"
 #include "evo/providertx.h"
 #include "evo/deterministicmns.h"
+#include "masternode-payments.h"
 #include "messagesigner.h"
 #include "netbase.h"
 #include "policy/policy.h"
@@ -371,6 +374,30 @@ BOOST_FIXTURE_TEST_CASE(dip3_protx, TestChain400Setup)
     }
     // 30 blocks, 15 masternodes. Must have been paid exactly 2 times each.
     CheckPayments(mapPayments, 15, 2);
+
+    // Check that the prev DMN winner is different that the tip one
+    std::vector<CTxOut> vecMnOutsPrev;
+    BOOST_CHECK(masternodePayments.GetMasternodeTxOuts(chainTip->pprev, vecMnOutsPrev));
+    std::vector<CTxOut> vecMnOutsNow;
+    BOOST_CHECK(masternodePayments.GetMasternodeTxOuts(chainTip, vecMnOutsNow));
+    BOOST_CHECK(vecMnOutsPrev != vecMnOutsNow);
+
+    // Craft an invalid block paying to the previous block DMN again
+    CBlock invalidBlock = CreateBlock({}, coinbaseKey);
+    std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>(invalidBlock);
+    CMutableTransaction invalidCoinbaseTx = CreateCoinbaseTx(CScript(), chainTip);
+    invalidCoinbaseTx.vout.clear();
+    for (const CTxOut& mnOut: vecMnOutsPrev) {
+        invalidCoinbaseTx.vout.emplace_back(mnOut);
+    }
+    invalidCoinbaseTx.vout.emplace_back(
+            CTxOut(GetBlockValue(nHeight + 1) - GetMasternodePayment(),
+                   GetScriptForDestination(coinbaseKey.GetPubKey().GetID())));
+    pblock->vtx[0] = MakeTransactionRef(invalidCoinbaseTx);
+    pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
+    CValidationState state;
+    BOOST_CHECK_MESSAGE(!ProcessNewBlock(state, nullptr, pblock, nullptr), "Error, invalid block paying to an already paid DMN passed");
+    BOOST_CHECK(WITH_LOCK(cs_main, return chainActive.Height()) == nHeight); // no block connected
 
     UpdateNetworkUpgradeParameters(Consensus::UPGRADE_V6_0, Consensus::NetworkUpgrade::NO_ACTIVATION_HEIGHT);
 }
