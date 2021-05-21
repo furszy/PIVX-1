@@ -11,6 +11,7 @@
 #include "evo/providertx.h"
 #include "evo/deterministicmns.h"
 #include "masternode-payments.h"
+#include "masternode-sync.h"
 #include "messagesigner.h"
 #include "netbase.h"
 #include "policy/policy.h"
@@ -192,6 +193,12 @@ BOOST_FIXTURE_TEST_CASE(dip3_protx, TestChain400Setup)
     CBlockIndex* chainTip = chainActive.Tip();
     int nHeight = chainTip->nHeight;
     UpdateNetworkUpgradeParameters(Consensus::UPGRADE_V6_0, nHeight);
+    masternodeSync.RequestedMasternodeAssets = MASTERNODE_SYNC_FINISHED;
+    // enable SPORK_8
+    int64_t nTime = GetTime() - 10;
+    const CSporkMessage& sporkMnPayment = CSporkMessage(SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT, nTime + 1, nTime);
+    sporkManager.AddOrUpdateSporkMessage(sporkMnPayment);
+    BOOST_CHECK(sporkManager.IsSporkActive(SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT));
     int port = 1;
 
     std::vector<uint256> dmnHashes;
