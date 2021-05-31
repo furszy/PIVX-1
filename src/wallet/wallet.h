@@ -157,7 +157,7 @@ public:
         READWRITE(vchPubKey);
         if (ser_action.ForRead()) {
             try {
-                READWRITE(FLATDATA(type));
+                READWRITE(Span<unsigned char>((unsigned char*)&type, 1));
                 READWRITE(m_pre_split);
             } catch (std::ios_base::failure&) {
                 /* Set as external address if we can't read the type boolean
@@ -166,7 +166,7 @@ public:
                 m_pre_split = true;
             }
         } else {
-            READWRITE(FLATDATA(type));
+            READWRITE(Span<unsigned char>((unsigned char*)&type, 1));
             READWRITE(m_pre_split);
         }
     }

@@ -123,7 +123,6 @@ CMasternodeDB::ReadResult CMasternodeDB::Read(CMasternodeMan& mnodemanToLoad)
     }
 
     int version;
-    unsigned char pchMsgTmp[4];
     std::string strMagicMessageTmp;
     try {
         // de-serialize file header
@@ -137,10 +136,11 @@ CMasternodeDB::ReadResult CMasternodeDB::Read(CMasternodeMan& mnodemanToLoad)
         }
 
         // de-serialize file header (network specific magic number) and ..
-        ssMasternodes >> FLATDATA(pchMsgTmp);
+        std::vector<unsigned char> pchMsgTmp(4);
+        ssMasternodes >> MakeSpan(pchMsgTmp);
 
         // ... verify the network matches ours
-        if (memcmp(pchMsgTmp, Params().MessageStart(), sizeof(pchMsgTmp))) {
+        if (memcmp(pchMsgTmp.data(), Params().MessageStart(), pchMsgTmp.size()) != 0) {
             error("%s : Invalid network magic number", __func__);
             return IncorrectMagicNumber;
         }

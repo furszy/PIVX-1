@@ -5,7 +5,6 @@
 
 #include "masternode-payments.h"
 
-#include "addrman.h"
 #include "chainparams.h"
 #include "evo/deterministicmns.h"
 #include "fs.h"
@@ -112,7 +111,6 @@ CMasternodePaymentDB::ReadResult CMasternodePaymentDB::Read(CMasternodePayments&
     }
 
     int version;
-    unsigned char pchMsgTmp[4];
     std::string strMagicMessageTmp;
     try {
         // de-serialize file header
@@ -125,12 +123,12 @@ CMasternodePaymentDB::ReadResult CMasternodePaymentDB::Read(CMasternodePayments&
             return IncorrectMagicMessage;
         }
 
-
         // de-serialize file header (network specific magic number) and ..
-        ssObj >> FLATDATA(pchMsgTmp);
+        std::vector<unsigned char> pchMsgTmp(4);
+        ssObj >> MakeSpan(pchMsgTmp);
 
         // ... verify the network matches ours
-        if (memcmp(pchMsgTmp, Params().MessageStart(), sizeof(pchMsgTmp))) {
+        if (memcmp(pchMsgTmp.data(), Params().MessageStart(), pchMsgTmp.size()) != 0) {
             error("%s : Invalid network magic number", __func__);
             return IncorrectMagicNumber;
         }
