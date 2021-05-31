@@ -136,7 +136,7 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
     if (chainActive.Contains(blockindex))
         confirmations = chainActive.Height() - blockindex->nHeight + 1;
     result.pushKV("confirmations", confirmations);
-    result.pushKV("size", (int)::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION));
+    result.pushKV("size", (int)::GetSerializeSize(block, PROTOCOL_VERSION));
     result.pushKV("height", blockindex->nHeight);
     result.pushKV("version", block.nVersion);
     result.pushKV("merkleroot", block.hashMerkleRoot.GetHex());
@@ -1363,7 +1363,7 @@ UniValue getblockindexstats(const JSONRPCRequest& request) {
                 continue;
 
             // Transaction size
-            nBytes += GetSerializeSize(tx, SER_NETWORK, CLIENT_VERSION);
+            nBytes += GetSerializeSize(tx, CLIENT_VERSION);
 
             // Transparent inputs
             for (unsigned int j = 0; j < tx.vin.size(); j++) {

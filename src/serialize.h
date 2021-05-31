@@ -603,7 +603,6 @@ template<typename Stream, typename T, std::size_t N> void Unserialize(Stream& is
  * optional
  */
 template<typename T> unsigned int GetSerializeSize(const Optional<T> &item);
-template<typename T> unsigned int GetSerializeSizeNetwork(const Optional<T> &item);
 template<typename Stream, typename T> void Serialize(Stream& os, const Optional<T>& item);
 template<typename Stream, typename T> void Unserialize(Stream& is, Optional<T>& item);
 
@@ -618,29 +617,6 @@ unsigned int GetSerializeSize(const std::array<T, N> &item)
         size += GetSerializeSize(item[0]);
     }
     return size;
-}
-
-/**
-  * optional
-  */
-template<typename T>
-unsigned int GetSerializeSize(const Optional<T> &item)
-{
-    if (item) {
-        return 1 + GetSerializeSize(*item);
-    } else {
-        return 1;
-    }
-}
-
-template<typename T>
-unsigned int GetSerializeSizeNetwork(const Optional<T> &item)
-{
-    if (item) {
-        return 1 + GetSerializeSize(*item, SER_NETWORK, 0);
-    } else {
-        return 1;
-    }
 }
 
 template<typename Stream, typename T>
@@ -1074,11 +1050,10 @@ class CSizeComputer
 protected:
     size_t nSize;
 
-    const int nType;
     const int nVersion;
 
 public:
-    CSizeComputer(int nTypeIn, int nVersionIn) : nSize(0), nType(nTypeIn), nVersion(nVersionIn) {}
+    explicit CSizeComputer(int nVersionIn) : nSize(0), nVersion(nVersionIn) {}
 
     void write(const char* psz, size_t _nSize)
     {
@@ -1104,7 +1079,6 @@ public:
     }
 
     int GetVersion() const { return nVersion; }
-    int GetType() const { return nType; }
 };
 
 template<typename Stream>
@@ -1155,15 +1129,28 @@ inline void WriteCompactSize(CSizeComputer &s, uint64_t nSize)
 }
 
 template <typename T>
-size_t GetSerializeSize(const T& t, int nType, int nVersion = 0)
+size_t GetSerializeSize(const T& t, int nVersion = 0)
 {
-    return (CSizeComputer(nType, nVersion) << t).size();
+    return (CSizeComputer(nVersion) << t).size();
 }
 
 template <typename S, typename T>
 size_t GetSerializeSize(const S& s, const T& t)
 {
-    return (CSizeComputer(s.GetType(), s.GetVersion()) << t).size();
+    return (CSizeComputer(s.GetVersion()) << t).size();
+}
+
+/**
+  * optional
+  */
+template<typename T>
+unsigned int GetSerializeSize(const Optional<T> &item)
+{
+    if (item) {
+        return 1 + GetSerializeSize(*item);
+    } else {
+        return 1;
+    }
 }
 
 #endif // PIVX_SERIALIZE_H

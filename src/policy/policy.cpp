@@ -29,7 +29,7 @@ CAmount GetDustThreshold(const CTxOut& txout, const CFeeRate& dustRelayFee)
     if (txout.scriptPubKey.IsUnspendable())
         return 0;
 
-    size_t nSize = GetSerializeSize(txout, SER_DISK, 0);
+    size_t nSize = GetSerializeSize(txout, 0);
     nSize += (32 + 4 + 1 + 107 + 4); // the 148 mentioned above
     return 3 * dustRelayFee.GetFee(nSize);
 }

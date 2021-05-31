@@ -19,7 +19,7 @@ void check_ser_rep(T thing, std::vector<unsigned char> expected)
     CDataStream ss(SER_DISK, 0);
     ss << thing;
 
-    BOOST_CHECK(GetSerializeSize(thing, 0, 0) == ss.size());
+    BOOST_CHECK(GetSerializeSize(thing, 0) == ss.size());
 
     std::vector<unsigned char> serialized_representation(ss.begin(), ss.end());
 
@@ -208,13 +208,13 @@ BOOST_AUTO_TEST_CASE(varints)
     CDataStream::size_type size = 0;
     for (int i = 0; i < 100000; i++) {
         ss << VARINT(i, VarIntMode::NONNEGATIVE_SIGNED);
-        size += ::GetSerializeSize(VARINT(i, VarIntMode::NONNEGATIVE_SIGNED), 0, 0);
+        size += ::GetSerializeSize(VARINT(i, VarIntMode::NONNEGATIVE_SIGNED), 0);
         BOOST_CHECK(size == ss.size());
     }
 
     for (uint64_t i = 0;  i < 100000000000ULL; i += 999999937) {
         ss << VARINT(i);
-        size += ::GetSerializeSize(VARINT(i), 0, 0);
+        size += ::GetSerializeSize(VARINT(i), 0);
         BOOST_CHECK(size == ss.size());
     }
 

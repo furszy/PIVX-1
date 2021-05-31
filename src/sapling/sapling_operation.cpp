@@ -552,7 +552,7 @@ OperationResult CheckTransactionSize(std::vector<SendManyRecipient>& recipients,
         }
     }
     CTransaction tx(mtx);
-    size_t txsize = GetSerializeSize(tx, SER_NETWORK, tx.nVersion) + CTXOUT_REGULAR_SIZE * nTransparentOuts;
+    size_t txsize = tx.GetTotalSize() + CTXOUT_REGULAR_SIZE * nTransparentOuts;
     if (fromTaddr) {
         txsize += CTXIN_SPEND_DUST_SIZE;
         txsize += CTXOUT_REGULAR_SIZE;      // There will probably be taddr change
