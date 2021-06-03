@@ -18,56 +18,56 @@
 class CCoinControl;
 struct TxValues;
 
-struct ShieldedRecipient
+class ShieldedRecipient final : public CRecipientBase
 {
+public:
     const libzcash::SaplingPaymentAddress address;
-    const CAmount amount;
     const std::string memo;
-    bool fSubtractFeeFromAmount;
     ShieldedRecipient(const libzcash::SaplingPaymentAddress& _address, const CAmount& _amount, const std::string& _memo, bool _fSubtractFeeFromAmount) :
-        address(_address),
-        amount(_amount),
-        memo(_memo),
-        fSubtractFeeFromAmount(_fSubtractFeeFromAmount)
-    {}
+        CRecipientBase(_amount, _fSubtractFeeFromAmount), address(_address), memo(_memo) {}
+    bool isTransparent() const override { return false; }
+    Optional<libzcash::SaplingPaymentAddress> getSapPaymentAddr() const override { return {address}; };
+    std::string getMemo() const override { return memo; }
 };
 
 struct SendManyRecipient
 {
-    const Optional<ShieldedRecipient> shieldedRecipient{nullopt};
-    const Optional<CRecipient> transparentRecipient{nullopt};
+    const std::shared_ptr<CRecipientBase> recipient;
 
-    bool IsTransparent() const { return transparentRecipient != nullopt; }
-    bool IsSubtractFee() const { return IsTransparent() ? transparentRecipient->fSubtractFeeFromAmount
-                                                        : shieldedRecipient->fSubtractFeeFromAmount; }
+    bool IsTransparent() const { return recipient->isTransparent(); }
+    bool IsSubtractFee() const { return recipient->fSubtractFeeFromAmount; }
+    CAmount getAmount() const { return recipient->nAmount; };
+    CScript getScript() const { assert(IsTransparent()); return *recipient->getScript(); }
+    libzcash::SaplingPaymentAddress getSapPaymentAddr() const { assert(!IsTransparent()); return *recipient->getSapPaymentAddr(); }
+    std::string getMemo() const { return recipient->getMemo(); }
 
     // Prevent default empty initialization
     SendManyRecipient() = delete;
 
     // Shielded recipient
     SendManyRecipient(const libzcash::SaplingPaymentAddress& address, const CAmount& amount, const std::string& memo, bool fSubtractFeeFromAmount):
-        shieldedRecipient(ShieldedRecipient(address, amount, memo, fSubtractFeeFromAmount))
+            recipient(new ShieldedRecipient(address, amount, memo, fSubtractFeeFromAmount))
     {}
 
     // Transparent recipient: P2PKH
     SendManyRecipient(const CTxDestination& dest, const CAmount& amount, bool fSubtractFeeFromAmount):
-        transparentRecipient(CRecipient(GetScriptForDestination(dest), amount, fSubtractFeeFromAmount))
+            recipient(new CRecipient(GetScriptForDestination(dest), amount, fSubtractFeeFromAmount))
     {}
 
     // Transparent recipient: P2CS
     SendManyRecipient(const CKeyID& ownerKey, const CKeyID& stakerKey, const CAmount& amount, bool fV6Enforced):
-        transparentRecipient(CRecipient(fV6Enforced ? GetScriptForStakeDelegation(stakerKey, ownerKey)
-                                                    : GetScriptForStakeDelegationLOF(stakerKey, ownerKey), amount, false))
+            recipient(new CRecipient(fV6Enforced ? GetScriptForStakeDelegation(stakerKey, ownerKey)
+                        : GetScriptForStakeDelegationLOF(stakerKey, ownerKey), amount, false))
     {}
 
     // Transparent recipient: multisig
     SendManyRecipient(int nRequired, const std::vector<CPubKey>& keys, const CAmount& amount):
-        transparentRecipient(CRecipient(GetScriptForMultisig(nRequired, keys), amount, false))
+            recipient(new CRecipient(GetScriptForMultisig(nRequired, keys), amount, false))
     {}
 
     // Transparent recipient: OP_RETURN
     SendManyRecipient(const uint256& message):
-        transparentRecipient(CRecipient(GetScriptForOpReturn(message), 0, false))
+            recipient(new CRecipient(GetScriptForOpReturn(message), 0, false))
     {}
 };
 
