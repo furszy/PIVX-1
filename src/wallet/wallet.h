@@ -1164,7 +1164,7 @@ public:
     bool AbandonTransaction(const uint256& hashTx);
 
     /* Initializes the wallet, returns a new CWallet instance or a null pointer in case of an error */
-    static CWallet* CreateWalletFromFile(const std::string& walletFile, bool& fFirstRun);
+    static CWallet* CreateWalletFromFile(const std::string& walletFile);
 
     /**
      * Wallet post-init setup

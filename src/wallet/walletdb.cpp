@@ -894,8 +894,10 @@ static bool cleanWalletBackups(folder_set_t& folder_set, int nWalletBackups, std
     return true;
 }
 
-bool AutoBackupWallet(const std::string& strWalletFile, std::string& strBackupWarning, std::string& strBackupError)
+bool AutoBackupWallet(const CWallet& wallet, std::string& strBackupWarning, std::string& strBackupError)
 {
+    std::string strWalletFile = wallet.GetDBHandle().GetName();
+
     strBackupWarning = strBackupError = "";
     int nWalletBackups = std::max(0, std::min(10, (int)gArgs.GetArg("-createwalletbackups", DEFAULT_CREATEWALLETBACKUPS)));
     if (nWalletBackups == 0) {
@@ -918,13 +920,13 @@ bool AutoBackupWallet(const std::string& strWalletFile, std::string& strBackupWa
     }
 
     if (!fs::exists(sourceFile)) {
-        // Do not warn here. This could happen if the wallet hasn't been created.
-        LogPrintf("%s\n", _("Cannot create wallet auto-backup, wallet file not found"));
+        strBackupWarning = _("Failed to create backup, wallet file not found");
+        LogPrintf("%s\n", strBackupWarning);
         return false;
     }
 
     // Try to backup
-    if (!AttemptBackupWallet(nullptr, sourceFile, backupFile)) {
+    if (!AttemptBackupWallet(&wallet, sourceFile, backupFile)) {
         return false; // error is logged internally
     }
 
