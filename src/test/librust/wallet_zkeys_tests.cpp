@@ -21,7 +21,7 @@
  * LoadZKeyMetadata()
  */
 
-BOOST_FIXTURE_TEST_SUITE(wallet_zkeys_tests, WalletTestingSetup)
+BOOST_AUTO_TEST_SUITE(wallet_zkeys_tests)
 
 /**
   * This test covers Sapling methods on CWallet
@@ -30,9 +30,7 @@ BOOST_FIXTURE_TEST_SUITE(wallet_zkeys_tests, WalletTestingSetup)
   * LoadSaplingZKey()
   * LoadSaplingZKeyMetadata()
   */
-BOOST_AUTO_TEST_CASE(StoreAndLoadSaplingZkeys) {
-    SelectParams(CBaseChainParams::MAIN);
-
+BOOST_FIXTURE_TEST_CASE(StoreAndLoadSaplingZkeys, TestingSetup) {
     CWallet wallet("dummy", CWalletDBWrapper::CreateDummy());
     LOCK(wallet.cs_wallet);
     // wallet should be empty
@@ -133,10 +131,9 @@ BOOST_AUTO_TEST_CASE(StoreAndLoadSaplingZkeys) {
 /**
   * This test covers methods on CWalletDB to load/save crypted sapling z keys.
   */
-BOOST_AUTO_TEST_CASE(WriteCryptedSaplingZkeyDirectToDb) {
-    SelectParams(CBaseChainParams::TESTNET);
-
+BOOST_FIXTURE_TEST_CASE(WriteCryptedSaplingZkeyDirectToDb, TestnetSetup) {
     fs::path path = fs::absolute("testWallet1", GetWalletDir());
+    path.make_preferred();
     CWallet testWallet("testWallet1", CWalletDBWrapper::Create(path));
     bool fFirstRun;
     BOOST_CHECK_EQUAL(testWallet.LoadWallet(fFirstRun), DB_LOAD_OK);
