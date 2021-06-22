@@ -29,7 +29,6 @@ class GovernanceInvalidBudgetTest(PivxTestFramework):
         self.enable_mocktime()
 
         self.minerAPos = 0
-        self.minerBPos = 1
         self.remoteOnePos = 1
         self.remoteTwoPos = 2
 
@@ -41,12 +40,11 @@ class GovernanceInvalidBudgetTest(PivxTestFramework):
 
     def run_test(self):
         self.minerA = self.nodes[self.minerAPos]     # also controller of mn1 and mn2
-        self.minerB = self.nodes[self.minerBPos]
         self.mn1 = self.nodes[self.remoteOnePos]
         self.mn2 = self.nodes[self.remoteTwoPos]
         self.setupContext()
 
-        # Create a proposal and vote on it
+        # Create a valid proposal and vote on it
         next_superblock = self.minerA.getnextsuperblock()
         payee = self.minerA.getnewaddress()
         self.log.info("Creating a proposal to be paid at block %d" % next_superblock)
@@ -62,12 +60,12 @@ class GovernanceInvalidBudgetTest(PivxTestFramework):
         self.minerA.mnbudgetvote("alias", proposalHash, "yes", self.masternodeTwoAlias)
         time.sleep(1)
         self.stake_and_ping(self.minerAPos, 1, [self.mn1, self.mn2])
-        projection = self.minerB.getbudgetprojection()[0]
+        projection = self.mn1.getbudgetprojection()[0]
         assert_equal(projection["Name"], "test1")
         assert_equal(projection["Hash"], proposalHash)
         assert_equal(projection["Yeas"], 2)
 
-        # Create invalid finalized budget and vote on it
+        # Try to create an invalid finalized budget, paying to an nonexistent proposal
         self.log.info("Creating invalid budget finalization...")
         self.stake_and_ping(self.minerAPos, 5, [self.mn1, self.mn2])
 
@@ -84,32 +82,9 @@ class GovernanceInvalidBudgetTest(PivxTestFramework):
         time.sleep(1)
         self.stake_and_ping(self.minerAPos, 4, [self.mn1, self.mn2])
         res = self.minerA.createrawmnfinalbudget(budgetname, blockstart, proposals, feeBudgetId)
-        assert(res["result"] == "fin_budget_sent")
-        budgetFinHash = res["id"]
-        assert (budgetFinHash != "")
-        time.sleep(1)
+        assert(res["result"] == "error") # not accepted
 
-        self.log.info("Voting for invalid budget finalization...")
-        self.minerA.mnfinalbudget("vote-many", budgetFinHash)
-        self.stake_and_ping(self.minerAPos, 2, [self.mn1, self.mn2])
-        budFin = self.minerB.mnfinalbudget("show")
-        budget = budFin[next(iter(budFin))]
-        assert_equal(budget["VoteCount"], 2)
-
-        # Stake up until the block before the superblock.
-        skip_blocks = next_superblock - self.minerA.getblockcount() - 1
-        self.stake_and_ping(self.minerAPos, skip_blocks, [self.mn1, self.mn2])
-
-        # mine the superblock and check payment, it must not pay to the invalid finalization.
-        self.log.info("Checking superblock...")
-        self.stake_and_ping(self.nodes.index(self.minerA), 1, [])
-        assert_equal(self.minerA.getblockcount(), next_superblock)
-        coinstake = self.minerA.getrawtransaction(self.minerA.getblock(self.minerA.getbestblockhash())["tx"][1], True)
-        budget_payment_out = coinstake["vout"][-1]
-        assert(budget_payment_out["scriptPubKey"]["hex"] != badPropPayee)
-        assert(budget_payment_out["value"] != badPropAmount)
-
-        self.log.info("All good.")
+        self.log.info("Good, invalid budget not accepted.")
 
     def send_3_pings(self, mn_list):
         self.advance_mocktime(30)
@@ -120,15 +95,11 @@ class GovernanceInvalidBudgetTest(PivxTestFramework):
         time.sleep(2)
 
     def setupContext(self):
-        # First mine 250 PoW blocks (50 with minerB, 200 with minerA)
+        # First mine 250 PoW blocks (250 with minerA)
         self.log.info("Generating 259 blocks...")
-        for _ in range(2):
-            for _ in range(25):
-                self.mocktime = self.generate_pow(self.minerBPos, self.mocktime)
-            self.sync_blocks()
-            for _ in range(100):
-                self.mocktime = self.generate_pow(self.minerAPos, self.mocktime)
-            self.sync_blocks()
+        for _ in range(250):
+            self.mocktime = self.generate_pow(self.minerAPos, self.mocktime)
+        self.sync_blocks()
         # Then stake 9 blocks with minerA
         self.stake_and_ping(self.minerAPos, 9, [])
         for n in self.nodes:
