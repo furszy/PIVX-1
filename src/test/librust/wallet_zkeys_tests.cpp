@@ -131,51 +131,55 @@ BOOST_FIXTURE_TEST_CASE(StoreAndLoadSaplingZkeys, TestingSetup) {
 /**
   * This test covers methods on CWalletDB to load/save crypted sapling z keys.
   */
-BOOST_FIXTURE_TEST_CASE(WriteCryptedSaplingZkeyDirectToDb, TestnetSetup) {
+BOOST_FIXTURE_TEST_CASE(WriteCryptedSaplingZkeyDirectToDb, BasicTestingSetup) {
     fs::path path = fs::absolute("testWallet1", GetWalletDir());
     path.make_preferred();
-    CWallet testWallet("testWallet1", CWalletDBWrapper::Create(path));
+    std::unique_ptr<CWallet> testWallet = std::make_unique<CWallet>("testWallet1", CWalletDBWrapper::Create(path));
     bool fFirstRun;
-    BOOST_CHECK_EQUAL(testWallet.LoadWallet(fFirstRun), DB_LOAD_OK);
-    BOOST_CHECK(!testWallet.HasSaplingSPKM());
-    assert(testWallet.SetupSPKM(true));
+    BOOST_CHECK_EQUAL(testWallet->LoadWallet(fFirstRun), DB_LOAD_OK);
+    BOOST_CHECK(!testWallet->HasSaplingSPKM());
+    assert(testWallet->SetupSPKM(true));
 
     // wallet should be empty
     std::set<libzcash::SaplingPaymentAddress> addrs;
-    testWallet.GetSaplingPaymentAddresses(addrs);
+    testWallet->GetSaplingPaymentAddresses(addrs);
     BOOST_CHECK_EQUAL(0, addrs.size());
 
     // Add random key to the wallet
-    auto address = testWallet.GenerateNewSaplingZKey();
+    auto address = testWallet->GenerateNewSaplingZKey();
 
     // wallet should have one key
-    testWallet.GetSaplingPaymentAddresses(addrs);
+    testWallet->GetSaplingPaymentAddresses(addrs);
     BOOST_CHECK_EQUAL(1, addrs.size());
 
     // encrypt wallet
     SecureString strWalletPass;
     strWalletPass.reserve(100);
     strWalletPass = "hello";
-    BOOST_CHECK(testWallet.EncryptWallet(strWalletPass));
+    BOOST_CHECK(testWallet->EncryptWallet(strWalletPass));
 
     // adding a new key will fail as the wallet is locked
-    BOOST_CHECK_THROW(testWallet.GenerateNewSaplingZKey(), std::runtime_error);
+    BOOST_CHECK_THROW(testWallet->GenerateNewSaplingZKey(), std::runtime_error);
 
     // unlock wallet and then add
-    testWallet.Unlock(strWalletPass);
-    libzcash::SaplingPaymentAddress address2 = testWallet.GenerateNewSaplingZKey();
+    testWallet->Unlock(strWalletPass);
+    libzcash::SaplingPaymentAddress address2 = testWallet->GenerateNewSaplingZKey();
+
+    // Force db close
+    testWallet->Flush(true);
+    testWallet->GetDBHandlePtr()->CloseAndReset();
+    testWallet.reset();
 
     // Create a new wallet from the existing wallet path
     fFirstRun = false;
-    CWallet wallet2("testWallet1", CWalletDBWrapper::Create(path));
-    BOOST_CHECK_EQUAL(DB_LOAD_OK, wallet2.LoadWallet(fFirstRun));
+    std::unique_ptr<CWallet> wallet2 = std::make_unique<CWallet>("testWallet1", CWalletDBWrapper::Create(path));
+    BOOST_CHECK_EQUAL(DB_LOAD_OK, wallet2->LoadWallet(fFirstRun));
 
     // Confirm it's not the same as the other wallet
-    BOOST_CHECK(&testWallet != &wallet2);
-    BOOST_CHECK(wallet2.HasSaplingSPKM());
+    BOOST_CHECK(wallet2->HasSaplingSPKM());
 
     // wallet should have two keys
-    wallet2.GetSaplingPaymentAddresses(addrs);
+    wallet2->GetSaplingPaymentAddresses(addrs);
     BOOST_CHECK_EQUAL(2, addrs.size());
 
     //check we have entries for our payment addresses
@@ -184,16 +188,21 @@ BOOST_FIXTURE_TEST_CASE(WriteCryptedSaplingZkeyDirectToDb, TestnetSetup) {
 
     // spending key is crypted, so we can't extract valid payment address
     libzcash::SaplingExtendedSpendingKey keyOut;
-    BOOST_CHECK(!wallet2.GetSaplingExtendedSpendingKey(address, keyOut));
+    BOOST_CHECK(!wallet2->GetSaplingExtendedSpendingKey(address, keyOut));
 
     // unlock wallet to get spending keys and verify payment addresses
-    wallet2.Unlock(strWalletPass);
+    wallet2->Unlock(strWalletPass);
 
-    BOOST_CHECK(wallet2.GetSaplingExtendedSpendingKey(address, keyOut));
+    BOOST_CHECK(wallet2->GetSaplingExtendedSpendingKey(address, keyOut));
     BOOST_CHECK(address == keyOut.DefaultAddress());
 
-    BOOST_CHECK(wallet2.GetSaplingExtendedSpendingKey(address2, keyOut));
+    BOOST_CHECK(wallet2->GetSaplingExtendedSpendingKey(address2, keyOut));
     BOOST_CHECK(address2 == keyOut.DefaultAddress());
+
+    // Force db close
+    wallet2->Flush(true);
+    wallet2->GetDBHandlePtr()->CloseAndReset();
+    wallet2.reset();
 }
 
 
