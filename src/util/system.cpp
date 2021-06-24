@@ -835,7 +835,7 @@ void ArgsManager::ReadConfigFile(const std::string& confPath)
         m_config_args.clear();
     }
 
-    fs::ifstream stream(GetConfigFile(confPath));
+    fsbridge::ifstream stream(GetConfigFile(confPath));
 
     // ok to not have a config file
     if (stream.good()) {
