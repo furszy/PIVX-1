@@ -32,6 +32,7 @@
 #include <stdint.h>
 #include <string>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include <boost/signals2/signal.hpp>
@@ -300,5 +301,24 @@ fs::path AbsPathForConfigVal(const fs::path& path, bool net_specific = true);
  * sched_setchedule().
  */
 int ScheduleBatchPriority(void);
+
+namespace util {
+
+#ifdef WIN32
+class WinCmdLineArgs
+{
+public:
+    WinCmdLineArgs();
+    ~WinCmdLineArgs();
+    std::pair<int, char**> get();
+
+private:
+    int argc;
+    char** argv;
+    std::vector<std::string> args;
+};
+#endif
+
+} // namespace util
 
 #endif // BITCOIN_UTIL_SYSTEM_H
