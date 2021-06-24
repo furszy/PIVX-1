@@ -712,7 +712,8 @@ std::string NetworkErrorString(int err)
             nullptr, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
             buf, ARRAYSIZE(buf), nullptr))
     {
-        return strprintf("%s (%d)", std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>,wchar_t>().to_bytes(buf), err);
+        const auto& bufConvert = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>,wchar_t>().to_bytes(buf);
+        return strprintf("%s (%d)", bufConvert, err);
     } else {
         return strprintf("Unknown error (%d)", err);
     }
