@@ -574,7 +574,7 @@ BOOST_AUTO_TEST_CASE(cached_balances_tests)
 
     // Receive balance from an external source
     CTxDestination receivingAddr;
-    BOOST_ASSERT(wallet.getNewAddress(receivingAddr, "receiving_address").result);
+    BOOST_ASSERT(wallet.getNewAddress(receivingAddr, "receiving_address"));
     CTxOut creditOut(nCredit/2, GetScriptForDestination(receivingAddr));
     CWalletTx& wtxCredit = ReceiveBalanceWith({creditOut, creditOut},wallet);
 

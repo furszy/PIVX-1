@@ -178,15 +178,15 @@ std::vector<CWalletTx> CWallet::getWalletTxs()
     return result;
 }
 
-PairResult CWallet::getNewAddress(CTxDestination& ret, std::string label){
+CallResult<CTxDestination> CWallet::getNewAddress(CTxDestination& ret, std::string label){
     return getNewAddress(ret, label, AddressBook::AddressBookPurpose::RECEIVE);
 }
 
-PairResult CWallet::getNewStakingAddress(CTxDestination& ret, std::string label){
+CallResult<CTxDestination> CWallet::getNewStakingAddress(CTxDestination& ret, std::string label){
     return getNewAddress(ret, label, AddressBook::AddressBookPurpose::COLD_STAKING, CChainParams::Base58Type::STAKING_ADDRESS);
 }
 
-PairResult CWallet::getNewAddress(CTxDestination& ret, const std::string addressLabel, const std::string purpose,
+CallResult<CTxDestination> CWallet::getNewAddress(CTxDestination& ret, const std::string addressLabel, const std::string purpose,
                                          const CChainParams::Base58Type addrType)
 {
     LOCK(cs_wallet);
@@ -200,7 +200,7 @@ PairResult CWallet::getNewAddress(CTxDestination& ret, const std::string address
     // Get a key
     if (!GetKeyFromPool(newKey, type)) {
         // inform the user to top-up the keypool or unlock the wallet
-        return PairResult(false, new std::string(
+        return CallResult<CTxDestination>(false, std::string(
                         _("Keypool ran out, please call keypoolrefill first, or unlock the wallet.")));
     }
     CKeyID keyID = newKey.GetID();
@@ -209,7 +209,7 @@ PairResult CWallet::getNewAddress(CTxDestination& ret, const std::string address
         throw std::runtime_error("CWallet::getNewAddress() : SetAddressBook failed");
 
     ret = CTxDestination(keyID);
-    return PairResult(true);
+    return CallResult<CTxDestination>(true, ret);
 }
 
 int64_t CWallet::GetKeyCreationTime(const CWDestination& dest)

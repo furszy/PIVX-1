@@ -631,12 +631,12 @@ QString AddressTableModel::getAddressToShow(bool isShielded) const
     }
 
     // For some reason we don't have any address in our address book, let's create one
-    PairResult res(false);
+    CallResult<Destination> res(false, "");
     QString addressStr;
     if (!isShielded) {
         Destination newAddress;
         res = walletModel->getNewAddress(newAddress, "Default");
-        if (res.result) {
+        if (res) {
             addressStr = QString::fromStdString(newAddress.ToString());
         }
     } else {

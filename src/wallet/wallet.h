@@ -18,7 +18,7 @@
 #include "key.h"
 #include "key_io.h"
 #include "keystore.h"
-#include "pairresult.h"
+#include "operationresult.h"
 #include "policy/feerate.h"
 #include "primitives/block.h"
 #include "primitives/transaction.h"
@@ -883,10 +883,10 @@ public:
     void LockIfMyCollateral(const CTransactionRef& ptx);
 
     //  keystore implementation
-    PairResult getNewAddress(CTxDestination& ret, const std::string addressLabel, const std::string purpose,
+    CallResult<CTxDestination> getNewAddress(CTxDestination& ret, const std::string addressLabel, const std::string purpose,
                                            const CChainParams::Base58Type addrType = CChainParams::PUBKEY_ADDRESS);
-    PairResult getNewAddress(CTxDestination& ret, std::string label);
-    PairResult getNewStakingAddress(CTxDestination& ret, std::string label);
+    CallResult<CTxDestination> getNewAddress(CTxDestination& ret, std::string label);
+    CallResult<CTxDestination> getNewStakingAddress(CTxDestination& ret, std::string label);
     int64_t GetKeyCreationTime(const CWDestination& dest);
     int64_t GetKeyCreationTime(CPubKey pubkey);
     int64_t GetKeyCreationTime(const CTxDestination& address);

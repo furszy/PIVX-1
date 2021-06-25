@@ -252,7 +252,7 @@ void ReceiveWidget::onNewAddressClicked()
         }
 
         QString strAddress;
-        PairResult r(false);
+        CallResult<Destination> r(false, "");
         if (!shieldedMode) {
             Destination address;
             r = walletModel->getNewAddress(address, "");
@@ -262,8 +262,8 @@ void ReceiveWidget::onNewAddressClicked()
         }
 
         // Check validity
-        if (!r.result) {
-            inform(r.status->c_str());
+        if (!r) {
+            inform(r.getError().c_str());
             return;
         }
 

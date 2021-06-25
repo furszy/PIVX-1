@@ -115,7 +115,7 @@ void RequestDialog::accept()
         QString title;
 
         Destination address;
-        PairResult r(false);
+        CallResult<Destination> r(false, "");
         if (this->isPaymentRequest) {
             r = walletModel->getNewAddress(address, label);
             title = tr("Request for ") + BitcoinUnits::format(displayUnit, value, false, BitcoinUnits::separatorAlways) + " " + QString(CURRENCY_UNIT.c_str());
@@ -124,7 +124,7 @@ void RequestDialog::accept()
             title = tr("Cold Staking Address Generated");
         }
 
-        if (!r.result) {
+        if (!r) {
             // TODO: notify user about this error
             close();
             return;

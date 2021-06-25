@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(test_in_block_and_mempool_notes_double_spend)
 {
     CTxDestination coinbaseDest;
     auto ret = pwalletMain->getNewAddress(coinbaseDest, "coinbase");
-    BOOST_ASSERT_MSG(ret.result, "cannot create address");
+    BOOST_ASSERT_MSG(ret, "cannot create address");
     BOOST_ASSERT_MSG(IsValidDestination(coinbaseDest), "invalid destination");
     BOOST_ASSERT_MSG(IsMine(*pwalletMain, coinbaseDest), "destination not from wallet");
 

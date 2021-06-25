@@ -119,9 +119,9 @@ static CTxDestination GetNewAddressFromLabel(CWallet* const pwallet, const std::
         label = LabelFromValue(params[0]);
 
     CTxDestination address;
-    PairResult r = pwallet->getNewAddress(address, label, purpose, addrType);
-    if(!r.result)
-        throw JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, *r.status);
+    auto r = pwallet->getNewAddress(address, label, purpose, addrType);
+    if(!r)
+        throw JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, r.getError());
     return address;
 }
 

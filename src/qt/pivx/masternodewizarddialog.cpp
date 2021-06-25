@@ -222,11 +222,11 @@ bool MasterNodeWizardDialog::createMN()
     if (!walletModel->getMNCollateralCandidate(collateralOut)) {
         // New receive address
         Destination dest;
-        PairResult r = walletModel->getNewAddress(dest, alias);
+        auto r = walletModel->getNewAddress(dest, alias);
 
-        if (!r.result) {
+        if (!r) {
             // generate address fail
-            inform(tr(r.status->c_str()));
+            inform(tr(r.getError().c_str()));
             return false;
         }
 
