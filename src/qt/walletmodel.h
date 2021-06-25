@@ -275,11 +275,11 @@ public:
     int64_t getKeyCreationTime(const CTxDestination& address);
     int64_t getKeyCreationTime(const std::string& address);
     int64_t getKeyCreationTime(const libzcash::SaplingPaymentAddress& address);
-    CallResult<Destination> getNewAddress(Destination& ret, std::string label = "") const;
+    CallResult<Destination> getNewAddress(Destination& ret, const std::string& label = "") const;
     /**
      * Return a new address used to receive for delegated cold stake purpose.
      */
-    CallResult<Destination> getNewStakingAddress(Destination& ret, std::string label = "") const;
+    CallResult<Destination> getNewStakingAddress(Destination& ret, const std::string& label = "") const;
 
     //! Return a new shielded address.
     CallResult<Destination> getNewShieldedAddress(QString& shieldedAddrRet, std::string strLabel = "");

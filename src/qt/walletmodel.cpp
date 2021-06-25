@@ -921,19 +921,17 @@ int64_t WalletModel::getKeyCreationTime(const libzcash::SaplingPaymentAddress& a
     return 0;
 }
 
-CallResult<Destination> WalletModel::getNewAddress(Destination& ret, std::string label) const
+CallResult<Destination> WalletModel::getNewAddress(Destination& ret, const std::string& label) const
 {
-    CTxDestination dest;
-    auto res = wallet->getNewAddress(dest, label);
-    if (res) ret = Destination(dest, false);
+    auto res = wallet->getNewAddress(label);
+    if (res) ret = Destination(*res.getObjResult(), false);
     return CallResult<Destination>(res.getResult(), ret);
 }
 
-CallResult<Destination> WalletModel::getNewStakingAddress(Destination& ret, std::string label) const
+CallResult<Destination> WalletModel::getNewStakingAddress(Destination& ret, const std::string& label) const
 {
-    CTxDestination dest;
-    auto res = wallet->getNewStakingAddress(dest, label);
-    if (res) ret = Destination(dest, true);
+    auto res = wallet->getNewStakingAddress(label);
+    if (res) ret = Destination(*res.getObjResult(), true);
     return CallResult<Destination>(res.getResult(), ret);
 }
 

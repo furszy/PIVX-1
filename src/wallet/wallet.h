@@ -883,10 +883,10 @@ public:
     void LockIfMyCollateral(const CTransactionRef& ptx);
 
     //  keystore implementation
-    CallResult<CTxDestination> getNewAddress(CTxDestination& ret, const std::string addressLabel, const std::string purpose,
-                                           const CChainParams::Base58Type addrType = CChainParams::PUBKEY_ADDRESS);
-    CallResult<CTxDestination> getNewAddress(CTxDestination& ret, std::string label);
-    CallResult<CTxDestination> getNewStakingAddress(CTxDestination& ret, std::string label);
+    CallResult<CTxDestination> getNewAddress(const std::string& addressLabel, const std::string purpose,
+                                             const CChainParams::Base58Type addrType = CChainParams::PUBKEY_ADDRESS);
+    CallResult<CTxDestination> getNewAddress(const std::string& label);
+    CallResult<CTxDestination> getNewStakingAddress(const std::string& label);
     int64_t GetKeyCreationTime(const CWDestination& dest);
     int64_t GetKeyCreationTime(CPubKey pubkey);
     int64_t GetKeyCreationTime(const CTxDestination& address);
