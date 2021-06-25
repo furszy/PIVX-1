@@ -17,7 +17,6 @@
 #include "key_io.h"
 #include "operationresult.h"
 #include "support/allocators/zeroafterfree.h"
-#include "pairresult.h"
 
 #include <map>
 #include <vector>

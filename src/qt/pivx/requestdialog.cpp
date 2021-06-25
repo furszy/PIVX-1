@@ -9,7 +9,6 @@
 #include "qt/pivx/qtutils.h"
 #include "guiutil.h"
 #include "amount.h"
-#include "pairresult.h"
 #include "optionsmodel.h"
 
 RequestDialog::RequestDialog(QWidget *parent) :

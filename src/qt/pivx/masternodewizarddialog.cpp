@@ -9,7 +9,6 @@
 #include "clientmodel.h"
 #include "key_io.h"
 #include "optionsmodel.h"
-#include "pairresult.h"
 #include "qt/pivx/mnmodel.h"
 #include "qt/pivx/guitransactionsutils.h"
 #include "qt/pivx/qtutils.h"
