@@ -36,6 +36,8 @@ private:
 public:
     CallResult(bool _res, const std::string& _error) : OperationResult(_res, _error) { }
     CallResult(bool _res, T _obj) : OperationResult(_res), m_obj_res(_obj) { }
+    CallResult(T _obj) : OperationResult(true), m_obj_res(_obj) { }
+    CallResult(const std::string& error) : OperationResult(false, error) { }
     const Optional<T>& getObjResult() const { return m_obj_res; }
 };
 

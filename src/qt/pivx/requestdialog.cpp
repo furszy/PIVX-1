@@ -113,13 +113,12 @@ void RequestDialog::accept()
         std::string label = info->label.isEmpty() ? "" : info->label.toStdString();
         QString title;
 
-        Destination address;
         CallResult<Destination> r(false, "");
         if (this->isPaymentRequest) {
-            r = walletModel->getNewAddress(address, label);
+            r = walletModel->getNewAddress(label);
             title = tr("Request for ") + BitcoinUnits::format(displayUnit, value, false, BitcoinUnits::separatorAlways) + " " + QString(CURRENCY_UNIT.c_str());
         } else {
-            r = walletModel->getNewStakingAddress(address, label);
+            r = walletModel->getNewStakingAddress(label);
             title = tr("Cold Staking Address Generated");
         }
 
@@ -129,7 +128,7 @@ void RequestDialog::accept()
             return;
         }
 
-        info->address = QString::fromStdString(address.ToString());
+        info->address = QString::fromStdString(r.getObjResult()->ToString());
         ui->labelTitle->setText(title);
 
         updateQr(info->address);

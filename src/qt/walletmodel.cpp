@@ -470,8 +470,9 @@ WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransact
                 Destination ownerAdd;
                 if (rcp.ownerAddress.isEmpty()) {
                     // Create new internal owner address
-                    if (!getNewAddress(ownerAdd))
-                        return CannotCreateInternalAddress;
+                    auto res = getNewAddress();
+                    if (!res) return CannotCreateInternalAddress;
+                    ownerAdd = *res.getObjResult();
                 } else {
                     ownerAdd = Destination(DecodeDestination(rcp.ownerAddress.toStdString()), false);
                 }
@@ -921,18 +922,18 @@ int64_t WalletModel::getKeyCreationTime(const libzcash::SaplingPaymentAddress& a
     return 0;
 }
 
-CallResult<Destination> WalletModel::getNewAddress(Destination& ret, const std::string& label) const
+CallResult<Destination> WalletModel::getNewAddress(const std::string& label) const
 {
     auto res = wallet->getNewAddress(label);
-    if (res) ret = Destination(*res.getObjResult(), false);
-    return CallResult<Destination>(res.getResult(), ret);
+    return res ? CallResult<Destination>(Destination(*res.getObjResult(), false)) :
+           CallResult<Destination>(res.getError());
 }
 
-CallResult<Destination> WalletModel::getNewStakingAddress(Destination& ret, const std::string& label) const
+CallResult<Destination> WalletModel::getNewStakingAddress(const std::string& label) const
 {
     auto res = wallet->getNewStakingAddress(label);
-    if (res) ret = Destination(*res.getObjResult(), true);
-    return CallResult<Destination>(res.getResult(), ret);
+    return res ? CallResult<Destination>(Destination(*res.getObjResult(), true)) :
+           CallResult<Destination>(res.getError());
 }
 
 CallResult<Destination> WalletModel::getNewShieldedAddress(QString& shieldedAddrRet, std::string strLabel)

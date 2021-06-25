@@ -220,9 +220,7 @@ bool MasterNodeWizardDialog::createMN()
     // If not found create a new collateral tx
     if (!walletModel->getMNCollateralCandidate(collateralOut)) {
         // New receive address
-        Destination dest;
-        auto r = walletModel->getNewAddress(dest, alias);
-
+        auto r = walletModel->getNewAddress(alias);
         if (!r) {
             // generate address fail
             inform(tr(r.getError().c_str()));
@@ -231,7 +229,7 @@ bool MasterNodeWizardDialog::createMN()
 
         // const QString& addr, const QString& label, const CAmount& amount, const QString& message
         SendCoinsRecipient sendCoinsRecipient(
-                QString::fromStdString(dest.ToString()),
+                QString::fromStdString(r.getObjResult()->ToString()),
                 QString::fromStdString(alias),
                 clientModel->getMNCollateralRequiredAmount(),
                 "");

@@ -634,11 +634,8 @@ QString AddressTableModel::getAddressToShow(bool isShielded) const
     CallResult<Destination> res(false, "");
     QString addressStr;
     if (!isShielded) {
-        Destination newAddress;
-        res = walletModel->getNewAddress(newAddress, "Default");
-        if (res) {
-            addressStr = QString::fromStdString(newAddress.ToString());
-        }
+        res = walletModel->getNewAddress("Default");
+        if (res) { addressStr = QString::fromStdString(res.getObjResult()->ToString()); }
     } else {
         res = walletModel->getNewShieldedAddress(addressStr, "default shielded");
     }

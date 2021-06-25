@@ -253,9 +253,8 @@ void ReceiveWidget::onNewAddressClicked()
         QString strAddress;
         CallResult<Destination> r(false, "");
         if (!shieldedMode) {
-            Destination address;
-            r = walletModel->getNewAddress(address, "");
-            strAddress = QString::fromStdString(address.ToString());
+            r = walletModel->getNewAddress("");
+            if (r) strAddress = QString::fromStdString(r.getObjResult()->ToString());
         } else {
             r = walletModel->getNewShieldedAddress(strAddress, "");
         }
