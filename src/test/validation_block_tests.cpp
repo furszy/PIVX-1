@@ -146,7 +146,7 @@ BOOST_AUTO_TEST_CASE(processnewblock_signals_ordering)
                     if (state.GetRejectReason() == "duplicate" ||
                         state.GetRejectReason() == "prevblk-not-found" ||
                         state.GetRejectReason() == "bad-prevblk") continue;
-                    ASSERT_WITH_MSG(!processed,  ("Error: " + state.GetRejectReason()).c_str());
+                    ASSERT_WITH_MSG(processed,  ("Error: " + state.GetRejectReason()).c_str());
                 }
             }
         });
