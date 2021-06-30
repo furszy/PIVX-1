@@ -2813,10 +2813,10 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     int nHeight = 0;
     if (pindexPrev != nullptr && block.hashPrevBlock != UINT256_ZERO) {
         if (pindexPrev->GetBlockHash() != block.hashPrevBlock) {
-            //out of order
+            // out of order
             auto mi = mapBlockIndex.find(block.hashPrevBlock);
-            if (mi == mapBlockIndex.end()) {
-                return false;
+            if (mi == mapBlockIndex.end()) { // future: Move contextual check outside of CheckBlock (Accept/ConnectBlock).
+                return state.Error("blk-out-of-order");
             }
             pindexPrev = mi->second;
         }
