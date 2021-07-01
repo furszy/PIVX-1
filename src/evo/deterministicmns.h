@@ -598,6 +598,8 @@ public:
     bool LegacyMNObsolete(int nHeight) const;
     bool LegacyMNObsolete() const;
 
+    // Retrieve the cached tip index, only public for testing purposes
+    const CBlockIndex* GetCachedTipIndex() const { return tipIndex; }
 private:
     void CleanupCache(int nHeight);
 };

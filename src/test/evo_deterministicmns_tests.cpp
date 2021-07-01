@@ -228,13 +228,18 @@ BOOST_FIXTURE_TEST_CASE(dip3_protx, TestChain400Setup)
 {
     auto utxos = BuildSimpleUtxoMap(coinbaseTxns);
 
-    CBlockIndex* chainTip = chainActive.Tip();
-    int nHeight = chainTip->nHeight;
+    CBlockIndex* chainTip = nullptr;
+    int nHeight = 0;
+    {
+        LOCK(cs_main);
+        chainTip = chainActive.Tip();
+        nHeight = chainTip->nHeight;
+    }
     UpdateNetworkUpgradeParameters(Consensus::UPGRADE_V6_0, nHeight + 2);
 
     // load empty list (last block before enforcement)
     CreateAndProcessBlock({}, coinbaseKey);
-    chainTip = chainActive.Tip();
+    chainTip = WITH_LOCK(cs_main, return chainActive.Tip());
     BOOST_CHECK_EQUAL(chainTip->nHeight, ++nHeight);
 
     // force mnsync complete and enable spork 8
@@ -275,7 +280,7 @@ BOOST_FIXTURE_TEST_CASE(dip3_protx, TestChain400Setup)
         BOOST_CHECK(!CheckTransactionSignature(tx2));
 
         CreateAndProcessBlock({tx}, coinbaseKey);
-        chainTip = chainActive.Tip();
+        chainTip = WITH_LOCK(cs_main, return chainActive.Tip());
         BOOST_CHECK_EQUAL(chainTip->nHeight, nHeight + 1);
         SyncWithValidationInterfaceQueue();
         BOOST_CHECK(deterministicMNManager->GetListAtChainTip().HasMN(txid));
@@ -297,9 +302,11 @@ BOOST_FIXTURE_TEST_CASE(dip3_protx, TestChain400Setup)
     std::map<uint256, int> mapPayments;
     for (size_t i = 0; i < 20; i++) {
         SyncWithValidationInterfaceQueue();
+        BOOST_CHECK_MESSAGE(deterministicMNManager->GetCachedTipIndex()->GetBlockHash() == chainTip->GetBlockHash(),
+                            "Error: DMN Manager has a different tip cached.");
         auto dmnExpectedPayee = deterministicMNManager->GetListAtChainTip().GetMNPayee();
         CBlock block = CreateAndProcessBlock({}, coinbaseKey);
-        chainTip = chainActive.Tip();
+        chainTip = WITH_LOCK(cs_main, return chainActive.Tip());
         BOOST_ASSERT(!block.vtx.empty());
         BOOST_CHECK(IsMNPayeeInBlock(block, dmnExpectedPayee->pdmnState->scriptPayout));
         mapPayments[dmnExpectedPayee->proTxHash]++;
