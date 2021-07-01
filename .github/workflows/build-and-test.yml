@@ -141,25 +141,11 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - name: ARM 32-bit
-            os: ubuntu-18.04
-            host: arm-linux-gnueabihf
-            apt_get: python3 g++-arm-linux-gnueabihf
-
-          - name: AARCH64
-            os: ubuntu-18.04
-            host: aarch64-linux-gnu
-            apt_get: python3 g++-aarch64-linux-gnu
 
           - name: Win64
             os: ubuntu-18.04
             host: x86_64-w64-mingw32
             apt_get: python3 nsis g++-mingw-w64-x86-64 wine-binfmt wine64
-
-          - name: 32-bit + dash
-            os: ubuntu-18.04
-            host: i686-pc-linux-gnu
-            apt_get: g++-multilib python3-zmq
 
           - name: x86_64 Linux
             os: ubuntu-18.04
@@ -251,25 +237,6 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - name: ARM 32-bit [GOAL:install]  [no unit or functional tests]
-            os: ubuntu-18.04
-            host: arm-linux-gnueabihf
-            apt_get: python3 g++-arm-linux-gnueabihf
-            unit_tests: false
-            functional_tests: false
-            goal: install
-            # -Wno-psabi is to disable ABI warnings: "note: parameter passing for argument of type ... changed in GCC 7.1"
-            # This could be removed once the ABI change warning does not show up by default
-            BITCOIN_CONFIG: "--with-gui=qt5 --enable-glibc-back-compat --enable-reduce-exports --disable-online-rust CXXFLAGS=-Wno-psabi"
-
-          - name: AARCH64 [GOAL:install] [no unit or functional tests]
-            os: ubuntu-18.04
-            host: aarch64-linux-gnu
-            apt_get: python3 g++-aarch64-linux-gnu
-            unit_tests: false
-            functional_tests: false
-            goal: install
-            BITCOIN_CONFIG: "--with-gui=qt5 --enable-glibc-back-compat --enable-reduce-exports --disable-online-rust"
 
           - name: Win64  [GOAL:deploy] [no functional tests]
             os: ubuntu-18.04
@@ -290,16 +257,6 @@ jobs:
             test_runner_extra: "--coverage --all  --exclude feature_dbcrash"
             BITCOIN_CONFIG: "--enable-zmq --with-gui=qt5 --enable-glibc-back-compat --enable-reduce-exports --disable-online-rust"
 
-          - name: x86_64 Linux  [GOAL:install]  [bionic] [no GUI no unit tests - only functional tests on legacy pre-HD wallets]
-            os: ubuntu-18.04
-            host: x86_64-unknown-linux-gnu
-            apt_get: python3-zmq
-            unit_tests: false
-            functional_tests: true
-            goal: install
-            test_runner_extra: "--legacywallet"
-            BITCOIN_CONFIG: "--enable-zmq --with-gui=no --enable-glibc-back-compat --enable-reduce-exports --disable-online-rust"
-
           - name: x86_64 Linux  [GOAL:install]  [bionic]  [no depends only system libs]
             os: ubuntu-18.04
             host: x86_64-unknown-linux-gnu
@@ -308,29 +265,6 @@ jobs:
             no_depends: 1
             goal: install
             BITCOIN_CONFIG: "--enable-zmq --with-incompatible-bdb --with-gui=qt5 CPPFLAGS=-DDEBUG_LOCKORDER"
-
-          - name: macOS 10.12  [GOAL:deploy] [no functional tests]
-            os: ubuntu-18.04
-            host: x86_64-apple-darwin16
-            apt_get: cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools python3-dev python3-setuptools
-            XCODE_VERSION: 11.3.1
-            XCODE_BUILD_ID: 11C505
-            unit_tests: false
-            functional_tests: false
-            goal: deploy
-            BITCOIN_CONFIG: "--enable-gui --enable-reduce-exports --enable-werror --disable-online-rust"
-
-          - name: macOS 10.15 [GOAL:deploy] [native macOS using syslibs no unit or functional tests]
-            os: macos-10.15
-            host: x86_64-apple-darwin19.6.0
-            brew_install: autoconf automake ccache berkeley-db4 libtool boost miniupnpc pkg-config python3 qt5 zmq libevent qrencode gmp libsodium rust librsvg
-            unit_tests: false
-            functional_tests: false
-            no_depends: 1
-            goal: deploy
-            cc: $(brew --prefix llvm)/bin/clang
-            cxx: $(brew --prefix llvm)/bin/clang++
-            BITCOIN_CONFIG: "--enable-zmq --enable-gui --enable-reduce-exports --enable-werror"
 
     steps:
       - name: Get Source
