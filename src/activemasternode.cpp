@@ -43,22 +43,22 @@ OperationResult initMasternode(const std::string& _strMasterNodePrivKey, const s
 
     // Allow for the port number to be omitted here and just double check
     // that if a port is supplied, it matches the required default port.
-    if (nPort == 0) nPort = nDefaultPort;
-    if (nPort != nDefaultPort && !params.IsRegTestNet()) {
-        return errorOut(strprintf(_("Invalid -masternodeaddr port %d, only %d is supported on %s-net."),
-                                           nPort, nDefaultPort, Params().NetworkIDString()));
-    }
-    CService addrTest(LookupNumeric(strHost.c_str(), nPort));
-    if (!addrTest.IsValid()) {
-        return errorOut(strprintf(_("Invalid -masternodeaddr address: %s"), strMasterNodeAddr));
-    }
-
-    // Peer port needs to match the masternode public one for IPv4 and IPv6.
-    // Onion can run in other ports because those are behind a hidden service which has the public port fixed to the default port.
-    if (nPort != GetListenPort() && !addrTest.IsTor()) {
-        return errorOut(strprintf(_("Invalid -masternodeaddr port %d, isn't the same as the peer port %d"),
-                                  nPort, GetListenPort()));
-    }
+//    if (nPort == 0) nPort = nDefaultPort;
+//    if (nPort != nDefaultPort && !params.IsRegTestNet()) {
+//        return errorOut(strprintf(_("Invalid -masternodeaddr port %d, only %d is supported on %s-net."),
+//                                           nPort, nDefaultPort, Params().NetworkIDString()));
+//    }
+//    CService addrTest(LookupNumeric(strHost.c_str(), nPort));
+//    if (!addrTest.IsValid()) {
+//        return errorOut(strprintf(_("Invalid -masternodeaddr address: %s"), strMasterNodeAddr));
+//    }
+//
+//    // Peer port needs to match the masternode public one for IPv4 and IPv6.
+//    // Onion can run in other ports because those are behind a hidden service which has the public port fixed to the default port.
+//    if (nPort != GetListenPort() && !addrTest.IsTor()) {
+//        return errorOut(strprintf(_("Invalid -masternodeaddr port %d, isn't the same as the peer port %d"),
+//                                  nPort, GetListenPort()));
+//    }
 
     CKey key;
     CPubKey pubkey;
@@ -68,7 +68,7 @@ OperationResult initMasternode(const std::string& _strMasterNodePrivKey, const s
 
     activeMasternode.pubKeyMasternode = pubkey;
     activeMasternode.privKeyMasternode = key;
-    activeMasternode.service = addrTest;
+    activeMasternode.service = CService(LookupNumeric(strHost.c_str(), nPort));
     fMasterNode = true;
 
     if (masternodeSync.IsBlockchainSynced()) {
