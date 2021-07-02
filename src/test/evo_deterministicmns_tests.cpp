@@ -303,7 +303,8 @@ BOOST_FIXTURE_TEST_CASE(dip3_protx, TestChain400Setup)
     for (size_t i = 0; i < 20; i++) {
         SyncWithValidationInterfaceQueue();
         BOOST_CHECK_MESSAGE(deterministicMNManager->GetCachedTipIndex()->GetBlockHash() == chainTip->GetBlockHash(),
-                            "Error: DMN Manager has a different tip cached.");
+                            strprintf("Error: DMN Manager has a different tip cached. cached %d vs chain %d",
+                                      deterministicMNManager->GetCachedTipIndex()->nHeight, chainTip->nHeight));
         auto dmnExpectedPayee = deterministicMNManager->GetListAtChainTip().GetMNPayee();
         CBlock block = CreateAndProcessBlock({}, coinbaseKey);
         chainTip = WITH_LOCK(cs_main, return chainActive.Tip());
