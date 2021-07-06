@@ -243,7 +243,7 @@ jobs:
       CCACHE_COMPRESS: 1
       PARAMS_DIR: ${{ github.workspace }}/.pivx-params
       WINEDEBUG: fixme-all
-      BOOST_TEST_RANDOM: 1${{ github.run_id }} % 4294967295 # Mod max unsigned int value.
+      BOOST_TEST_RANDOM: $((1${{ github.run_id }} % 4294967295)) # Mod max unsigned int value.
     defaults:
       run:
         shell: bash
