@@ -175,11 +175,19 @@ static CMutableTransaction MalleateProTxPayout(const CMutableTransaction& tx)
     return tx2;
 }
 
+CService CreateUniqueAddr()
+{
+    CService ret;
+    auto dmnList = deterministicMNManager->GetListAtChainTip();
+    do { ret = LookupNumeric("1.1.1.1", InsecureRandRange(2000)); } while (dmnList.HasUniqueProperty(ret));
+    return ret;
+}
+
 static CMutableTransaction MalleateProUpServTx(const CMutableTransaction& tx)
 {
     ProUpServPL pl;
     GetTxPayload(tx, pl);
-    pl.addr = LookupNumeric("1.1.1.1", InsecureRandRange(2000));
+    pl.addr = CreateUniqueAddr();
     if (!pl.scriptOperatorPayout.empty()) {
         pl.scriptOperatorPayout = GenerateRandomAddress();
     }
