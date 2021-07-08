@@ -5,8 +5,6 @@
 
 
 #include "prf.h"
-#include "crypto/sha256.h"
-#include "hash.h"
 
 #include <array>
 #include <sodium.h>
@@ -17,7 +15,7 @@ const unsigned char ZCASH_EXPANDSEED_PERSONALIZATION[crypto_generichash_blake2b_
 // Sapling
 std::array<unsigned char, 64> PRF_expand(const uint256& sk, unsigned char t)
 {
-    std::array<unsigned char, 64> res;
+    std::array<unsigned char, 64> res{};
     unsigned char blob[33];
 
     memcpy(&blob[0], sk.begin(), 32);
@@ -57,7 +55,7 @@ uint256 PRF_ovk(const uint256& sk)
 
 std::array<unsigned char, 11> default_diversifier(const uint256& sk)
 {
-    std::array<unsigned char, 11> res;
+    std::array<unsigned char, 11> res{};
     unsigned char blob[34];
 
     memcpy(&blob[0], sk.begin(), 32);

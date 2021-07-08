@@ -6,7 +6,6 @@
 #include "sapling/noteencryption.h"
 
 #include "sapling/prf.h"
-#include "sapling/sapling_util.h"
 
 #include <librustzcash.h>
 #include <sodium.h>
@@ -14,13 +13,6 @@
 #include <stdexcept>
 
 #define NOTEENCRYPTION_CIPHER_KEYSIZE 32
-
-void clamp_curve25519(unsigned char key[crypto_scalarmult_SCALARBYTES])
-{
-    key[0] &= 248;
-    key[31] &= 127;
-    key[31] |= 64;
-}
 
 void PRF_ock(
     unsigned char K[NOTEENCRYPTION_CIPHER_KEYSIZE],
@@ -65,39 +57,6 @@ void KDF_Sapling(
 
     if (crypto_generichash_blake2b_salt_personal(K, NOTEENCRYPTION_CIPHER_KEYSIZE,
                                                  block, 64,
-                                                 NULL, 0, // No key.
-                                                 NULL,    // No salt.
-                                                 personalization
-                                                ) != 0)
-    {
-        throw std::logic_error("hash function failure");
-    }
-}
-
-void KDF(unsigned char K[NOTEENCRYPTION_CIPHER_KEYSIZE],
-    const uint256 &dhsecret,
-    const uint256 &epk,
-    const uint256 &pk_enc,
-    const uint256 &hSig,
-    unsigned char nonce
-   )
-{
-    if (nonce == 0xff) {
-        throw std::logic_error("no additional nonce space for KDF");
-    }
-
-    unsigned char block[128] = {};
-    memcpy(block+0, hSig.begin(), 32);
-    memcpy(block+32, dhsecret.begin(), 32);
-    memcpy(block+64, epk.begin(), 32);
-    memcpy(block+96, pk_enc.begin(), 32);
-
-    unsigned char personalization[crypto_generichash_blake2b_PERSONALBYTES] = {};
-    memcpy(personalization, "ZcashKDF", 8);
-    memcpy(personalization+8, &nonce, 1);
-
-    if (crypto_generichash_blake2b_salt_personal(K, NOTEENCRYPTION_CIPHER_KEYSIZE,
-                                                 block, 128,
                                                  NULL, 0, // No key.
                                                  NULL,    // No salt.
                                                  personalization

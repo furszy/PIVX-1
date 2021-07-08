@@ -9,17 +9,6 @@
 #include <algorithm>
 #include <librustzcash.h>
 #include <stdexcept>
-#include <iostream>
-
-std::vector<unsigned char> convertIntToVectorLE(const uint64_t val_int) {
-    std::vector<unsigned char> bytes;
-
-    for(size_t i = 0; i < 8; i++) {
-        bytes.push_back(val_int >> (i * 8));
-    }
-
-    return bytes;
-}
 
 // Convert bytes into boolean vector. (MSB to LSB)
 std::vector<bool> convertBytesVectorToVector(const std::vector<unsigned char>& bytes) {

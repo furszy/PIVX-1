@@ -26,7 +26,6 @@ public:
     HDSeed() {}
     HDSeed(const CPrivKey& seedIn) : seed(seedIn) {}
 
-    static HDSeed Random(size_t len = 32);
     bool IsNull() const { return seed.empty(); };
     uint256 Fingerprint() const;
     CPrivKey RawSeed() const { return seed; }

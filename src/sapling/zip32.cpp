@@ -19,14 +19,6 @@ const unsigned char PIVX_HD_SEED_FP_PERSONAL[crypto_generichash_blake2b_PERSONAL
 const unsigned char PIVX_TADDR_OVK_PERSONAL[crypto_generichash_blake2b_PERSONALBYTES] =
         {'P', 'x', 'T', 'a', 'd', 'd', 'r', 'T', 'o', 'S', 'a', 'p', 'l', 'i', 'n', 'g'};
 
-HDSeed HDSeed::Random(size_t len)
-{
-    assert(len >= 32);
-    CPrivKey rawSeed(len, 0);
-    GetRandBytes(rawSeed.data(), len);
-    return HDSeed(rawSeed);
-}
-
 uint256 HDSeed::Fingerprint() const
 {
     CBLAKE2bWriter h(SER_GETHASH, 0, PIVX_HD_SEED_FP_PERSONAL);

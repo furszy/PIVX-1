@@ -9,7 +9,6 @@
 #include "utilmoneystr.h"
 #include "consensus/upgrades.h"
 #include "policy/policy.h"
-#include "validation.h"
 
 #include <librustzcash.h>
 
